@@ -11,14 +11,36 @@ import json
 import subprocess
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, asdict, field
 
 LOG_DIR = os.getenv("LOG_DIR", "/pentest/logs")
-os.makedirs(LOG_DIR, exist_ok=True)
+# Create log directory if it doesn't exist and path is writable
+try:
+    os.makedirs(LOG_DIR, exist_ok=True)
+except (OSError, PermissionError):
+    # Fallback to temp directory if /pentest is not writable (e.g., on macOS)
+    import tempfile
+    LOG_DIR = os.path.join(tempfile.gettempdir(), "neurosploit_logs")
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 sys.path.insert(0, os.path.dirname(__file__))
 from llm_client import LLMClient
+
+# Import new modules
+try:
+    from cve_lookup import CVELookup
+    CVE_LOOKUP_AVAILABLE = True
+except ImportError:
+    CVE_LOOKUP_AVAILABLE = False
+    print("Warning: CVE lookup not available")
+
+try:
+    from llm_providers import create_provider, auto_detect_provider
+    MULTI_MODEL_AVAILABLE = True
+except ImportError:
+    MULTI_MODEL_AVAILABLE = False
+    print("Warning: Multi-model support not available")
 
 
 @dataclass
@@ -228,14 +250,34 @@ The audit is complete when you have:
 Continue until the full audit is complete.
 """
 
-    def __init__(self, log_dir: str = LOG_DIR, mitre_context: str = None):
+    def __init__(self, log_dir: str = LOG_DIR, mitre_context: str = None, 
+                 llm_provider: str = None, websocket = None, session_id: str = None):
         self.log_dir = log_dir
-        self.llm = LLMClient(log_dir)
+        self.session_id = session_id or f"session_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+        self.websocket = websocket
+        
+        # Initialize LLM (support multi-model)
+        if llm_provider and MULTI_MODEL_AVAILABLE:
+            if llm_provider == "auto":
+                provider = auto_detect_provider()
+            else:
+                provider = create_provider(llm_provider)
+            self.llm = provider
+            self.llm_is_provider = True
+        else:
+            self.llm = LLMClient(log_dir)
+            self.llm_is_provider = False
+        
+        # Initialize CVE lookup
+        self.cve_lookup = CVELookup() if CVE_LOOKUP_AVAILABLE else None
+        
         self.executions: List[Execution] = []
         self.conversation: List[Dict] = []
         self.iteration = 0
         self.max_iterations = 50  # More iterations for thorough exploitation
         self.mitre_context = mitre_context
+        self.target = None
+        self.objective = None
         
         # Build full system prompt with MITRE context if available
         system_prompt = self.SYSTEM_PROMPT_BASE
@@ -248,6 +290,19 @@ Continue until the full audit is complete.
         ]
         
         self._log("Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness")
+    
+    async def _send_websocket_update(self, event_type: str, data: Dict):
+        """Send real-time update via WebSocket if available"""
+        if self.websocket:
+            try:
+                await self.websocket.send_json({
+                    "type": event_type,
+                    "data": data,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "session_id": self.session_id
+                })
+            except Exception as e:
+                print(f"WebSocket error: {e}")
     
     def _log(self, msg: str, level: str = "INFO"):
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -406,11 +461,71 @@ Continue until the full audit is complete.
 
 Analyze this output and decide what to do next."""
     
+    def save_session(self) -> str:
+        """Save current session state to file"""
+        session_file = f"{self.log_dir}/session_{self.session_id}.json"
+        
+        session_data = {
+            "session_id": self.session_id,
+            "target": self.target,
+            "objective": self.objective,
+            "conversation": self.conversation,
+            "executions": [asdict(e) for e in self.executions],
+            "iteration": self.iteration,
+            "max_iterations": self.max_iterations,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+        with open(session_file, 'w') as f:
+            json.dump(session_data, f, indent=2)
+        
+        self._log(f"Session saved: {session_file}")
+        return session_file
+    
+    def load_session(self, session_id: str) -> bool:
+        """Load session from file"""
+        session_file = f"{self.log_dir}/session_{session_id}.json"
+        
+        try:
+            with open(session_file, 'r') as f:
+                session_data = json.load(f)
+            
+            self.session_id = session_data["session_id"]
+            self.target = session_data.get("target")
+            self.objective = session_data.get("objective")
+            self.conversation = session_data["conversation"]
+            self.iteration = session_data["iteration"]
+            self.max_iterations = session_data.get("max_iterations", 50)
+            
+            # Restore executions
+            self.executions = []
+            for exec_dict in session_data["executions"]:
+                self.executions.append(Execution(**exec_dict))
+            
+            self._log(f"Session loaded: {session_file}")
+            return True
+        except Exception as e:
+            self._log(f"Failed to load session: {e}", "ERROR")
+            return False
+    
+    def lookup_cve(self, cve_id: str) -> Optional[str]:
+        """Lookup CVE information"""
+        if not self.cve_lookup:
+            return None
+        
+        cve_info = self.cve_lookup.lookup(cve_id)
+        if cve_info:
+            return self.cve_lookup.format_cve_info(cve_info)
+        return None
+    
     def run(self, target: str, objective: str) -> Dict:
         """
         Run the agent with a target and objective.
         The AI decides everything else.
         """
+        self.target = target
+        self.objective = objective
+        
         self._log(f"Starting engagement: {target}")
         self._log(f"Objective: {objective}")
         
@@ -429,9 +544,18 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
             
             # Get AI response
             try:
-                response = self.llm.chat(self.conversation)
+                if self.llm_is_provider:
+                    response, usage = self.llm.chat(self.conversation)
+                else:
+                    response = self.llm.chat(self.conversation)
+                    usage = {}
+                
                 self.conversation.append({"role": "assistant", "content": response})
                 self._log(f"AI response: {len(response)} chars")
+                
+                # Auto-save session every 5 iterations
+                if self.iteration % 5 == 0:
+                    self.save_session()
             except Exception as e:
                 self._log(f"LLM error: {e}", "ERROR")
                 break
@@ -541,16 +665,48 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="NeuroSploit Dynamic AI Agent")
-    parser.add_argument("--target", required=True, help="Target (IP, URL, or range)")
-    parser.add_argument("--objective", required=True, help="What to accomplish")
+    parser.add_argument("--target", help="Target (IP, URL, or range)")
+    parser.add_argument("--objective", help="What to accomplish")
     parser.add_argument("--max-iterations", type=int, default=15, help="Max iterations")
+    parser.add_argument("--llm-provider", choices=["auto", "openai", "anthropic", "ollama", "lmstudio"], 
+                        help="LLM provider to use")
+    parser.add_argument("--resume", help="Resume from session ID")
+    parser.add_argument("--cve", help="Lookup CVE information")
     
     args = parser.parse_args()
     
-    agent = DynamicAgent()
+    # CVE lookup mode
+    if args.cve:
+        if CVE_LOOKUP_AVAILABLE:
+            lookup = CVELookup()
+            cve_info = lookup.lookup(args.cve)
+            if cve_info:
+                print(lookup.format_cve_info(cve_info))
+            else:
+                print(f"CVE {args.cve} not found")
+        else:
+            print("CVE lookup not available")
+        return
+    
+    agent = DynamicAgent(llm_provider=args.llm_provider)
     agent.max_iterations = args.max_iterations
     
-    report = agent.run(args.target, args.objective)
+    # Resume mode
+    if args.resume:
+        if agent.load_session(args.resume):
+            print(f"Resumed session: {args.resume}")
+            if agent.target and agent.objective:
+                report = agent.run(agent.target, agent.objective)
+            else:
+                print("Error: Session missing target/objective")
+                return
+        else:
+            print(f"Failed to resume session: {args.resume}")
+            return
+    else:
+        if not args.target or not args.objective:
+            parser.error("--target and --objective required (unless using --resume or --cve)")
+        report = agent.run(args.target, args.objective)
     
     print("\n" + "=" * 60)
     print("ENGAGEMENT COMPLETE")

@@ -1,0 +1,399 @@
+# NeuroSploit Enterprise Vulnerable Lab
+# Comprehensive multi-tier environment for intense testing
+#
+# Components:
+# - Firewall (pfSense-style with iptables)
+# - Load Balancer (HAProxy)
+# - Web Tier (DVWA, DVNA, Juice Shop, WebGoat)
+# - Database Tier (MySQL, PostgreSQL, MongoDB)
+# - Application Tier (vulnerable APIs)
+# - Internal Network (simulated corporate network)
+#
+# Network Topology:
+# [Internet] -> [Firewall] -> [DMZ] -> [Internal]
+#                              |
+#                         [Load Balancer]
+#                              |
+#                    [Web Tier Services]
+#                              |
+#                    [Database Tier]
+
+version: '3.8'
+
+networks:
+  external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+  dmz:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+  internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.3.0/24
+  database:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.4.0/24
+
+services:
+  # =============================================================================
+  # FIREWALL / ROUTER (Gateway between networks)
+  # =============================================================================
+  firewall:
+    image: alpine:latest
+    container_name: ns-firewall
+    privileged: true
+    command: >
+      sh -c "
+        apk add --no-cache iptables iproute2 tcpdump nmap &&
+        echo 1 > /proc/sys/net/ipv4/ip_forward &&
+        
+        # Default policies - allow all for lab (intentionally weak)
+        iptables -P INPUT ACCEPT &&
+        iptables -P FORWARD ACCEPT &&
+        iptables -P OUTPUT ACCEPT &&
+        
+        # NAT for internal networks
+        iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE &&
+        
+        # Log all traffic (for detection)
+        iptables -A INPUT -j LOG --log-prefix 'FW-INPUT: ' &&
+        iptables -A FORWARD -j LOG --log-prefix 'FW-FORWARD: ' &&
+        
+        # Vulnerable: SSH with weak config
+        echo 'root:toor' | chpasswd &&
+        
+        # Keep running
+        tail -f /dev/null
+      "
+    networks:
+      external:
+        ipv4_address: 10.0.1.1
+      dmz:
+        ipv4_address: 10.0.2.1
+      internal:
+        ipv4_address: 10.0.3.1
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    ports:
+      - "2222:22"  # SSH to firewall
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "10.0.2.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # LOAD BALANCER (HAProxy in DMZ)
+  # =============================================================================
+  loadbalancer:
+    image: haproxy:2.8
+    container_name: ns-loadbalancer
+    networks:
+      dmz:
+        ipv4_address: 10.0.2.10
+      internal:
+        ipv4_address: 10.0.3.10
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8404:8404"  # Stats page (vulnerable - no auth)
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - dvwa
+      - dvna
+      - juiceshop
+      - webgoat
+    healthcheck:
+      test: ["CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # WEB TIER - DMZ (Multiple Vulnerable Applications)
+  # =============================================================================
+  
+  # DVWA - Damn Vulnerable Web Application (PHP)
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    container_name: ns-dvwa
+    networks:
+      dmz:
+        ipv4_address: 10.0.2.20
+      database:
+        ipv4_address: 10.0.4.20
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=dvwa_password
+      - MYSQL_DATABASE=dvwa
+    depends_on:
+      - mysql
+    ports:
+      - "8081:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # DVNA - Damn Vulnerable Node Application
+  dvna:
+    image: appsecco/dvna:sqlite
+    container_name: ns-dvna
+    networks:
+      dmz:
+        ipv4_address: 10.0.2.21
+    ports:
+      - "9091:9090"
+    environment:
+      - DVNA_DB_TYPE=sqlite
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # OWASP Juice Shop (Node.js)
+  juiceshop:
+    image: bkimminich/juice-shop:latest
+    container_name: ns-juiceshop
+    networks:
+      dmz:
+        ipv4_address: 10.0.2.22
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WebGoat (Java - OWASP)
+  webgoat:
+    image: webgoat/webgoat:latest
+    container_name: ns-webgoat
+    networks:
+      dmz:
+        ipv4_address: 10.0.2.23
+    ports:
+      - "8082:8080"
+      - "9090:9090"
+    environment:
+      - WEBGOAT_HOST=0.0.0.0
+      - WEBGOAT_PORT=8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/WebGoat/"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+
+  # Vulnerable API (custom)
+  vulnerable-api:
+    image: python:3.11-slim
+    container_name: ns-vulnerable-api
+    networks:
+      dmz:
+        ipv4_address: 10.0.2.24
+      internal:
+        ipv4_address: 10.0.3.24
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./vulnerable-api:/app
+    working_dir: /app
+    command: >
+      sh -c "
+        pip install flask flask-cors pymysql pymongo &&
+        python app.py
+      "
+    depends_on:
+      - mysql
+      - mongodb
+
+  # =============================================================================
+  # INTERNAL NETWORK SERVICES (Behind Firewall)
+  # =============================================================================
+  
+  # Internal File Server (Samba with weak config)
+  fileserver:
+    image: dperson/samba:latest
+    container_name: ns-fileserver
+    networks:
+      internal:
+        ipv4_address: 10.0.3.30
+    environment:
+      - USER=admin;admin123  # Weak credentials
+      - SHARE=shared;/shared;yes;no;yes;admin
+      - SHARE2=confidential;/confidential;yes;no;no;admin
+    volumes:
+      - ./samba/shared:/shared
+      - ./samba/confidential:/confidential
+    ports:
+      - "445:445"
+      - "139:139"
+
+  # Internal SSH Jump Host
+  jumphost:
+    image: linuxserver/openssh-server:latest
+    container_name: ns-jumphost
+    networks:
+      internal:
+        ipv4_address: 10.0.3.31
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - PASSWORD_ACCESS=true
+      - USER_NAME=admin
+      - USER_PASSWORD=admin123  # Weak password
+      - SUDO_ACCESS=true
+    ports:
+      - "2223:2222"
+
+  # Internal Web Admin Panel
+  admin-panel:
+    image: php:8.2-apache
+    container_name: ns-admin-panel
+    networks:
+      internal:
+        ipv4_address: 10.0.3.32
+    volumes:
+      - ./admin-panel:/var/www/html
+    ports:
+      - "8888:80"
+
+  # =============================================================================
+  # DATABASE TIER (Isolated Network)
+  # =============================================================================
+  
+  # MySQL (Primary Database)
+  mysql:
+    image: mysql:8.0
+    container_name: ns-mysql
+    networks:
+      database:
+        ipv4_address: 10.0.4.40
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123  # Weak root password
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=dvwa_password
+    volumes:
+      - ./mysql/init:/docker-entrypoint-initdb.d
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+
+  # PostgreSQL (Secondary Database)  
+  postgres:
+    image: postgres:15
+    container_name: ns-postgres
+    networks:
+      database:
+        ipv4_address: 10.0.4.41
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres  # Default creds
+      - POSTGRES_DB=enterprise
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # MongoDB (NoSQL)
+  mongodb:
+    image: mongo:6
+    container_name: ns-mongodb
+    networks:
+      database:
+        ipv4_address: 10.0.4.42
+    # No authentication - intentionally vulnerable
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  # Redis (Cache - No Auth)
+  redis:
+    image: redis:7
+    container_name: ns-redis
+    networks:
+      database:
+        ipv4_address: 10.0.4.43
+    # No password - intentionally vulnerable
+    ports:
+      - "6379:6379"
+    command: redis-server --protected-mode no
+
+  # =============================================================================
+  # MONITORING (Vulnerable ELK-style)
+  # =============================================================================
+  
+  elasticsearch:
+    image: elasticsearch:7.17.10
+    container_name: ns-elasticsearch
+    networks:
+      internal:
+        ipv4_address: 10.0.3.50
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false  # No auth - vulnerable
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: kibana:7.17.10
+    container_name: ns-kibana
+    networks:
+      internal:
+        ipv4_address: 10.0.3.51
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  # =============================================================================
+  # ATTACKER (Kali with NeuroSploit)
+  # =============================================================================
+  
+  kali-attacker:
+    build:
+      context: ../kali-executor
+      dockerfile: Dockerfile.minimal
+    container_name: ns-kali-attacker
+    networks:
+      external:
+        ipv4_address: 10.0.1.100
+    environment:
+      - LLM_API_BASE=http://host.docker.internal:1234/v1
+      - LLM_MODEL=openai/gpt-oss-120b
+    volumes:
+      - ./logs:/pentest/logs
+      - ../kali-executor/open-interpreter:/opt/neurosploit
+    privileged: true
+    stdin_open: true
+    tty: true
+
+volumes:
+  mysql_data:
+  postgres_data:
+  mongodb_data:
+  elasticsearch_data:
