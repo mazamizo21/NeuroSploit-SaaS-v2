@@ -471,6 +471,118 @@ class ActivityLog(Base):
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
 
+# =============================================================================
+# ATTACK PATH VISUALIZATION (Phase 2)
+# =============================================================================
+
+class AttackNode(Base):
+    """Nodes in attack graph"""
+    __tablename__ = "attack_nodes"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    
+    # Node details
+    node_type = Column(String(50), nullable=False)  # host, service, vulnerability, exploit, credential, data
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    
+    # Risk and impact
+    risk_score = Column(Integer, default=0)  # 0-100
+    
+    # MITRE mapping
+    mitre_techniques = Column(JSONB, default=[])
+    
+    # Additional data
+    node_metadata = Column(JSONB, default={})
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class AttackEdge(Base):
+    """Edges in attack graph (relationships between nodes)"""
+    __tablename__ = "attack_edges"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    
+    # Edge endpoints
+    source_node_id = Column(UUID(as_uuid=True), ForeignKey("attack_nodes.id", ondelete="CASCADE"), nullable=False)
+    target_node_id = Column(UUID(as_uuid=True), ForeignKey("attack_nodes.id", ondelete="CASCADE"), nullable=False)
+    
+    # Edge details
+    edge_type = Column(String(50), nullable=False)  # exploits, accesses, pivots_to, escalates_to, extracts
+    technique_id = Column(String(20))  # MITRE technique
+    
+    # Difficulty and impact
+    difficulty = Column(String(20), default="medium")  # easy, medium, hard
+    impact = Column(String(20), default="medium")  # low, medium, high, critical
+    
+    # Additional data
+    edge_metadata = Column(JSONB, default={})
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class AttackPath(Base):
+    """Complete attack paths from start to end"""
+    __tablename__ = "attack_paths"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    
+    # Path details
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    
+    # Path endpoints
+    start_node_id = Column(UUID(as_uuid=True), ForeignKey("attack_nodes.id", ondelete="CASCADE"))
+    end_node_id = Column(UUID(as_uuid=True), ForeignKey("attack_nodes.id", ondelete="CASCADE"))
+    
+    # Path data
+    path_nodes = Column(JSONB, default=[])  # Array of node IDs in order
+    path_edges = Column(JSONB, default=[])  # Array of edge IDs in order
+    
+    # Metrics
+    total_risk_score = Column(Integer, default=0)  # 0-100
+    length = Column(Integer, default=0)  # Number of hops
+    
+    # Flags
+    is_critical = Column(Boolean, default=False)
+    leads_to_critical_asset = Column(Boolean, default=False)
+    
+    # Additional data
+    path_metadata = Column(JSONB, default={})
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class CriticalAsset(Base):
+    """Critical assets to protect (crown jewels)"""
+    __tablename__ = "critical_assets"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    
+    # Asset details
+    name = Column(String(255), nullable=False)
+    asset_type = Column(String(50), nullable=False)  # server, database, service, credential, data
+    criticality = Column(String(20), default="high")  # low, medium, high, critical
+    
+    # Identifiers
+    identifiers = Column(JSONB, default={})  # IP, hostname, username, etc.
+    
+    # Additional data
+    asset_metadata = Column(JSONB, default={})
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class CommandLog(Base):
     """Log of all commands executed"""
     __tablename__ = "command_logs"
