@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # OSINT
     theharvester recon-ng maltego \
     # Web Reconnaissance
-    whatweb wafw00f httpx \
+    whatweb wafw00f \
     # Information Gathering
     whois dmitry p0f \
     && apt-get clean
@@ -54,11 +54,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wfuzz ffuf gobuster dirb dirbuster \
     && apt-get clean
 
-# Install nuclei separately (latest version)
-RUN wget -q https://github.com/projectdiscovery/nuclei/releases/latest/download/nuclei_linux_amd64.zip \
-    && unzip nuclei_linux_amd64.zip -d /usr/local/bin/ \
-    && rm nuclei_linux_amd64.zip \
-    && chmod +x /usr/local/bin/nuclei
+# Install nuclei from apt (Kali has it)
+RUN apt-get update && apt-get install -y nuclei || true
 
 # =============================================================================
 # EXPLOITATION TOOLS (30+)
@@ -72,7 +69,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Network Exploitation
     responder bettercap ettercap-common \
     # Exploit Tools
-    exploitdb searchsploit \
+    exploitdb \
     # Wireless (if needed)
     aircrack-ng wifite reaver \
     # Password Attacks
@@ -185,11 +182,16 @@ RUN git clone --depth=1 https://github.com/swisskyrepo/PayloadsAllTheThings.git 
 RUN gunzip -k /usr/share/wordlists/rockyou.txt.gz 2>/dev/null || true
 
 # =============================================================================
-# OPEN INTERPRETER CONFIGURATION
+# NEUROSPLOIT AI AGENT
 # =============================================================================
 
-COPY open-interpreter/config.py /opt/open-interpreter/config.py
-COPY open-interpreter/agent_wrapper.py /opt/open-interpreter/agent_wrapper.py
+COPY open-interpreter/config.py /opt/neurosploit/config.py
+COPY open-interpreter/agent_wrapper.py /opt/neurosploit/agent_wrapper.py
+COPY open-interpreter/dynamic_agent.py /opt/neurosploit/dynamic_agent.py
+COPY open-interpreter/llm_client.py /opt/neurosploit/llm_client.py
+
+# Make agent executable
+RUN chmod +x /opt/neurosploit/dynamic_agent.py
 
 # =============================================================================
 # ENTRYPOINT AND WORKING DIRECTORY

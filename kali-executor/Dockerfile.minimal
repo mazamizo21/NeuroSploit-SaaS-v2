@@ -28,7 +28,7 @@ RUN pip3 install --break-system-packages --no-cache-dir \
     open-interpreter || echo "Open Interpreter install skipped"
 
 # Copy agent code
-COPY open-interpreter/ /opt/open-interpreter/
+COPY open-interpreter/ /opt/neurosploit/
 
 WORKDIR /pentest
 RUN mkdir -p /pentest/logs /pentest/output
@@ -36,7 +36,10 @@ RUN mkdir -p /pentest/logs /pentest/output
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Set Python path
+ENV PYTHONPATH="/opt/neurosploit:$PYTHONPATH"
+
 EXPOSE 9000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["python3", "/opt/open-interpreter/agent_wrapper.py"]
+CMD ["python3", "/opt/neurosploit/dynamic_agent.py", "--help"]
