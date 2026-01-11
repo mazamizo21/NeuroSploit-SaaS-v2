@@ -356,6 +356,94 @@ class ScheduledJob(Base):
     # Relationships
     tenant = relationship("Tenant")
 
+# =============================================================================
+# WORKSPACES (Team Collaboration)
+# =============================================================================
+
+class Workspace(Base):
+    """Shared workspace for team collaboration"""
+    __tablename__ = "workspaces"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    
+    # Workspace details
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    
+    # Settings
+    is_default = Column(Boolean, default=False)
+    settings = Column(JSONB, default={})
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    tenant = relationship("Tenant")
+    members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
+
+class WorkspaceMember(Base):
+    """Workspace membership with roles"""
+    __tablename__ = "workspace_members"
+    
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    
+    # Role: admin, member, viewer
+    role = Column(String(50), default="member")
+    
+    # Permissions
+    can_create_jobs = Column(Boolean, default=True)
+    can_edit_findings = Column(Boolean, default=True)
+    can_delete = Column(Boolean, default=False)
+    
+    # Metadata
+    joined_at = Column(DateTime, default=datetime.utcnow)
+    invited_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    
+    # Relationships
+    workspace = relationship("Workspace", back_populates="members")
+
+class FindingComment(Base):
+    """Comments on findings for collaboration"""
+    __tablename__ = "finding_comments"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    finding_id = Column(UUID(as_uuid=True), ForeignKey("findings.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
+    
+    # Comment content
+    comment = Column(Text, nullable=False)
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    edited = Column(Boolean, default=False)
+
+class ActivityLog(Base):
+    """Activity feed for workspace collaboration"""
+    __tablename__ = "activity_logs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    
+    # Activity details
+    activity_type = Column(String(100), nullable=False)  # job.created, finding.commented, etc.
+    resource_type = Column(String(50))  # job, finding, scope, etc.
+    resource_id = Column(UUID(as_uuid=True))
+    
+    # Activity description
+    title = Column(String(500))
+    description = Column(Text)
+    metadata = Column(JSONB, default={})
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class CommandLog(Base):
     """Log of all commands executed"""
     __tablename__ = "command_logs"
