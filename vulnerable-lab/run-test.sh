@@ -1,14 +1,16 @@
 #!/bin/bash
 # Run NeuroSploit against the Enterprise Vulnerable Lab
 
+set -e
+
 echo "=========================================="
 echo "NeuroSploit Enterprise Pentest"
 echo "=========================================="
 
 # Default values
-MAX_ITERATIONS=${1:-50}
-LLM_API_BASE=${LLM_API_BASE:-"http://host.docker.internal:1234/v1"}
-LLM_MODEL=${LLM_MODEL:-"openai/gpt-oss-120b"}
+MAX_ITERATIONS="${1:-50}"
+LLM_API_BASE="${LLM_API_BASE:-http://host.docker.internal:1234/v1}"
+LLM_MODEL="${LLM_MODEL:-openai/gpt-oss-120b}"
 
 # Create logs directory
 mkdir -p logs

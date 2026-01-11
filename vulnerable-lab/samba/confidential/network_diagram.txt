@@ -1,0 +1,22 @@
+=== INTERNAL NETWORK DIAGRAM ===
+
+External: 10.0.1.0/24
+  - Firewall: 10.0.1.1
+  
+DMZ: 10.0.2.0/24
+  - Load Balancer: 10.0.2.10
+  - Web Servers: 10.0.2.20-24
+  
+Internal: 10.0.3.0/24
+  - File Server: 10.0.3.30
+  - Jump Host: 10.0.3.31
+  - Admin Panel: 10.0.3.32
+  - Elasticsearch: 10.0.3.50
+  
+Database: 10.0.4.0/24
+  - MySQL: 10.0.4.40
+  - PostgreSQL: 10.0.4.41
+  - MongoDB: 10.0.4.42
+  - Redis: 10.0.4.43
+
+Firewall Rules: ALLOW ALL (for testing)

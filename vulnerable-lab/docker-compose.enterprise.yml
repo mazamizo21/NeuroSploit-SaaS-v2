@@ -83,8 +83,8 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    ports:
-      - "2222:22"  # SSH to firewall
+    # ports:
+    #   - "2222:22"  # SSH to firewall - disabled to avoid conflicts
     healthcheck:
       test: ["CMD", "ping", "-c", "1", "10.0.2.1"]
       interval: 30s
@@ -126,6 +126,7 @@ services:
   # DVWA - Damn Vulnerable Web Application (PHP)
   dvwa:
     image: vulnerables/web-dvwa:latest
+    platform: linux/amd64
     container_name: ns-dvwa
     networks:
       dmz:
@@ -150,6 +151,7 @@ services:
   # DVNA - Damn Vulnerable Node Application
   dvna:
     image: appsecco/dvna:sqlite
+    platform: linux/amd64
     container_name: ns-dvna
     networks:
       dmz:
@@ -182,6 +184,7 @@ services:
   # WebGoat (Java - OWASP)
   webgoat:
     image: webgoat/webgoat:latest
+    platform: linux/amd64
     container_name: ns-webgoat
     networks:
       dmz:
@@ -208,7 +211,7 @@ services:
       internal:
         ipv4_address: 10.0.3.24
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - ./vulnerable-api:/app
     working_dir: /app
