@@ -1,0 +1,246 @@
+# NeuroSploit SaaS v2 - Development Docker Compose
+# Implements Control Plane / Execution Plane separation
+
+version: "3.9"
+
+services:
+  # =============================================================================
+  # INFRASTRUCTURE SERVICES
+  # =============================================================================
+  
+  postgres:
+    image: postgres:15-alpine
+    container_name: neurosploit-postgres
+    environment:
+      POSTGRES_DB: neurosploit
+      POSTGRES_USER: neurosploit
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-neurosploit_dev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./control-plane/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - control-plane-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neurosploit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: neurosploit-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - control-plane-network
+      - execution-plane-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # CONTROL PLANE SERVICES
+  # =============================================================================
+  
+  control-plane-api:
+    build:
+      context: ./control-plane
+      dockerfile: Dockerfile
+    container_name: neurosploit-control-api
+    environment:
+      - DATABASE_URL=postgresql://neurosploit:${DB_PASSWORD:-neurosploit_dev}@postgres:5432/neurosploit
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=DEBUG
+      - ENABLE_FULL_LOGGING=true
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - control-plane-network
+    volumes:
+      - ./control-plane:/app
+      - ./observability/logs:/app/logs
+    restart: unless-stopped
+
+  # =============================================================================
+  # EXECUTION PLANE SERVICES
+  # =============================================================================
+  
+  job-scheduler:
+    build:
+      context: ./execution-plane
+      dockerfile: Dockerfile.scheduler
+    container_name: neurosploit-scheduler
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CONTROL_PLANE_URL=http://control-plane-api:8000
+      - LOG_LEVEL=DEBUG
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-10}
+    depends_on:
+      - redis
+      - control-plane-api
+    networks:
+      - execution-plane-network
+      - control-plane-network
+    volumes:
+      - ./execution-plane:/app
+      - ./observability/logs:/app/logs
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./execution-plane
+      dockerfile: Dockerfile.worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CONTROL_PLANE_URL=http://control-plane-api:8000
+      - LLM_PROVIDER=${LLM_PROVIDER:-lm-studio}
+      - LLM_API_BASE=${LLM_API_BASE:-http://host.docker.internal:1234/v1}
+      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-120b}
+      - CLAUDE_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LOG_LEVEL=DEBUG
+      - ENABLE_FULL_LOGGING=true
+    depends_on:
+      - redis
+      - job-scheduler
+    networks:
+      - execution-plane-network
+      - kali-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./execution-plane:/app
+      - ./observability/logs:/app/logs
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+
+  # =============================================================================
+  # KALI EXECUTION CONTAINERS (Pool)
+  # =============================================================================
+  
+  kali-executor:
+    build:
+      context: ./kali-executor
+      dockerfile: Dockerfile
+    environment:
+      - LLM_API_BASE=${LLM_API_BASE:-http://host.docker.internal:1234/v1}
+      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-120b}
+    networks:
+      - kali-network
+    # SECURITY: No default internet access
+    # Egress controlled per-job via network policies
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW  # Required for nmap, etc.
+    security_opt:
+      - no-new-privileges:true
+    read_only: false  # Tools need to write temp files
+    tmpfs:
+      - /tmp:size=1G
+      - /run:size=100M
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    restart: unless-stopped
+
+  # =============================================================================
+  # LOCAL LLM (Development Only)
+  # =============================================================================
+  
+  # LM Studio runs on host - connect via host.docker.internal:1234
+  # In production, replace with Claude API
+
+  # =============================================================================
+  # OBSERVABILITY SERVICES
+  # =============================================================================
+  
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: neurosploit-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - control-plane-network
+    restart: unless-stopped
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: neurosploit-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - control-plane-network
+    restart: unless-stopped
+
+  # =============================================================================
+  # DEVELOPMENT TARGET (DVWA)
+  # =============================================================================
+  
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: neurosploit-dvwa
+    ports:
+      - "8888:80"
+    networks:
+      - kali-network
+    profiles:
+      - dev
+
+# =============================================================================
+# NETWORKS - Isolation between planes
+# =============================================================================
+
+networks:
+  control-plane-network:
+    driver: bridge
+    name: neurosploit-control
+    
+  execution-plane-network:
+    driver: bridge
+    name: neurosploit-execution
+    
+  kali-network:
+    driver: bridge
+    name: neurosploit-kali
+    internal: true  # No external internet by default
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+
+volumes:
+  postgres-data:
+  redis-data:
+  grafana-data:
+  prometheus-data:

@@ -1,0 +1,43 @@
+# NeuroSploit SaaS v2 - Git Ignore
+
+# Environment
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Docker
+*.tar
+
+# Test outputs
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets (NEVER commit)
+*.pem
+*.key
+secrets/
