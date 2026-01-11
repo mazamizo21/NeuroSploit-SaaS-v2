@@ -1,7 +1,8 @@
 # NeuroSploit SaaS v2 - Development Docker Compose
 # Implements Control Plane / Execution Plane separation
 
-version: "3.9"
+# NeuroSploit SaaS v2 - Full Stack
+# Use docker-compose.infra.yml for infrastructure only
 
 services:
   # =============================================================================
