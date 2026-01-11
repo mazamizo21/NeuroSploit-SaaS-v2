@@ -34,6 +34,7 @@ class Execution:
     duration_ms: int
     success: bool
     tool_used: str       # detected tool name
+    mitre_techniques: List[str] = field(default_factory=list)  # MITRE ATT&CK technique IDs
     
 
 class DynamicAgent:
@@ -49,7 +50,21 @@ class DynamicAgent:
     """
     
     # System prompt - this is the ONLY place we guide AI behavior
-    SYSTEM_PROMPT = """You are an autonomous penetration testing AI agent running inside a Kali Linux container.
+    SYSTEM_PROMPT_BASE = """You are an autonomous penetration testing AI agent running inside a Kali Linux container.
+
+## MITRE ATT&CK FRAMEWORK
+You MUST tag all your actions with MITRE ATT&CK techniques. When executing commands:
+1. Identify which MITRE technique(s) you are using (e.g., T1046 for Network Service Discovery)
+2. State the tactic you're pursuing (e.g., Reconnaissance, Initial Access, Exploitation)
+3. Document findings with technique IDs
+
+Common techniques you'll use:
+- **T1595**: Active Scanning (nmap, masscan)
+- **T1046**: Network Service Discovery
+- **T1190**: Exploit Public-Facing Application (sqlmap, metasploit)
+- **T1110**: Brute Force (hydra, john)
+- **T1590**: Gather Victim Network Information
+- **T1595.002**: Vulnerability Scanning (nikto, nuclei)
 
 ## YOUR CAPABILITIES
 You have access to ALL Kali Linux tools including but not limited to:
@@ -109,22 +124,37 @@ When something fails:
 4. If a tool doesn't work, try another tool
 5. If all tools fail, write custom code
 
-Remember: You are autonomous. Make decisions. Don't ask for permission."""
+Remember: You are autonomous. Make decisions. Don't ask for permission.
 
-    def __init__(self, log_dir: str = LOG_DIR):
+## REPORTING FORMAT
+When documenting findings, use this format:
+**Finding**: [Description]
+**MITRE Technique**: [T1234]
+**Severity**: [Critical/High/Medium/Low]
+**Evidence**: [What you found]
+**Recommendation**: [How to fix]
+"""
+
+    def __init__(self, log_dir: str = LOG_DIR, mitre_context: str = None):
         self.log_dir = log_dir
         self.llm = LLMClient(log_dir)
         self.executions: List[Execution] = []
         self.conversation: List[Dict] = []
         self.iteration = 0
         self.max_iterations = 20
+        self.mitre_context = mitre_context
+        
+        # Build full system prompt with MITRE context if available
+        system_prompt = self.SYSTEM_PROMPT_BASE
+        if mitre_context:
+            system_prompt += f"\n\n{mitre_context}"
         
         # Initialize with system prompt only
         self.conversation = [
-            {"role": "system", "content": self.SYSTEM_PROMPT}
+            {"role": "system", "content": system_prompt}
         ]
         
-        self._log("Dynamic Agent initialized - fully AI-driven, no hardcoded logic")
+        self._log("Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness")
     
     def _log(self, msg: str, level: str = "INFO"):
         timestamp = datetime.now(timezone.utc).isoformat()

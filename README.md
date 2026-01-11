@@ -76,9 +76,7 @@ neurosploit-saas-v2/
 │
 ├── kali-executor/          # Kali Linux container
 │   ├── Dockerfile          # 150+ pentest tools
-│   └── open-interpreter/   # AI agent wrapper
-│
-├── neurosploit-core/       # Fresh clone of CyberSecurityUP/NeuroSploit
+│   └── open-interpreter/   # AI agent (dynamic_agent.py, exploit_executor.py)
 │
 ├── frontend/               # Next.js SaaS frontend (to be added)
 │
@@ -187,4 +185,6 @@ This platform executes penetration testing tools. Ensure:
 
 ## License
 
-Based on [CyberSecurityUP/NeuroSploit](https://github.com/CyberSecurityUP/NeuroSploit) - MIT License
+MIT License
+
+**Note**: This project was originally inspired by [CyberSecurityUP/NeuroSploit](https://github.com/CyberSecurityUP/NeuroSploit) but has been completely rewritten with a custom AI agent architecture.
