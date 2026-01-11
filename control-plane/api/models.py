@@ -237,6 +237,33 @@ class Finding(Base):
     # Relationships
     job = relationship("Job", back_populates="findings")
 
+class RiskScore(Base):
+    """Risk scores for jobs"""
+    __tablename__ = "risk_scores"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, unique=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    
+    # Risk scores
+    overall_score = Column(Integer, nullable=False)  # 0-100
+    attack_surface_score = Column(Integer, nullable=False)
+    exploitability_score = Column(Integer, nullable=False)
+    impact_score = Column(Integer, nullable=False)
+    
+    # Risk level
+    risk_level = Column(String(20), nullable=False)  # critical, high, medium, low
+    
+    # Severity breakdown
+    severity_breakdown = Column(JSONB, default={})
+    
+    # Metadata
+    total_findings = Column(Integer, default=0)
+    calculated_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Recommendations
+    recommendations = Column(JSONB, default=[])
+
 # =============================================================================
 # POLICY MANAGEMENT
 # =============================================================================
