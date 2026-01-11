@@ -14,7 +14,7 @@ from sqlalchemy import select, and_
 from ..database import get_db
 from ..models import ScheduledJob, Tenant
 from ..auth import get_current_user
-from ...services.scheduler_service import SchedulerService, CRON_PATTERNS
+from services.scheduler_service import SchedulerService, CRON_PATTERNS
 
 router = APIRouter()
 

@@ -34,7 +34,7 @@ class MITREService:
         if self._loaded:
             return
         
-        logger.info("Loading MITRE ATT&CK data", path=self.data_path)
+        logger.info(f"Loading MITRE ATT&CK data from {self.data_path}")
         
         try:
             with open(self.data_path, 'r') as f:
@@ -124,15 +124,13 @@ class MITREService:
             
             self._loaded = True
             logger.info(
-                "MITRE ATT&CK data loaded",
-                techniques=len(self.techniques),
-                tactics=len(self.tactics),
-                tools=len(self.tools),
-                mappings=len(self.tool_technique_map)
+                f"MITRE ATT&CK data loaded: {len(self.techniques)} techniques, "
+                f"{len(self.tactics)} tactics, {len(self.tools)} tools, "
+                f"{len(self.tool_technique_map)} mappings"
             )
             
         except Exception as e:
-            logger.error("Failed to load MITRE data", error=str(e))
+            logger.error(f"Failed to load MITRE data: {e}")
             raise
     
     def _extract_technique_id(self, obj: Dict) -> Optional[str]:

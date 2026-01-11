@@ -14,8 +14,8 @@ from sqlalchemy import select
 from ..database import get_db
 from ..models import Job, Finding, RiskScore
 from ..auth import get_current_user
-from ...services.risk_scoring_service import RiskScoringService
-from ...services.report_generator import ReportGenerator
+from services.risk_scoring_service import RiskScoringService
+from services.report_generator import ReportGenerator
 
 router = APIRouter()
 

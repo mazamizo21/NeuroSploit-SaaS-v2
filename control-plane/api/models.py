@@ -466,7 +466,7 @@ class ActivityLog(Base):
     # Activity description
     title = Column(String(500))
     description = Column(Text)
-    metadata = Column(JSONB, default={})
+    activity_metadata = Column(JSONB, default={})
     
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -74,6 +74,7 @@ services:
     volumes:
       - ./control-plane:/app
       - ./observability/logs:/app/logs
+      - ./data:/data
     restart: unless-stopped
 
   # =============================================================================

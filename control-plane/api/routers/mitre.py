@@ -7,7 +7,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ...services.mitre_service import get_mitre_service
+from services.mitre_service import get_mitre_service
 
 router = APIRouter()
 
