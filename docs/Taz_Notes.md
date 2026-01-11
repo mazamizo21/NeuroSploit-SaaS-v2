@@ -10,3 +10,6 @@ docker exec neurosploit-kali cat /pentest/logs/executions.jsonl
 
 # Run E2E tests
 ./scripts/test_e2e.sh
+
+
+cat logs/agent_report_20260111_211806.json | jq '.' 2>/dev/null
