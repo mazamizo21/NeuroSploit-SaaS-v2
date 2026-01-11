@@ -313,6 +313,49 @@ class AuditLog(Base):
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
 
+# =============================================================================
+# SCHEDULED JOBS (Continuous Scanning)
+# =============================================================================
+
+class ScheduledJob(Base):
+    """Scheduled jobs for continuous scanning"""
+    __tablename__ = "scheduled_jobs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    
+    # Schedule configuration
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    schedule = Column(String(100), nullable=False)  # Cron expression: "0 2 * * *"
+    timezone = Column(String(50), default="UTC")
+    
+    # Job template (what to run)
+    job_template = Column(JSONB, nullable=False)  # Contains: scope_id, phase, targets, intensity, etc.
+    
+    # Status
+    is_active = Column(Boolean, default=True)
+    is_paused = Column(Boolean, default=False)
+    
+    # Execution tracking
+    last_run = Column(DateTime)
+    next_run = Column(DateTime)
+    total_runs = Column(Integer, default=0)
+    successful_runs = Column(Integer, default=0)
+    failed_runs = Column(Integer, default=0)
+    
+    # Error handling
+    max_retries = Column(Integer, default=3)
+    retry_delay_seconds = Column(Integer, default=300)
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    tenant = relationship("Tenant")
+
 class CommandLog(Base):
     """Log of all commands executed"""
     __tablename__ = "command_logs"

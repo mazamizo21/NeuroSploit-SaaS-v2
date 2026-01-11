@@ -253,8 +253,9 @@ app.include_router(policies.router, prefix="/api/v1/policies", tags=["Policies"]
 app.include_router(audit.router, prefix="/api/v1/audit", tags=["Audit"])
 
 # Import and include MITRE router
-from api.routers import mitre
+from api.routers import mitre, scheduled_jobs
 app.include_router(mitre.router, prefix="/api/v1/mitre", tags=["MITRE ATT&CK"])
+app.include_router(scheduled_jobs.router, prefix="/api/v1/scheduled-jobs", tags=["Scheduled Jobs"])
 
 # =============================================================================
 # ROOT ENDPOINT
