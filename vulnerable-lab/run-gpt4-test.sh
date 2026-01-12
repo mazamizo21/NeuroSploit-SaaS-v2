@@ -21,7 +21,7 @@ fi
 
 # OpenAI API configuration
 LLM_API_BASE="${LLM_API_BASE:-https://api.openai.com/v1}"
-LLM_MODEL="${LLM_MODEL:-gpt-5.2-2025-12-11}"
+LLM_MODEL="${LLM_MODEL:-gpt-4o}"
 
 mkdir -p logs
 rm -f logs/*.jsonl logs/*.log logs/*.json logs/*.md 2>/dev/null

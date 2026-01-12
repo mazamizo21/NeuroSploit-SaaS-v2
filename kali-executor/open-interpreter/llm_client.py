@@ -52,11 +52,55 @@ class LLMClient:
         
         logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude}, OpenAI: {self.is_openai}, GPT-5: {self.is_gpt5})")
     
+    def _estimate_tokens(self, text: str) -> int:
+        """Rough token estimation (4 chars per token)"""
+        return len(text) // 4
+    
+    def _trim_messages(self, messages: List[Dict], max_context_tokens: int = 20000) -> List[Dict]:
+        """Trim conversation history to stay under token limit for GPT-4o"""
+        if not messages:
+            return messages
+        
+        # Always keep system message
+        system_msg = None
+        other_messages = []
+        for msg in messages:
+            if msg["role"] == "system":
+                system_msg = msg
+            else:
+                other_messages.append(msg)
+        
+        # Estimate total tokens
+        total_tokens = sum(self._estimate_tokens(m.get("content", "")) for m in messages)
+        
+        # If under limit, return as-is
+        if total_tokens <= max_context_tokens:
+            return messages
+        
+        # Trim from the beginning (keep recent messages)
+        logger.warning(f"Trimming context: {total_tokens} tokens > {max_context_tokens} limit")
+        while total_tokens > max_context_tokens and len(other_messages) > 4:
+            removed = other_messages.pop(0)
+            total_tokens -= self._estimate_tokens(removed.get("content", ""))
+        
+        # Reconstruct with system message first
+        result = []
+        if system_msg:
+            result.append(system_msg)
+        result.extend(other_messages)
+        
+        logger.info(f"Context trimmed to ~{total_tokens} tokens, {len(result)} messages")
+        return result
+    
     def chat(self, messages: List[Dict], max_tokens: int = 2048, 
              temperature: float = 0.7) -> str:
         """Send chat completion request with full logging"""
         
         start_time = time.time()
+        
+        # Trim messages for GPT-4o to stay under 30K TPM limit
+        if self.is_openai and not self.is_gpt5:
+            messages = self._trim_messages(messages, max_context_tokens=20000)
         
         try:
             if self.is_claude:
