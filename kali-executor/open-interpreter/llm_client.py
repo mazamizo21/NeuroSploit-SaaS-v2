@@ -31,7 +31,7 @@ class LLMInteraction:
 
 
 class LLMClient:
-    """Client for LM Studio / OpenAI-compatible APIs with full logging"""
+    """Client for LM Studio / OpenAI-compatible APIs / Claude with full logging"""
     
     def __init__(self, log_dir: str = "/pentest/logs"):
         self.api_base = os.getenv("LLM_API_BASE", "http://host.docker.internal:1234/v1")
@@ -43,7 +43,11 @@ class LLMClient:
         self.total_tokens = 0
         self.total_cost = 0.0
         
-        logger.info(f"LLM Client initialized: {self.api_base} / {self.model}")
+        # Detect if using Claude API
+        self.is_claude = "anthropic.com" in self.api_base or "claude" in self.model.lower()
+        self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude})")
     
     def chat(self, messages: List[Dict], max_tokens: int = 2048, 
              temperature: float = 0.7) -> str:
@@ -52,32 +56,78 @@ class LLMClient:
         start_time = time.time()
         
         try:
-            with httpx.Client(timeout=120.0) as client:
-                response = client.post(
-                    f"{self.api_base}/chat/completions",
-                    json={
-                        "model": self.model,
-                        "messages": messages,
-                        "max_tokens": max_tokens,
-                        "temperature": temperature,
-                        "stream": False
-                    }
-                )
-                response.raise_for_status()
-                data = response.json()
+            if self.is_claude:
+                # Claude API format
+                headers = {
+                    "x-api-key": self.anthropic_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                }
+                
+                # Convert messages format for Claude
+                system_msg = None
+                claude_messages = []
+                for msg in messages:
+                    if msg["role"] == "system":
+                        system_msg = msg["content"]
+                    else:
+                        claude_messages.append(msg)
+                
+                payload = {
+                    "model": self.model,
+                    "messages": claude_messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature
+                }
+                if system_msg:
+                    payload["system"] = system_msg
+                
+                with httpx.Client(timeout=120.0) as client:
+                    response = client.post(
+                        f"{self.api_base}/v1/messages",
+                        headers=headers,
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                
+                # Extract Claude response
+                content = data["content"][0]["text"]
+                usage = data.get("usage", {})
+                prompt_tokens = usage.get("input_tokens", 0)
+                completion_tokens = usage.get("output_tokens", 0)
+                
+            else:
+                # OpenAI-compatible format
+                with httpx.Client(timeout=120.0) as client:
+                    response = client.post(
+                        f"{self.api_base}/chat/completions",
+                        json={
+                            "model": self.model,
+                            "messages": messages,
+                            "max_tokens": max_tokens,
+                            "temperature": temperature,
+                            "stream": False
+                        }
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                
+                # Extract OpenAI response
+                content = data["choices"][0]["message"]["content"]
+                usage = data.get("usage", {})
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
             
             latency_ms = int((time.time() - start_time) * 1000)
-            
-            # Extract response
-            content = data["choices"][0]["message"]["content"]
-            usage = data.get("usage", {})
+            total_tokens = prompt_tokens + completion_tokens
             
             interaction = LLMInteraction(
                 timestamp=datetime.utcnow().isoformat(),
                 model=self.model,
-                prompt_tokens=usage.get("prompt_tokens", 0),
-                completion_tokens=usage.get("completion_tokens", 0),
-                total_tokens=usage.get("total_tokens", 0),
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
                 latency_ms=latency_ms,
                 messages=messages,
                 response=content
