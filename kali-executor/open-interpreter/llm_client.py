@@ -46,10 +46,11 @@ class LLMClient:
         # Detect API provider
         self.is_claude = "anthropic.com" in self.api_base or "claude" in self.model.lower()
         self.is_openai = "api.openai.com" in self.api_base or "gpt" in self.model.lower()
+        self.is_gpt5 = "gpt-5" in self.model.lower()  # GPT-5 uses different parameter names
         self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         self.openai_key = os.getenv("OPENAI_API_KEY")
         
-        logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude}, OpenAI: {self.is_openai})")
+        logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude}, OpenAI: {self.is_openai}, GPT-5: {self.is_gpt5})")
     
     def chat(self, messages: List[Dict], max_tokens: int = 2048, 
              temperature: float = 0.7) -> str:
@@ -112,16 +113,23 @@ class LLMClient:
                 if self.is_openai and self.openai_key:
                     headers["Authorization"] = f"Bearer {self.openai_key}"
                 
+                # GPT-5 uses max_completion_tokens instead of max_tokens
+                payload = {
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "stream": False
+                }
+                
+                if self.is_gpt5:
+                    payload["max_completion_tokens"] = max_tokens
+                else:
+                    payload["max_tokens"] = max_tokens
+                
                 response = requests.post(
                     f"{self.api_base}/chat/completions",
                     headers=headers,
-                    json={
-                        "model": self.model,
-                        "messages": messages,
-                        "max_tokens": max_tokens,
-                        "temperature": temperature,
-                        "stream": False
-                    },
+                    json=payload,
                     timeout=120
                 )
                 
@@ -150,17 +158,22 @@ class LLMClient:
                         logger.warning(f"Rate limited. Waiting {wait_time}s before retry {retry + 1}/{max_retries}...")
                         time.sleep(wait_time)
                         
-                        # Retry the request
+                        # Retry the request with correct payload format
+                        retry_payload = {
+                            "model": self.model,
+                            "messages": messages,
+                            "temperature": temperature,
+                            "stream": False
+                        }
+                        if self.is_gpt5:
+                            retry_payload["max_completion_tokens"] = max_tokens
+                        else:
+                            retry_payload["max_tokens"] = max_tokens
+                        
                         response = requests.post(
                             f"{self.api_base}/chat/completions",
                             headers=headers,
-                            json={
-                                "model": self.model,
-                                "messages": messages,
-                                "max_tokens": max_tokens,
-                                "temperature": temperature,
-                                "stream": False
-                            },
+                            json=retry_payload,
                             timeout=120
                         )
                         
