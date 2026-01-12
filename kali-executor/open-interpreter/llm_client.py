@@ -134,40 +134,47 @@ class LLMClient:
                 elif response.status_code == 401:
                     raise ValueError(f"Invalid OpenAI API key: {response.text}")
                 elif response.status_code == 429:
-                    # Rate limited - extract wait time and retry
-                    error_data = response.json()
-                    error_msg = error_data.get("error", {}).get("message", "")
-                    
-                    # Try to extract wait time from error message
+                    # Rate limited - retry with exponential backoff
                     import re
-                    wait_match = re.search(r'try again in ([\d.]+)s', error_msg)
-                    wait_time = float(wait_match.group(1)) if wait_match else 10.0
+                    max_retries = 3
                     
-                    logger.warning(f"Rate limited. Waiting {wait_time}s before retry...")
-                    time.sleep(wait_time + 1)  # Add 1 second buffer
-                    
-                    # Retry the request
-                    response = requests.post(
-                        f"{self.api_base}/chat/completions",
-                        headers=headers,
-                        json={
-                            "model": self.model,
-                            "messages": messages,
-                            "max_tokens": max_tokens,
-                            "temperature": temperature,
-                            "stream": False
-                        },
-                        timeout=120
-                    )
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        content = data["choices"][0]["message"]["content"]
-                        usage = data.get("usage", {})
-                        prompt_tokens = usage.get("prompt_tokens", 0)
-                        completion_tokens = usage.get("completion_tokens", 0)
-                    else:
-                        raise ValueError(f"API error after retry {response.status_code}: {response.text}")
+                    for retry in range(max_retries):
+                        error_data = response.json()
+                        error_msg = error_data.get("error", {}).get("message", "")
+                        
+                        # Try to extract wait time from error message
+                        wait_match = re.search(r'try again in ([\d.]+)s', error_msg)
+                        wait_time = float(wait_match.group(1)) if wait_match else 10.0
+                        wait_time += 2  # Add 2 second buffer
+                        
+                        logger.warning(f"Rate limited. Waiting {wait_time}s before retry {retry + 1}/{max_retries}...")
+                        time.sleep(wait_time)
+                        
+                        # Retry the request
+                        response = requests.post(
+                            f"{self.api_base}/chat/completions",
+                            headers=headers,
+                            json={
+                                "model": self.model,
+                                "messages": messages,
+                                "max_tokens": max_tokens,
+                                "temperature": temperature,
+                                "stream": False
+                            },
+                            timeout=120
+                        )
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            content = data["choices"][0]["message"]["content"]
+                            usage = data.get("usage", {})
+                            prompt_tokens = usage.get("prompt_tokens", 0)
+                            completion_tokens = usage.get("completion_tokens", 0)
+                            break
+                        elif response.status_code != 429:
+                            raise ValueError(f"API error after retry {response.status_code}: {response.text}")
+                        elif retry == max_retries - 1:
+                            raise ValueError(f"Rate limit exceeded after {max_retries} retries: {response.text}")
                 else:
                     raise ValueError(f"API error {response.status_code}: {response.text}")
             
