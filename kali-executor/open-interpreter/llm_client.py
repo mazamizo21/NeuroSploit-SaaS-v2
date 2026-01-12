@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
-import httpx
+import requests
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("neurosploit.llm")
@@ -57,7 +57,11 @@ class LLMClient:
         
         try:
             if self.is_claude:
-                # Claude API format
+                # Claude API format (using requests like NeuroSploit)
+                if not self.anthropic_key:
+                    raise ValueError("ANTHROPIC_API_KEY not set")
+                
+                url = "https://api.anthropic.com/v1/messages"
                 headers = {
                     "x-api-key": self.anthropic_key,
                     "anthropic-version": "2023-06-01",
@@ -82,45 +86,46 @@ class LLMClient:
                 if system_msg:
                     payload["system"] = system_msg
                 
-                # Claude API endpoint
-                endpoint = f"{self.api_base}/v1/messages" if not self.api_base.endswith("/v1/messages") else self.api_base
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=120
+                )
                 
-                with httpx.Client(timeout=120.0) as client:
-                    response = client.post(
-                        endpoint,
-                        headers=headers,
-                        json=payload
-                    )
-                    response.raise_for_status()
+                if response.status_code == 200:
                     data = response.json()
-                
-                # Extract Claude response
-                content = data["content"][0]["text"]
-                usage = data.get("usage", {})
-                prompt_tokens = usage.get("input_tokens", 0)
-                completion_tokens = usage.get("output_tokens", 0)
+                    content = data["content"][0]["text"]
+                    usage = data.get("usage", {})
+                    prompt_tokens = usage.get("input_tokens", 0)
+                    completion_tokens = usage.get("output_tokens", 0)
+                elif response.status_code == 401:
+                    raise ValueError(f"Invalid Claude API key: {response.text}")
+                else:
+                    raise ValueError(f"Claude API error {response.status_code}: {response.text}")
                 
             else:
                 # OpenAI-compatible format
-                with httpx.Client(timeout=120.0) as client:
-                    response = client.post(
-                        f"{self.api_base}/chat/completions",
-                        json={
-                            "model": self.model,
-                            "messages": messages,
-                            "max_tokens": max_tokens,
-                            "temperature": temperature,
-                            "stream": False
-                        }
-                    )
-                    response.raise_for_status()
-                    data = response.json()
+                response = requests.post(
+                    f"{self.api_base}/chat/completions",
+                    json={
+                        "model": self.model,
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                        "stream": False
+                    },
+                    timeout=120
+                )
                 
-                # Extract OpenAI response
-                content = data["choices"][0]["message"]["content"]
-                usage = data.get("usage", {})
-                prompt_tokens = usage.get("prompt_tokens", 0)
-                completion_tokens = usage.get("completion_tokens", 0)
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data["choices"][0]["message"]["content"]
+                    usage = data.get("usage", {})
+                    prompt_tokens = usage.get("prompt_tokens", 0)
+                    completion_tokens = usage.get("completion_tokens", 0)
+                else:
+                    raise ValueError(f"API error {response.status_code}: {response.text}")
             
             latency_ms = int((time.time() - start_time) * 1000)
             total_tokens = prompt_tokens + completion_tokens
