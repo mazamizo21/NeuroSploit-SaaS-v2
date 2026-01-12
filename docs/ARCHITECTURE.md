@@ -16,10 +16,10 @@ NeuroSploit SaaS v2 is a multi-tenant, AI-powered penetration testing platform b
 │  │  • Tenant Onboarding    • Auth (Clerk + MFA)    • Dashboard              │    │
 │  │  • Scope Management     • Billing/Quotas        • Audit Logs             │    │
 │  │  • Policy Config        • Approvals             • Reports                │    │
-│  └─────────────────────────────────────────────────────────────────────────┘    │
+│  └───────────────────────────────────────────────────────────────────────┘    │
 │                                      │                                           │
 │                                      ▼                                           │
-│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  ┌─────────────────────────────────────────────────────────────────────────┐     │
 │  │                      Control Plane API (FastAPI)                         │    │
 │  │  • Tenant Management    • Scope Validation      • Policy Engine          │    │
 │  │  • Job Orchestration    • Quota Enforcement     • Audit Trail            │    │

