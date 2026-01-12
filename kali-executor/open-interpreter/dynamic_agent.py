@@ -252,7 +252,7 @@ Continue until the full audit is complete.
 """
 
     def __init__(self, log_dir: str = LOG_DIR, mitre_context: str = None, 
-                 llm_provider: str = None, websocket = None, session_id: str = None):
+                 llm_provider: str = None, websocket = None, session_id: str = None, max_iterations: int = 50):
         self.log_dir = log_dir
         self.session_id = session_id or f"session_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         self.websocket = websocket
