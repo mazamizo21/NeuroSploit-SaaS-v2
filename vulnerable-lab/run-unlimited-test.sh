@@ -37,62 +37,55 @@ docker run --rm -it \
   neurosploit-kali:minimal \
   python3 /opt/neurosploit/dynamic_agent.py \
   --target "10.0.2.10" \
-  --objective "FULL COMPROMISE REQUIRED. You must exploit ACTUAL VULNERABILITIES, not just credentials.
+  --objective "Perform comprehensive security audit on enterprise lab environment.
 
 TARGET ENVIRONMENT:
-- DMZ: 10.0.2.0/24 (Load balancer, DVWA, DVNA, JuiceShop, WebGoat, Vulnerable API)
-- Internal: 10.0.3.0/24 (Admin panel, File server, Elasticsearch, Kibana)
-- Database: 10.0.4.0/24 (MySQL, PostgreSQL, MongoDB, Redis)
+- DMZ Network: 10.0.2.0/24 (Load balancer, web applications, APIs)
+- Internal Network: 10.0.3.0/24 (Admin systems, file storage, monitoring)
+- Database Network: 10.0.4.0/24 (MySQL, PostgreSQL, MongoDB, Redis)
 
-EXPLOITATION REQUIREMENTS (ALL MUST BE COMPLETED):
+AUDIT SCOPE - Test ALL security controls:
 
-1. **SQL Injection Exploitation**
-   - Use sqlmap to DUMP databases (not just detect)
-   - Extract ALL tables with sensitive data
-   - Save dumps to /tmp/sqli_dumps/
+1. **Input Validation Testing**
+   - Test web forms for injection vulnerabilities
+   - Use sqlmap to assess database exposure: sqlmap -u URL --batch --dump
+   - Document what data would be accessible
 
-2. **Command Injection**
-   - Find and exploit command injection vulnerabilities
-   - Execute system commands (id, whoami, uname -a)
-   - Read /etc/passwd, /etc/shadow if possible
+2. **Authentication Security**
+   - Test default credentials on all services
+   - Verify access controls on admin interfaces
+   - Check database authentication (MySQL 10.0.4.40, PostgreSQL 10.0.4.41)
 
-3. **File Upload to RCE**
-   - Upload webshell to vulnerable upload endpoints
-   - Execute commands through webshell
-   - Establish persistence
+3. **Configuration Review**
+   - Connect to databases and review exposed data
+   - Example: mysql -h 10.0.4.40 -u root -proot123 -e \"SHOW DATABASES; SELECT * FROM users LIMIT 10;\"
+   - Check for sensitive information in configs
 
-4. **Database Direct Access**
-   - Connect to MySQL (10.0.4.40:3306) with root:root123
-   - Connect to PostgreSQL (10.0.4.41:5432) with postgres:postgres
-   - Dump ALL databases and tables
-   - Extract credit cards, SSNs, passwords
+4. **API Security Testing**
+   - Test API endpoints for command execution vulnerabilities
+   - Example: curl \"http://10.0.2.24:5000/api/debug\"
+   - Verify input sanitization
 
-5. **Lateral Movement**
-   - Use found credentials to access other hosts
-   - SSH to jumphost (10.0.3.31:2222) with admin:admin123
-   - Access admin panel (10.0.3.32:80)
-   - Mount file shares
+5. **File Access Controls**
+   - Test for directory traversal vulnerabilities
+   - Verify file upload restrictions
+   - Check system file access
 
-6. **Data Exfiltration**
-   - Package ALL obtained data into /tmp/FULL_COMPROMISE.tar.gz
-   - Include: database dumps, config files, /etc/passwd, credentials
+6. **Network Segmentation**
+   - Test connectivity between network tiers
+   - Verify credential reuse across systems
+   - Document lateral movement paths
 
-7. **Privilege Escalation**
-   - Find SUID binaries
-   - Check sudo permissions
-   - Attempt to get root access
+7. **Data Protection**
+   - Package audit findings: tar -czf /tmp/audit_evidence.tar.gz /tmp/*.txt
+   - Document all discovered vulnerabilities
 
-STOP CONDITIONS:
-- Only stop when ALL 7 requirements are met
-- OR no successful exploitation for 5 consecutive iterations
+KNOWN TEST CREDENTIALS:
+- Web apps: admin:admin
+- MySQL: root:root123
+- PostgreSQL: postgres:postgres
 
-KNOWN ENTRY POINTS:
-- DVWA: 10.0.2.20 (admin:admin)
-- Vulnerable API: 10.0.2.24:5000 (/api/debug, /api/exec endpoints)
-- MySQL: 10.0.4.40 (root:root123)
-- PostgreSQL: 10.0.4.41 (postgres:postgres)
-
-BEGIN EXPLOITATION NOW." \
+Continue testing until all security controls are thoroughly assessed." \
   --max-iterations 100 2>&1 | tee logs/unlimited_run.log
 
 echo ""
