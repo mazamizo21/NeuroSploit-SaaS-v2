@@ -43,11 +43,13 @@ class LLMClient:
         self.total_tokens = 0
         self.total_cost = 0.0
         
-        # Detect if using Claude API
+        # Detect API provider
         self.is_claude = "anthropic.com" in self.api_base or "claude" in self.model.lower()
+        self.is_openai = "api.openai.com" in self.api_base or "gpt" in self.model.lower()
         self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        self.openai_key = os.getenv("OPENAI_API_KEY")
         
-        logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude})")
+        logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude}, OpenAI: {self.is_openai})")
     
     def chat(self, messages: List[Dict], max_tokens: int = 2048, 
              temperature: float = 0.7) -> str:
@@ -106,8 +108,13 @@ class LLMClient:
                 
             else:
                 # OpenAI-compatible format
+                headers = {}
+                if self.is_openai and self.openai_key:
+                    headers["Authorization"] = f"Bearer {self.openai_key}"
+                
                 response = requests.post(
                     f"{self.api_base}/chat/completions",
+                    headers=headers,
                     json={
                         "model": self.model,
                         "messages": messages,
@@ -124,6 +131,8 @@ class LLMClient:
                     usage = data.get("usage", {})
                     prompt_tokens = usage.get("prompt_tokens", 0)
                     completion_tokens = usage.get("completion_tokens", 0)
+                elif response.status_code == 401:
+                    raise ValueError(f"Invalid OpenAI API key: {response.text}")
                 else:
                     raise ValueError(f"API error {response.status_code}: {response.text}")
             
