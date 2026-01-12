@@ -82,9 +82,12 @@ class LLMClient:
                 if system_msg:
                     payload["system"] = system_msg
                 
+                # Claude API endpoint
+                endpoint = f"{self.api_base}/v1/messages" if not self.api_base.endswith("/v1/messages") else self.api_base
+                
                 with httpx.Client(timeout=120.0) as client:
                     response = client.post(
-                        f"{self.api_base}/v1/messages",
+                        endpoint,
                         headers=headers,
                         json=payload
                     )
