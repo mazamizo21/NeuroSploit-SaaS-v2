@@ -22,7 +22,7 @@ Built with security-first architecture: Control Plane / Execution Plane separati
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Quick Start
+## Quick Startt
 
 ### Prerequisites
 - Docker & Docker Compose
