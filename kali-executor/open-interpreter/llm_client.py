@@ -99,8 +99,12 @@ class LLMClient:
         start_time = time.time()
         
         # Trim messages for GPT-4o to stay under 30K TPM limit
+        # For local models, use much larger context (131072 tokens)
         if self.is_openai and not self.is_gpt5:
             messages = self._trim_messages(messages, max_context_tokens=20000)
+        elif not self.is_openai and not self.is_claude:
+            # Local LLM - use 131072 context
+            messages = self._trim_messages(messages, max_context_tokens=131072)
         
         try:
             if self.is_claude:
@@ -137,7 +141,7 @@ class LLMClient:
                     url,
                     headers=headers,
                     json=payload,
-                    timeout=120
+                    timeout=300
                 )
                 
                 if response.status_code == 200:
@@ -174,7 +178,7 @@ class LLMClient:
                     f"{self.api_base}/chat/completions",
                     headers=headers,
                     json=payload,
-                    timeout=120
+                    timeout=300
                 )
                 
                 if response.status_code == 200:

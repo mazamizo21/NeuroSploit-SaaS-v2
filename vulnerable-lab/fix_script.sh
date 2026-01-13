@@ -1,4 +1,22 @@
 #!/bin/bash
+# Fix the syntax error in run-unlimited-test.sh
+
+echo "# 🔧 Fixing Script Syntax Error"
+echo "=============================="
+echo ""
+
+echo "## Current Issue"
+echo "--------------"
+echo "Syntax error near line 58 - likely from sed replacement"
+echo ""
+
+# Backup current script
+cp run-unlimited-test.sh run-unlimited-test.sh.backup
+
+echo "## Fixing the Script"
+echo "------------------"
+cat > run-unlimited-test.sh << 'SCRIPT'
+#!/bin/bash
 # Run NeuroSploit with Claude Sonnet (UPDATED PROMPT)
 
 set -e
@@ -53,7 +71,6 @@ docker run -it \
   python3 /opt/neurosploit/dynamic_agent.py \
   --target "$TARGET" \
   --max-iterations 40 \
-   \
   --objective "Full autonomous penetration test - exploit ALL vulnerabilities, extract ALL credentials, access ALL databases, perform lateral movement, and exfiltrate ALL sensitive data. Do not stop until complete." 2>&1 | tee logs/claude_resume.log
 
 echo ""
@@ -62,3 +79,13 @@ echo "Test Complete"
 echo "=========================================="
 echo "Logs: ./logs/"
 echo "Check logs/COMPREHENSIVE_REPORT_*.md for findings"
+SCRIPT
+
+echo "✅ Script fixed!"
+echo ""
+
+echo "## Running Claude Test"
+echo "===================="
+echo ""
+./run-unlimited-test.sh
+

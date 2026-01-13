@@ -9,19 +9,9 @@ echo "Production AI Pentesting"
 echo "=========================================="
 
 # Check for API key
-if [ -z "$OPENAI_API_KEY" ]; then
-    echo "❌ ERROR: OPENAI_API_KEY not set"
-    echo ""
-    echo "Get your API key from: https://platform.openai.com/api-keys"
-    echo "Then run:"
-    echo "  export OPENAI_API_KEY='your-key-here'"
-    echo ""
-    exit 1
-fi
-
-# OpenAI API configuration
-LLM_API_BASE="${LLM_API_BASE:-https://api.openai.com/v1}"
-LLM_MODEL="${LLM_MODEL:-gpt-4o}"
+# LM Studio local API configuration (no API key needed)
+LLM_API_BASE="${LLM_API_BASE:-http://host.docker.internal:1234/v1}"
+LLM_MODEL="${LLM_MODEL:-huihui-gpt-oss-120b-abliterated}"
 
 mkdir -p logs
 rm -f logs/*.jsonl logs/*.log logs/*.json logs/*.md 2>/dev/null
@@ -46,13 +36,13 @@ docker run --rm -it \
   -e LLM_API_BASE="$LLM_API_BASE" \
   -e LLM_MODEL="$LLM_MODEL" \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e TARGET="$TARGET" \
   -v "$(pwd)/logs:/pentest/logs" \
   -v "$(pwd)/../kali-executor/open-interpreter:/opt/neurosploit" \
   neurosploit-kali:minimal \
   python3 /opt/neurosploit/dynamic_agent.py \
   --target "$TARGET" \
-  --objective "Perform a comprehensive security assessment on the target. Find vulnerabilities, exploit them, and extract any sensitive data you can access. Document all findings." \
-  --max-iterations 30 2>&1 | tee logs/gpt4_run.log
+  --objective "Perform a comprehensive security assessment on the target. Find vulnerabilities, exploit them, and extract any sensitive data you can access. Document all findings." 2>&1 | tee logs/gpt4_run.log
 
 echo ""
 echo "=========================================="

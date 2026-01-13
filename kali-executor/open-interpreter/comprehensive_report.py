@@ -176,6 +176,26 @@ class ComprehensiveReport:
         cred_pattern = r"(\w+):([^\s:]+)"
         matches = re.findall(cred_pattern, stdout)
         
+        # Also extract from grep/config patterns
+        config_patterns = [
+            r"password['\"]?\s*[:=]\s*['\"]?([^'\">\s]+)",
+            r"user['\"]?\s*[:=]\s*['\"]?(\w+)",
+            r"MYSQL_ROOT_PASSWORD['\"]?\s*[:=]\s*['\"]?([^'\">\s]+)",
+            r"DB_PASSWORD['\"]?\s*[:=]\s*['\"]?([^'\">\s]+)"
+        ]
+        
+        for pattern in config_patterns:
+            config_matches = re.findall(pattern, stdout + content, re.IGNORECASE)
+            for match in config_matches:
+                if len(match) > 2:
+                    self.credentials.append(Credential(
+                        username="extracted",
+                        password=match,
+                        service="config file",
+                        source=content[:100],
+                        access_level="unknown"
+                    ))
+        
         for username, password in matches:
             if len(password) > 3 and password not in ['root', 'bin', 'daemon']:
                 self.credentials.append(Credential(

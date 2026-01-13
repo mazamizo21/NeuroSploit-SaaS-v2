@@ -1,0 +1,42 @@
+#!/bin/bash
+# Show the changes made to system prompt
+
+echo "# ✅ System Prompt Updated"
+echo "=========================="
+echo ""
+
+echo "## NEW Instructions Added (lines 86-94):"
+echo "----------------------------------------"
+echo ""
+echo "CRITICAL: If a command fails with \"command not found\" (exit code 127):"
+echo "1. Install the missing tool IMMEDIATELY - you have root access"
+echo "2. Use apt-get WITHOUT sudo: apt-get update && apt-get install -y <package>"
+echo "3. Common packages you may need:"
+echo "   - default-mysql-client (for mysql command)"
+echo "   - postgresql-client (for psql command)"
+echo "   - sshpass (for SSH with passwords)"
+echo "4. After installing, RETRY your original command"
+echo "5. Do NOT skip this step - install the tool and continue"
+echo ""
+
+echo "## Why This Should Work:"
+echo "-----------------------"
+echo ""
+echo "✅ Explicit permission to install tools"
+echo "✅ Clear instruction: exit code 127 = install immediately"
+echo "✅ Tells AI to use apt-get WITHOUT sudo (container has root)"
+echo "✅ Lists specific packages for common tools"
+echo "✅ Emphasizes: install THEN retry"
+echo ""
+
+echo "## Next Step: Test It!"
+echo "----------------------"
+echo ""
+echo "Let's run a quick test with one of the local models to verify:"
+echo "  1. AI encounters 'mysql: command not found'"
+echo "  2. AI recognizes exit code 127"
+echo "  3. AI installs default-mysql-client"
+echo "  4. AI retries the mysql command"
+echo "  5. Success!"
+echo ""
+

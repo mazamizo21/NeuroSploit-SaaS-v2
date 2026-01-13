@@ -13,3 +13,12 @@ docker exec neurosploit-kali cat /pentest/logs/executions.jsonl
 
 
 cat logs/agent_report_20260111_211806.json | jq '.' 2>/dev/null
+
+to access file was created by the pentest :
+
+mkdir -p extracted
+./run-unlimited-test.sh
+# After completion:
+ls extracted/
+unzip extracted/*.zip
+cat extracted/flags.txt
