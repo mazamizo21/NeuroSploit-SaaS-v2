@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Automated Security Audit
+TazoSploit  v2 - Automated Security Audit
 Performs security checks on the API
 """
 
@@ -216,7 +216,7 @@ class SecurityAudit:
         """Check Docker container security"""
         try:
             result = subprocess.run(
-                ["docker", "inspect", "neurosploit-control-api"],
+                ["docker", "inspect", "tazosploit-control-api"],
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -252,7 +252,7 @@ class SecurityAudit:
     def run_all(self):
         """Run all security checks"""
         print("=" * 70)
-        print("NeuroSploit SaaS v2 - Security Audit")
+        print("TazoSploit  v2 - Security Audit")
         print("=" * 70)
         print()
         

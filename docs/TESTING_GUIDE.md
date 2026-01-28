@@ -2,7 +2,7 @@
 
 ## Important: All Tests Run Inside Docker
 
-NeuroSploit is a **SaaS application** that runs entirely in Docker containers. All testing must be performed inside the Docker environment, not on the host machine.
+TazoSploit is a ** application** that runs entirely in Docker containers. All testing must be performed inside the Docker environment, not on the host machine.
 
 ---
 
@@ -15,11 +15,11 @@ docker-compose up -d
 
 2. **Verify containers are running:**
 ```bash
-docker ps | grep neurosploit
+docker ps | grep tazosploit
 ```
 
 You should see:
-- `neurosploit-kali` - Main Kali Linux executor container
+- `tazosploit-kali` - Main Kali Linux executor container
 - Other containers as needed
 
 ---
@@ -42,17 +42,17 @@ This script:
 
 ```bash
 # Copy test file to container
-docker cp tests/test_new_features.py neurosploit-kali:/pentest/
+docker cp tests/test_new_features.py tazosploit-kali:/pentest/
 
 # Run tests inside container
-docker exec neurosploit-kali python3 /pentest/test_new_features.py
+docker exec tazosploit-kali python3 /pentest/test_new_features.py
 ```
 
 ### Option 3: Interactive Shell
 
 ```bash
 # Enter container
-docker exec -it neurosploit-kali bash
+docker exec -it tazosploit-kali bash
 
 # Inside container, run tests
 cd /pentest
@@ -96,7 +96,7 @@ RESULTS: 6/7 tests passed (85.7%)
 ### 1. Test Authorization Framework
 
 ```bash
-docker exec neurosploit-kali python3 -c "
+docker exec tazosploit-kali python3 -c "
 from dynamic_agent import DynamicAgent
 agent = DynamicAgent()
 prompt = agent.conversation[0]['content']
@@ -108,7 +108,7 @@ print('✅ Authorization framework present')
 ### 2. Test CVE Lookup
 
 ```bash
-docker exec neurosploit-kali python3 /opt/open-interpreter/cve_lookup.py CVE-2021-44228
+docker exec tazosploit-kali python3 /opt/open-interpreter/cve_lookup.py CVE-2021-44228
 ```
 
 Expected output:
@@ -120,19 +120,19 @@ Expected output:
 
 ```bash
 # Start a test session
-docker exec neurosploit-kali python3 /opt/open-interpreter/dynamic_agent.py \
+docker exec tazosploit-kali python3 /opt/open-interpreter/dynamic_agent.py \
   --target http://test.local \
   --objective "Test session" \
   --max-iterations 2
 
 # Check session files
-docker exec neurosploit-kali ls -la /pentest/logs/session_*.json
+docker exec tazosploit-kali ls -la /pentest/logs/session_*.json
 ```
 
 ### 4. Test Multi-Model Support
 
 ```bash
-docker exec neurosploit-kali python3 -c "
+docker exec tazosploit-kali python3 -c "
 from llm_providers import auto_detect_provider
 provider = auto_detect_provider()
 print(f'Detected: {provider.get_provider_name()}')
@@ -151,10 +151,10 @@ docker-compose up -d dvna
 
 # 2. Run integration test
 docker exec -e TEST_TARGET=http://dvna:9090 \
-  neurosploit-kali python3 /opt/open-interpreter/test_full_integration.py
+  tazosploit-kali python3 /opt/open-interpreter/test_full_integration.py
 
 # 3. View results
-docker exec neurosploit-kali cat /pentest/logs/agent_report_*.json | jq '.'
+docker exec tazosploit-kali cat /pentest/logs/agent_report_*.json | jq '.'
 ```
 
 ---
@@ -163,22 +163,22 @@ docker exec neurosploit-kali cat /pentest/logs/agent_report_*.json | jq '.'
 
 ### LLM Interactions
 ```bash
-docker exec neurosploit-kali cat /pentest/logs/llm_interactions.jsonl
+docker exec tazosploit-kali cat /pentest/logs/llm_interactions.jsonl
 ```
 
 ### Command Executions
 ```bash
-docker exec neurosploit-kali cat /pentest/logs/agent_executions.jsonl
+docker exec tazosploit-kali cat /pentest/logs/agent_executions.jsonl
 ```
 
 ### Agent Logs
 ```bash
-docker exec neurosploit-kali cat /pentest/logs/dynamic_agent.log
+docker exec tazosploit-kali cat /pentest/logs/dynamic_agent.log
 ```
 
 ### Session Files
 ```bash
-docker exec neurosploit-kali ls -la /pentest/logs/session_*.json
+docker exec tazosploit-kali ls -la /pentest/logs/session_*.json
 ```
 
 ---
@@ -188,31 +188,31 @@ docker exec neurosploit-kali ls -la /pentest/logs/session_*.json
 ### Container Not Running
 ```bash
 # Check container status
-docker ps -a | grep neurosploit
+docker ps -a | grep tazosploit
 
 # Start containers
 docker-compose up -d
 
 # View logs
-docker-compose logs neurosploit-kali
+docker-compose logs tazosploit-kali
 ```
 
 ### Permission Issues
 ```bash
 # Fix permissions inside container
-docker exec neurosploit-kali chmod -R 777 /pentest/logs
+docker exec tazosploit-kali chmod -R 777 /pentest/logs
 ```
 
 ### Missing Dependencies
 ```bash
 # Install dependencies inside container
-docker exec neurosploit-kali pip3 install httpx requests
+docker exec tazosploit-kali pip3 install httpx requests
 ```
 
 ### Test File Not Found
 ```bash
 # Copy test file to container
-docker cp tests/test_new_features.py neurosploit-kali:/pentest/
+docker cp tests/test_new_features.py tazosploit-kali:/pentest/
 ```
 
 ---
@@ -252,7 +252,7 @@ jobs:
 ### Measure Agent Performance
 
 ```bash
-docker exec neurosploit-kali python3 /opt/open-interpreter/dynamic_agent.py \
+docker exec tazosploit-kali python3 /opt/open-interpreter/dynamic_agent.py \
   --target http://dvna:9090 \
   --objective "Complete security audit" \
   --max-iterations 10 \
@@ -285,16 +285,16 @@ Metrics to track:
 ./scripts/test_in_docker.sh
 
 # Run specific test
-docker exec neurosploit-kali python3 /pentest/test_new_features.py
+docker exec tazosploit-kali python3 /pentest/test_new_features.py
 
 # Test CVE lookup
-docker exec neurosploit-kali python3 /opt/open-interpreter/cve_lookup.py CVE-2021-44228
+docker exec tazosploit-kali python3 /opt/open-interpreter/cve_lookup.py CVE-2021-44228
 
 # View logs
-docker exec neurosploit-kali cat /pentest/logs/dynamic_agent.log
+docker exec tazosploit-kali cat /pentest/logs/dynamic_agent.log
 
 # Interactive shell
-docker exec -it neurosploit-kali bash
+docker exec -it tazosploit-kali bash
 ```
 
 ---
@@ -307,4 +307,4 @@ docker exec -it neurosploit-kali bash
 - ✅ Session files persist across container restarts
 - ✅ Integration tests use Docker networking
 
-**Never run tests locally** - NeuroSploit is a SaaS application that requires the Docker environment.
+**Never run tests locally** - TazoSploit is a  application that requires the Docker environment.

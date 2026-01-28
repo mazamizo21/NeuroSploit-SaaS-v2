@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Simulation Service
+TazoSploit SaaS v2 - Simulation Service
 What-if analysis for attack scenarios
 """
 

@@ -4,12 +4,12 @@
 set -e
 
 echo "============================================================"
-echo "Running NeuroSploit Tests Inside Docker Container"
+echo "Running TazoSploit Tests Inside Docker Container"
 echo "============================================================"
 
 # Check if container is running
-if ! docker ps | grep -q neurosploit-kali; then
-    echo "❌ Error: neurosploit-kali container is not running"
+if ! docker ps | grep -q tazosploit-kali; then
+    echo "❌ Error: tazosploit-kali container is not running"
     echo "Start it with: docker-compose up -d"
     exit 1
 fi
@@ -19,13 +19,13 @@ echo ""
 
 # Copy test file to container
 echo "📦 Copying test files to container..."
-docker cp tests/test_new_features.py neurosploit-kali:/pentest/test_new_features.py
+docker cp tests/test_new_features.py tazosploit-kali:/pentest/test_new_features.py
 
 # Run tests inside container
 echo ""
 echo "🧪 Running E2E tests inside container..."
 echo "============================================================"
-docker exec neurosploit-kali python3 /pentest/test_new_features.py
+docker exec tazosploit-kali python3 /pentest/test_new_features.py
 
 # Get exit code
 EXIT_CODE=$?

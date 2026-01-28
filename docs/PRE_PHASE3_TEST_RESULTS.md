@@ -124,7 +124,7 @@
 
 ### ✅ Test 1: PostgreSQL - PASSED
 ```
-✅ Container: neurosploit-postgres
+✅ Container: tazosploit-postgres
    - Status: Up (healthy)
    - Port: 5432
    - Connection: Working
@@ -132,7 +132,7 @@
 
 ### ✅ Test 2: Redis - PASSED
 ```
-✅ Container: neurosploit-redis
+✅ Container: tazosploit-redis
    - Status: Up (healthy)
    - Port: 6379
    - Connection: Working
@@ -140,7 +140,7 @@
 
 ### ✅ Test 3: Control Plane API - PASSED
 ```
-✅ Container: neurosploit-control-api
+✅ Container: tazosploit-control-api
    - Status: Up (healthy)
    - Port: 8000
    - Health check: Passing

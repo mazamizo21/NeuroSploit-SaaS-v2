@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Scheduled Jobs Router
+TazoSploit SaaS v2 - Scheduled Jobs Router
 API endpoints for continuous scanning configuration
 """
 

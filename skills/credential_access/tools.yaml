@@ -1,0 +1,90 @@
+mimikatz:
+  description: "Windows credential extraction tool - dump LSASS, hashes, tickets, and more"
+  category: "windows"
+  install_cmd: "apt-get install -y mimikatz"
+  verify_cmd: "which mimikatz"
+  examples:
+    - "sekurlsa::logonpasswords"
+    - "lsadump::lsa /inject"
+    - "lsadump::sam"
+    - "kerberos::list /export"
+
+hashcat:
+  description: "Advanced password recovery and hash cracking tool with GPU acceleration"
+  category: "cracking"
+  install_cmd: "apt-get install -y hashcat"
+  verify_cmd: "hashcat --version"
+  examples:
+    - "hashcat -m 1000 hash.txt wordlist.txt"
+    - "hashcat -m 1000 hash.txt wordlist.txt --rules best64.rule"
+    - "hashcat --identify hash.txt"
+
+john:
+  description: "Fast password cracker (John the Ripper) - supports many hash types"
+  category: "cracking"
+  install_cmd: "apt-get install -y john"
+  verify_cmd: "john --version"
+  examples:
+    - "john --wordlist=wordlist.txt hash.txt"
+    - "john --show hash.txt"
+    - "john --rules --wordlist=wordlist.txt hash.txt"
+
+hashid:
+  description: "Identify hash types from hash strings"
+  category: "cracking"
+  install_cmd: "apt-get install -y hashid"
+  verify_cmd: "hashid --version"
+  examples:
+    - "hashid hash.txt"
+
+cewl:
+  description: "Custom wordlist generator from target website content"
+  category: "cracking"
+  install_cmd: "apt-get install -y cewl"
+  verify_cmd: "cewl --help | head -n 1"
+  examples:
+    - "cewl -m 5 -w wordlist.txt http://target"
+
+crunch:
+  description: "Wordlist generator for brute-force password cracking"
+  category: "cracking"
+  install_cmd: "apt-get install -y crunch"
+  verify_cmd: "crunch --help | head -n 1"
+  examples:
+    - "crunch 8 8 abcdefghijklmnopqrstuvwxyz -o wordlist.txt"
+    - "crunch 6 6 0123456789 -o numbers.txt"
+
+fcrackzip:
+  description: "Zip file password cracker"
+  category: "cracking"
+  install_cmd: "apt-get install -y fcrackzip"
+  verify_cmd: "fcrackzip --help | head -n 1"
+  examples:
+    - "fcrackzip -u -D wordlist.txt archive.zip"
+
+pdfcrack:
+  description: "PDF password recovery tool"
+  category: "cracking"
+  install_cmd: "apt-get install -y pdfcrack"
+  verify_cmd: "pdfcrack --help | head -n 1"
+  examples:
+    - "pdfcrack -f document.pdf -w wordlist.txt"
+
+secretsdump:
+  description: "Extract secrets from Windows registry (sam, lsa, cached credentials)"
+  category: "windows"
+  install_cmd: "apt-get install -y impacket-secretsdump"
+  verify_cmd: "which impacket-secretsdump"
+  examples:
+    - "impacket-secretsdump -hashes :hash target/target"
+    - "impacket-secretsdump -just-dc-ntlm target/target"
+
+laZagne:
+  description: "Password recovery for many applications (browsers, email, databases, etc.)"
+  category: "windows"
+  install_cmd: "apt-get install -y laZagne"
+  verify_cmd: "which laZagne"
+  examples:
+    - "laZagne.exe all"
+    - "laZagne.exe browsers"
+    - "laZagne.exe windows"

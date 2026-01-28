@@ -17,12 +17,12 @@ echo "## Fixing the Script"
 echo "------------------"
 cat > run-unlimited-test.sh << 'SCRIPT'
 #!/bin/bash
-# Run NeuroSploit with Claude Sonnet (UPDATED PROMPT)
+# Run TazoSploit with Claude Sonnet (UPDATED PROMPT)
 
 set -e
 
 echo "=========================================="
-echo "NeuroSploit Claude Sonnet Test"
+echo "TazoSploit Claude Sonnet Test"
 echo "Cloud API - Anthropic - UPDATED PROMPT"
 echo "=========================================="
 
@@ -48,7 +48,7 @@ echo "🔥 NEW: System prompt updated with tool installation instructions!"
 echo ""
 
 # Build image if needed
-docker build -t neurosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
+docker build -t tazosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
 
 echo ""
 echo "Starting autonomous test..."
@@ -58,7 +58,7 @@ echo "=========================================="
 
 # Run with unlimited iterations
 docker run -it \
-  --name neurosploit-pentest-$(date +%Y%m%d_%H%M%S) \
+  --name tazosploit-pentest-$(date +%Y%m%d_%H%M%S) \
   --network vulnerable-lab_dmz \
   -e LLM_API_BASE="$LLM_API_BASE" \
   -e LLM_MODEL="$LLM_MODEL" \
@@ -66,9 +66,9 @@ docker run -it \
   -e TARGET="$TARGET" \
   -v "$(pwd)/logs:/pentest/logs" \
   -v "$(pwd)/extracted:/root/extracted" \
-  -v "$(pwd)/../kali-executor/open-interpreter:/opt/neurosploit" \
-  neurosploit-kali:minimal \
-  python3 /opt/neurosploit/dynamic_agent.py \
+  -v "$(pwd)/../kali-executor/open-interpreter:/opt/tazosploit" \
+  tazosploit-kali:minimal \
+  python3 /opt/tazosploit/dynamic_agent.py \
   --target "$TARGET" \
   --max-iterations 40 \
   --objective "Full autonomous penetration test - exploit ALL vulnerabilities, extract ALL credentials, access ALL databases, perform lateral movement, and exfiltrate ALL sensitive data. Do not stop until complete." 2>&1 | tee logs/claude_resume.log

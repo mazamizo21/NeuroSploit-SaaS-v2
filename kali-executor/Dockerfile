@@ -1,9 +1,9 @@
-# NeuroSploit SaaS v2 - Kali Executor Container
+# TazoSploit  v2 - Kali Executor Container
 # 150+ Pentest Tools + Open Interpreter + LM Studio Support
 
 FROM kalilinux/kali-rolling:latest
 
-LABEL maintainer="NeuroSploit SaaS"
+LABEL maintainer="TazoSploit "
 LABEL description="Kali Linux with 150+ tools for AI-powered pentesting"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -18,6 +18,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     curl wget git vim tmux screen \
     python3 python3-pip python3-venv \
     build-essential libssl-dev libffi-dev \
+    rustc cargo \
     && apt-get clean
 
 # =============================================================================
@@ -83,7 +84,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Remote Access
     crackmapexec evil-winrm \
-    smbclient rpcclient \
+    smbclient \
     # Impacket Suite
     impacket-scripts python3-impacket \
     # Persistence
@@ -109,9 +110,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Memory Forensics
-    volatility3 \
+    # volatility (via pip/git usually)
     # Disk Forensics
-    sleuthkit foremost scalpel photorec \
+    sleuthkit foremost scalpel testdisk \
     # Network Forensics
     wireshark-common tcpdump tshark \
     # Malware Analysis
@@ -139,7 +140,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # PYTHON TOOLS AND LIBRARIES
 # =============================================================================
 
-RUN pip3 install --break-system-packages --no-cache-dir \
+# Fix for Python 3.13 / PyO3 / tiktoken compatibility
+ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+
+RUN pip3 install --break-system-packages --ignore-installed --no-cache-dir \
     # Open Interpreter
     open-interpreter \
     # Pentest Libraries
@@ -185,13 +189,13 @@ RUN gunzip -k /usr/share/wordlists/rockyou.txt.gz 2>/dev/null || true
 # NEUROSPLOIT AI AGENT
 # =============================================================================
 
-COPY open-interpreter/config.py /opt/neurosploit/config.py
-COPY open-interpreter/agent_wrapper.py /opt/neurosploit/agent_wrapper.py
-COPY open-interpreter/dynamic_agent.py /opt/neurosploit/dynamic_agent.py
-COPY open-interpreter/llm_client.py /opt/neurosploit/llm_client.py
+COPY open-interpreter/config.py /opt/tazosploit/config.py
+COPY open-interpreter/agent_wrapper.py /opt/tazosploit/agent_wrapper.py
+COPY open-interpreter/dynamic_agent.py /opt/tazosploit/dynamic_agent.py
+COPY open-interpreter/llm_client.py /opt/tazosploit/llm_client.py
 
 # Make agent executable
-RUN chmod +x /opt/neurosploit/dynamic_agent.py
+RUN chmod +x /opt/tazosploit/dynamic_agent.py
 
 # =============================================================================
 # ENTRYPOINT AND WORKING DIRECTORY

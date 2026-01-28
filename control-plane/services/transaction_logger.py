@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Transaction Logger Service
+TazoSploit SaaS v2 - Transaction Logger Service
 Full transaction logging for audit and debugging
 """
 

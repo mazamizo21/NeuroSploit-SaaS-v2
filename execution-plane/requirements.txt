@@ -1,4 +1,4 @@
-# NeuroSploit SaaS v2 - Execution Plane Dependencies
+# TazoSploit SaaS v2 - Execution Plane Dependencies
 
 redis>=5.0.0
 httpx>=0.26.0

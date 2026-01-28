@@ -1,4 +1,4 @@
-# NeuroSploit SaaS v2 - Job Scheduler
+# TazoSploit SaaS v2 - Job Scheduler
 # Orchestrates job distribution to workers
 
 FROM python:3.11-slim

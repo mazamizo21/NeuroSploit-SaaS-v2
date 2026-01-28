@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Event Service
+TazoSploit SaaS v2 - Event Service
 Real-time event publishing and subscription via Redis Pub/Sub
 """
 

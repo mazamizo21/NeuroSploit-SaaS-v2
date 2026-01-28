@@ -1,6 +1,6 @@
 """
-NeuroSploit SaaS v2 - Agent Wrapper for Open Interpreter
-Provides HTTP API and full transaction logging for SaaS integration
+TazoSploit  v2 - Agent Wrapper for Open Interpreter
+Provides HTTP API and full transaction logging for  integration
 """
 
 import os
@@ -29,7 +29,7 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger('neurosploit.agent')
+logger = logging.getLogger('tazosploit.agent')
 
 # =============================================================================
 # DATA MODELS
@@ -411,7 +411,7 @@ Include:
 # =============================================================================
 
 app = FastAPI(
-    title="NeuroSploit Kali Executor",
+    title="TazoSploit Kali Executor",
     description="AI-powered pentest execution engine",
     version="2.0.0"
 )

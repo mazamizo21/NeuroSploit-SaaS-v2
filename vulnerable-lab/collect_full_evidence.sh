@@ -4,7 +4,7 @@
 OUTPUT="logs/FULL_EVIDENCE_REPORT.md"
 
 cat > "$OUTPUT" << 'REPORT_START'
-# 🔍 NeuroSploit - Complete Evidence Report
+# 🔍 TazoSploit - Complete Evidence Report
 **Generated:** $(date)
 **Test Duration:** Unlimited autonomous execution
 **Model:** huihui-gpt-oss-120b-abliterated

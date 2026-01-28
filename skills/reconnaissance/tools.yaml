@@ -1,0 +1,114 @@
+nmap:
+  description: "Network Mapper - comprehensive network scanning and service discovery"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -sS -sV -O -T4 target_ip"
+    - "nmap -p- -sC -sV target_ip"
+    - "nmap --script vuln target_ip"
+
+rustscan:
+  description: "Modern, ultra-fast port scanner written in Rust"
+  category: "network"
+  install_cmd: "apt-get install -y rustscan"
+  verify_cmd: "rustscan --version"
+  examples:
+    - "rustscan -a target_ip -- -sV -sC"
+
+masscan:
+  description: "High-speed port scanner for large networks"
+  category: "network"
+  install_cmd: "apt-get install -y masscan"
+  verify_cmd: "masscan --version"
+  examples:
+    - "masscan 192.168.0.0/24 -p80,443,22 --rate 1000"
+
+gobuster:
+  description: "Directory/file and DNS brute-forcing tool"
+  category: "web"
+  install_cmd: "apt-get install -y gobuster"
+  verify_cmd: "gobuster version"
+  examples:
+    - "gobuster dir -u http://target -w /usr/share/wordlists/dirb/common.txt"
+    - "gobuster dns -d target.com -w subdomains.txt"
+
+dirsearch:
+  description: "Advanced directory and file brute-forcing tool"
+  category: "web"
+  install_cmd: "apt-get install -y dirsearch"
+  verify_cmd: "dirsearch --version"
+  examples:
+    - "dirsearch -u http://target -e php,html,js -x 400,403,404"
+
+nikto:
+  description: "Web server vulnerability scanner"
+  category: "web"
+  install_cmd: "apt-get install -y nikto"
+  verify_cmd: "nikto -Version"
+  examples:
+    - "nikto -h http://target"
+
+whatweb:
+  description: "Web technology identification tool"
+  category: "web"
+  install_cmd: "apt-get install -y whatweb"
+  verify_cmd: "whatweb --version"
+  examples:
+    - "whatweb -a 3 -v http://target"
+
+wafw00f:
+  description: "Web Application Firewall detection and fingerprinting"
+  category: "web"
+  install_cmd: "apt-get install -y wafw00f"
+  verify_cmd: "wafw00f --version"
+  examples:
+    - "wafw00f http://target"
+
+httpx:
+  description: "Fast and multi-purpose HTTP toolkit"
+  category: "web"
+  install_cmd: "apt-get install -y httpx"
+  verify_cmd: "httpx --version"
+  examples:
+    - "cat urls.txt | httpx -status-code -title -tech-detect"
+
+subfinder:
+  description: "Fast subdomain enumeration tool"
+  category: "dns"
+  install_cmd: "apt-get install -y subfinder"
+  verify_cmd: "subfinder -version"
+  examples:
+    - "subfinder -d target.com -o subdomains.txt"
+
+amass:
+  description: "Comprehensive DNS enumeration and attack surface mapping"
+  category: "dns"
+  install_cmd: "apt-get install -y amass"
+  verify_cmd: "amass version"
+  examples:
+    - "amass enum -passive -d target.com"
+
+dnsenum:
+  description: "DNS enumeration tool"
+  category: "dns"
+  install_cmd: "apt-get install -y dnsenum"
+  verify_cmd: "dnsenum --version"
+  examples:
+    - "dnsenum target.com"
+
+dnsrecon:
+  description: "DNS reconnaissance script"
+  category: "dns"
+  install_cmd: "apt-get install -y dnsrecon"
+  verify_cmd: "dnsrecon --version"
+  examples:
+    - "dnsrecon -d target.com -t std"
+
+eyewitness:
+  description: "Screenshot tool for web applications"
+  category: "web"
+  install_cmd: "apt-get install -y eyewitness"
+  verify_cmd: "eyewitness --help | head -n 1"
+  examples:
+    - "cat urls.txt | eyewitness --web -d /tmp/screenshots"

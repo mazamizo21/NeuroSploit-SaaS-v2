@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Tenants Router
+TazoSploit SaaS v2 - Tenants Router
 Tenant management and configuration
 """
 

@@ -1,4 +1,4 @@
-# NeuroSploit SaaS v2 - Infrastructure Only
+# TazoSploit  v2 - Infrastructure Only
 # Use this for testing database and Redis
 
 version: "3.9"
@@ -6,25 +6,25 @@ version: "3.9"
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: neurosploit-postgres
+    container_name: tazosploit-postgres
     environment:
-      POSTGRES_DB: neurosploit
-      POSTGRES_USER: neurosploit
-      POSTGRES_PASSWORD: neurosploit_dev
+      POSTGRES_DB: tazosploit
+      POSTGRES_USER: tazosploit
+      POSTGRES_PASSWORD: tazosploit_dev
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./control-plane/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U neurosploit"]
+      test: ["CMD-SHELL", "pg_isready -U tazosploit"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: neurosploit-redis
+    container_name: tazosploit-redis
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data

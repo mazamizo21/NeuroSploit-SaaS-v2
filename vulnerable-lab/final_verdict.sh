@@ -5,7 +5,7 @@ echo "# ⚖️ FINAL VERDICT: Was The Test Legitimate?"
 echo "============================================="
 echo ""
 
-LOG_FILE="/Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/logs/agent_executions.jsonl"
+LOG_FILE="/Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/logs/agent_executions.jsonl"
 
 echo "## CRITICAL EVIDENCE"
 echo "-------------------"

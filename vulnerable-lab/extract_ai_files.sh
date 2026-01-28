@@ -1,11 +1,11 @@
 #!/bin/bash
 # Extract files created by AI from the last container
 
-echo "Finding last neurosploit container..."
-CONTAINER_ID=$(docker ps -a --filter "ancestor=neurosploit-kali:minimal" --format "{{.ID}}" | head -1)
+echo "Finding last tazosploit container..."
+CONTAINER_ID=$(docker ps -a --filter "ancestor=tazosploit-kali:minimal" --format "{{.ID}}" | head -1)
 
 if [ -z "$CONTAINER_ID" ]; then
-    echo "❌ No neurosploit container found"
+    echo "❌ No tazosploit container found"
     exit 1
 fi
 
@@ -38,7 +38,7 @@ docker cp "$CONTAINER_ID:/root/nmap" . 2>/dev/null && echo "  ✓ nmap/ director
 # List all files in /root
 echo ""
 echo "4. Listing all files in container /root..."
-docker exec "$CONTAINER_ID" ls -lah /root/ 2>/dev/null || docker run --rm -v neurosploit_data:/root alpine ls -lah /root/
+docker exec "$CONTAINER_ID" ls -lah /root/ 2>/dev/null || docker run --rm -v tazosploit_data:/root alpine ls -lah /root/
 
 echo ""
 echo "================================================"

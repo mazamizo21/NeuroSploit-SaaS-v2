@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Control Plane API
+TazoSploit SaaS v2 - Control Plane API
 Handles tenant management, authorization, job orchestration, and audit logging
 """
 
@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
 # =============================================================================
 
 app = FastAPI(
-    title="NeuroSploit SaaS v2 - Control Plane",
+    title="TazoSploit SaaS v2 - Control Plane",
     description="Multi-tenant AI-powered penetration testing platform",
     version="2.0.0",
     lifespan=lifespan,
@@ -270,7 +270,7 @@ app.include_router(simulations.router, prefix="/api/v1/simulations", tags=["Simu
 async def root():
     """API root endpoint"""
     return {
-        "service": "NeuroSploit SaaS v2 - Control Plane",
+        "service": "TazoSploit SaaS v2 - Control Plane",
         "version": "2.0.0",
         "docs": "/api/docs",
         "health": "/health"

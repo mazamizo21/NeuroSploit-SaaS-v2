@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Scheduler Service
+TazoSploit SaaS v2 - Scheduler Service
 Handles cron-like scheduling for continuous scanning
 """
 

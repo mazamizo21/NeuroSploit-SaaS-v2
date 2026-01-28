@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Phase 3 Integration Tests
+TazoSploit  v2 - Phase 3 Integration Tests
 Tests for advanced features: Real-time, Simulations, ML Predictions
 """
 
@@ -209,7 +209,7 @@ def test_control_types():
 def run_all_tests():
     """Run all Phase 3 tests"""
     print("=" * 80)
-    print("NeuroSploit SaaS v2 - Phase 3 Integration Tests")
+    print("TazoSploit  v2 - Phase 3 Integration Tests")
     print("=" * 80)
     
     tests_run = 0

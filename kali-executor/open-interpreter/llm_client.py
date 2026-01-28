@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - LLM Client
+TazoSploit SaaS v2 - LLM Client
 Handles communication with LM Studio / Claude API with full I/O logging
 """
 
@@ -13,7 +13,7 @@ from dataclasses import dataclass, asdict
 import requests
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("neurosploit.llm")
+logger = logging.getLogger("tazosploit.llm")
 
 @dataclass
 class LLMInteraction:
@@ -150,7 +150,7 @@ class LLMClient:
                     raise ValueError(f"Zhipu API error {response.status_code}: {response.text}")
             
             elif self.is_claude:
-                # Claude API format (using requests like NeuroSploit)
+                # Claude API format (using requests like TazoSploit)
                 if not self.anthropic_key:
                     raise ValueError("ANTHROPIC_API_KEY not set")
                 

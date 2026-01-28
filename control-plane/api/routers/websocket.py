@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - WebSocket Router
+TazoSploit SaaS v2 - WebSocket Router
 Real-time updates for attack graphs, findings, and job status
 """
 

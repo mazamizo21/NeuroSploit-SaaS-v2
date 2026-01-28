@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Attack Graph Integration Test
+TazoSploit  v2 - Attack Graph Integration Test
 Tests that the platform can build attack graphs from pentest findings
 and use simulation + ML prediction on real data
 """
@@ -212,7 +212,7 @@ def test_attack_path_visualization():
 def run_all_tests():
     """Run all integration tests"""
     print("=" * 70)
-    print("NeuroSploit SaaS v2 - Attack Graph Integration Tests")
+    print("TazoSploit  v2 - Attack Graph Integration Tests")
     print("Using real pentest findings from DVNA")
     print("=" * 70)
     

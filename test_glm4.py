@@ -8,7 +8,7 @@ import sys
 import json
 
 # Add the kali-executor path to import our LLM client
-sys.path.insert(0, '/Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/kali-executor/open-interpreter')
+sys.path.insert(0, '/Users/tazjack/Documents/PenTest/TazoSploit--v2/kali-executor/open-interpreter')
 
 from llm_client import LLMClient
 

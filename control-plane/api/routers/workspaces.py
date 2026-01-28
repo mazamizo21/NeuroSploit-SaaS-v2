@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Workspaces Router
+TazoSploit SaaS v2 - Workspaces Router
 API endpoints for team collaboration
 """
 

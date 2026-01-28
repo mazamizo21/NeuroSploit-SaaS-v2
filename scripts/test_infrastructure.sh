@@ -1,11 +1,11 @@
 #!/bin/bash
-# NeuroSploit SaaS v2 - Infrastructure Test Script
+# TazoSploit  v2 - Infrastructure Test Script
 # Tests PostgreSQL and Redis connectivity
 
 set -e
 
 echo "=============================================="
-echo "NeuroSploit SaaS v2 - Infrastructure Tests"
+echo "TazoSploit  v2 - Infrastructure Tests"
 echo "=============================================="
 
 # Colors
@@ -19,14 +19,14 @@ fail() { echo -e "${RED}[FAIL]${NC} $1"; exit 1; }
 # Test 1: PostgreSQL
 echo ""
 echo "Testing PostgreSQL..."
-if docker exec neurosploit-postgres pg_isready -U neurosploit > /dev/null 2>&1; then
+if docker exec tazosploit-postgres pg_isready -U tazosploit > /dev/null 2>&1; then
     pass "PostgreSQL is ready"
 else
     fail "PostgreSQL is not ready"
 fi
 
 # Test 2: PostgreSQL connection
-if docker exec neurosploit-postgres psql -U neurosploit -c "SELECT 1" > /dev/null 2>&1; then
+if docker exec tazosploit-postgres psql -U tazosploit -c "SELECT 1" > /dev/null 2>&1; then
     pass "PostgreSQL connection works"
 else
     fail "PostgreSQL connection failed"
@@ -35,18 +35,18 @@ fi
 # Test 3: Redis
 echo ""
 echo "Testing Redis..."
-if docker exec neurosploit-redis redis-cli ping | grep -q PONG; then
+if docker exec tazosploit-redis redis-cli ping | grep -q PONG; then
     pass "Redis is ready"
 else
     fail "Redis is not ready"
 fi
 
 # Test 4: Redis set/get
-docker exec neurosploit-redis redis-cli SET test_key "test_value" > /dev/null
-RESULT=$(docker exec neurosploit-redis redis-cli GET test_key)
+docker exec tazosploit-redis redis-cli SET test_key "test_value" > /dev/null
+RESULT=$(docker exec tazosploit-redis redis-cli GET test_key)
 if [ "$RESULT" == "test_value" ]; then
     pass "Redis set/get works"
-    docker exec neurosploit-redis redis-cli DEL test_key > /dev/null
+    docker exec tazosploit-redis redis-cli DEL test_key > /dev/null
 else
     fail "Redis set/get failed"
 fi

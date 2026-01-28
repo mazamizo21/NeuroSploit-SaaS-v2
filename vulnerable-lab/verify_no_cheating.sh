@@ -7,7 +7,7 @@ echo ""
 
 echo "## 1. Checking System Prompt for Hardcoded Passwords"
 echo "---------------------------------------------------"
-grep -n "p@ssw0rd\|admin123\|password123" /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/kali-executor/open-interpreter/dynamic_agent.py
+grep -n "p@ssw0rd\|admin123\|password123" /Users/tazjack/Documents/PenTest/TazoSploit--v2/kali-executor/open-interpreter/dynamic_agent.py
 if [ $? -eq 0 ]; then
     echo "⚠️  FOUND hardcoded passwords in system prompt"
 else
@@ -17,7 +17,7 @@ echo ""
 
 echo "## 2. Checking for Hardcoded Target IPs"
 echo "---------------------------------------------------"
-grep -n "10\.0\.2\.20" /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/kali-executor/open-interpreter/dynamic_agent.py
+grep -n "10\.0\.2\.20" /Users/tazjack/Documents/PenTest/TazoSploit--v2/kali-executor/open-interpreter/dynamic_agent.py
 if [ $? -eq 0 ]; then
     echo "⚠️  FOUND hardcoded target IP"
 else
@@ -27,7 +27,7 @@ echo ""
 
 echo "## 3. Checking for Hardcoded Exploit Commands"
 echo "---------------------------------------------------"
-grep -n "sqlmap.*dvwa\|hydra.*10\.0\.2\.20\|exploit.*specific" /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/kali-executor/open-interpreter/*.py
+grep -n "sqlmap.*dvwa\|hydra.*10\.0\.2\.20\|exploit.*specific" /Users/tazjack/Documents/PenTest/TazoSploit--v2/kali-executor/open-interpreter/*.py
 if [ $? -eq 0 ]; then
     echo "⚠️  FOUND hardcoded exploit commands"
 else
@@ -38,19 +38,19 @@ echo ""
 echo "## 4. System Prompt Analysis"
 echo "---------------------------------------------------"
 echo "Extracting system prompt from dynamic_agent.py..."
-grep -A 20 "SYSTEM_PROMPT_BASE = " /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/kali-executor/open-interpreter/dynamic_agent.py | head -25
+grep -A 20 "SYSTEM_PROMPT_BASE = " /Users/tazjack/Documents/PenTest/TazoSploit--v2/kali-executor/open-interpreter/dynamic_agent.py | head -25
 echo ""
 
 echo "## 5. Checking What AI Actually Discovered"
 echo "---------------------------------------------------"
 echo "Password found by AI in logs:"
-grep "p@ssw0rd" /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/logs/agent_executions.jsonl 2>/dev/null | jq -r 'select(.iteration <= 5) | "Iteration \(.iteration): \(.content[:150])"' | head -3
+grep "p@ssw0rd" /Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/logs/agent_executions.jsonl 2>/dev/null | jq -r 'select(.iteration <= 5) | "Iteration \(.iteration): \(.content[:150])"' | head -3
 echo ""
 
 echo "## 6. Where Does 'p@ssw0rd' Actually Exist?"
 echo "---------------------------------------------------"
 echo "Searching vulnerable-lab for the actual password..."
-grep -r "p@ssw0rd" /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/*.sql /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/mysql/init/*.sql 2>/dev/null | grep -v "logs/"
+grep -r "p@ssw0rd" /Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/*.sql /Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/mysql/init/*.sql 2>/dev/null | grep -v "logs/"
 echo ""
 
 echo "## 7. VERDICT"

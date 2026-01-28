@@ -1,11 +1,11 @@
 #!/bin/bash
 # Extract all files created by AI from the container after test completion
 
-echo "🔍 Finding neurosploit containers..."
-CONTAINERS=$(docker ps -a --filter "name=neurosploit-pentest" --format "{{.Names}}" | sort -r)
+echo "🔍 Finding tazosploit containers..."
+CONTAINERS=$(docker ps -a --filter "name=tazosploit-pentest" --format "{{.Names}}" | sort -r)
 
 if [ -z "$CONTAINERS" ]; then
-    echo "❌ No neurosploit-pentest containers found"
+    echo "❌ No tazosploit-pentest containers found"
     echo ""
     echo "Available containers:"
     docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}"

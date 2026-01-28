@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - MITRE ATT&CK Router
+TazoSploit SaaS v2 - MITRE ATT&CK Router
 API endpoints for MITRE ATT&CK framework integration
 """
 

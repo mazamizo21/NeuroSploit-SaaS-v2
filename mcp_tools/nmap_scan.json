@@ -1,0 +1,49 @@
+{
+  "name": "nmap_scan",
+  "description": "Perform network scanning with nmap",
+  "server_id": "builtin",
+  "category": "reconnaissance",
+  "requires_target": true,
+  "example_usage": "nmap_scan(network=\"192.168.1.0/24\", ports=\"1-65535\")",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "network": {
+        "type": "string",
+        "description": "Network range or host to scan (e.g., 192.168.1.0/24 or 192.168.1.1)"
+      },
+      "ports": {
+        "type": "string",
+        "description": "Port range to scan (e.g., 1-65535, 1-100, or common)"
+      },
+      "scan_type": {
+        "type": "string",
+        "enum": ["sS", "sT", "sA", "sW"],
+        "description": "Scan type: sS (SYN), sT (TCP connect), sA (ACK), sW (Window)",
+        "default": "sS"
+      },
+      "service_detection": {
+        "type": "boolean",
+        "description": "Enable service version detection (-sV)",
+        "default": true
+      },
+      "os_detection": {
+        "type": "boolean",
+        "description": "Enable OS fingerprinting (-O)",
+        "default": false
+      },
+      "scripts": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Nmap scripts to run (e.g., ['vuln', 'auth'])",
+        "default": []
+      }
+    },
+    "required": ["network"]
+  },
+  "metadata": {
+    "command": "nmap",
+    "timeout": 300,
+    "output_format": "xml"
+  }
+}

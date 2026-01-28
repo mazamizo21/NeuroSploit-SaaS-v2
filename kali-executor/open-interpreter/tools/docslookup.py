@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Documentation Lookup Tool for NeuroSploit AI Agent
+Documentation Lookup Tool for TazoSploit AI Agent
 Helps AI find documentation for tools, commands, and security concepts.
 """
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit Persistent Memory System
+TazoSploit Persistent Memory System
 Lightweight memory storage for AI agent to remember important learnings across sessions.
 
 Design principles:
@@ -42,7 +42,7 @@ class Memory:
 class MemoryStore:
     """
     Persistent memory storage for AI agent.
-    Memories are stored per-tenant and per-target for multi-tenant SaaS.
+    Memories are stored per-tenant and per-target for multi-tenant .
     """
     
     def __init__(self, tenant_id: str = "default", target: str = None):

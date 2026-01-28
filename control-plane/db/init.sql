@@ -1,4 +1,4 @@
--- NeuroSploit SaaS v2 - Database Initialization
+-- TazoSploit SaaS v2 - Database Initialization
 -- Creates tables, indexes, and seed data for development
 
 -- Enable UUID extension
@@ -265,7 +265,7 @@ INSERT INTO users (id, tenant_id, email, password_hash, full_name, role, is_acti
 VALUES (
     'b0000000-0000-0000-0000-000000000001',
     'a0000000-0000-0000-0000-000000000001',
-    'admin@neurosploit.local',
+    'admin@tazosploit.local',
     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VttYI/pVj.K6Iq',
     'Admin User',
     'admin',

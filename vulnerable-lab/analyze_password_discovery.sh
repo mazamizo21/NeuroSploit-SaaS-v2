@@ -5,7 +5,7 @@ echo "# 🔍 CRITICAL ANALYSIS: Password Discovery Method"
 echo "=================================================="
 echo ""
 
-LOG_FILE="/Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/logs/agent_executions.jsonl"
+LOG_FILE="/Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/logs/agent_executions.jsonl"
 
 echo "## 1. FIRST MENTION OF 'p@ssw0rd' IN LOGS"
 echo "-----------------------------------------"
@@ -34,9 +34,9 @@ echo ""
 echo "## 4. CHECKING LLM CONVERSATION LOGS"
 echo "-------------------------------------"
 echo ""
-if [ -f "/Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/logs/llm_interactions.jsonl" ]; then
+if [ -f "/Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/logs/llm_interactions.jsonl" ]; then
     echo "### First AI response that mentions password:"
-    jq -r 'select(.response | contains("p@ssw0rd")) | "Response: \(.response[:500])"' /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/logs/llm_interactions.jsonl 2>/dev/null | head -1
+    jq -r 'select(.response | contains("p@ssw0rd")) | "Response: \(.response[:500])"' /Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/logs/llm_interactions.jsonl 2>/dev/null | head -1
 else
     echo "⚠️  LLM interaction logs not found"
 fi

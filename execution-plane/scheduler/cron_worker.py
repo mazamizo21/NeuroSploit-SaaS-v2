@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Cron Worker
+TazoSploit SaaS v2 - Cron Worker
 Background worker that monitors scheduled jobs and triggers execution
 """
 
@@ -43,7 +43,7 @@ class CronWorker:
         # Database setup
         database_url = os.getenv(
             "DATABASE_URL",
-            "postgresql+asyncpg://neurosploit:neurosploit@localhost:5432/neurosploit"
+            "postgresql+asyncpg://tazosploit:tazosploit@localhost:5432/tazosploit"
         )
         self.engine = create_async_engine(database_url, echo=False)
         self.async_session = sessionmaker(

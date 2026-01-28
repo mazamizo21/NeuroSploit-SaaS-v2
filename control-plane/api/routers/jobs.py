@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Jobs Router
+TazoSploit SaaS v2 - Jobs Router
 Job creation, management, and execution control
 """
 

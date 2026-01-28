@@ -1,31 +1,31 @@
-# NeuroSploit SaaS v2 - Development Stack
+# TazoSploit  v2 - Development Stack
 # All services for local development
 
 services:
   # === INFRASTRUCTURE ===
   postgres:
     image: postgres:15-alpine
-    container_name: neurosploit-postgres
+    container_name: tazosploit-postgres
     environment:
-      POSTGRES_DB: neurosploit
-      POSTGRES_USER: neurosploit
-      POSTGRES_PASSWORD: neurosploit_dev
+      POSTGRES_DB: tazosploit
+      POSTGRES_USER: tazosploit
+      POSTGRES_PASSWORD: tazosploit_dev
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./control-plane/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U neurosploit"]
+      test: ["CMD-SHELL", "pg_isready -U tazosploit"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - neurosploit-net
+      - tazosploit-net
 
   redis:
     image: redis:7-alpine
-    container_name: neurosploit-redis
+    container_name: tazosploit-redis
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
@@ -37,16 +37,16 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - neurosploit-net
+      - tazosploit-net
 
   # === CONTROL PLANE ===
   api:
     build:
       context: ./control-plane
       dockerfile: Dockerfile
-    container_name: neurosploit-api
+    container_name: tazosploit-api
     environment:
-      DATABASE_URL: postgresql+asyncpg://neurosploit:neurosploit_dev@postgres:5432/neurosploit
+      DATABASE_URL: postgresql+asyncpg://tazosploit:tazosploit_dev@postgres:5432/tazosploit
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: dev-secret-change-in-prod
       ENVIRONMENT: development
@@ -58,7 +58,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - neurosploit-net
+      - tazosploit-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -70,7 +70,7 @@ services:
     build:
       context: ./kali-executor
       dockerfile: Dockerfile.minimal
-    container_name: neurosploit-kali
+    container_name: tazosploit-kali
     environment:
       LLM_API_BASE: http://host.docker.internal:1234/v1
       LLM_MODEL: openai/gpt-oss-120b
@@ -84,7 +84,7 @@ services:
       - api
       - redis
     networks:
-      - neurosploit-net
+      - tazosploit-net
     command: tail -f /dev/null  # Keep alive for exec
 
 volumes:
@@ -92,5 +92,5 @@ volumes:
   redis-data:
 
 networks:
-  neurosploit-net:
+  tazosploit-net:
     driver: bridge

@@ -1,11 +1,11 @@
 #!/bin/bash
-# NeuroSploit with Claude API - Production-Grade AI Pentesting
+# TazoSploit with Claude API - Production-Grade AI Pentesting
 # Claude Sonnet 3.5 has excellent reasoning and security knowledge
 
 set -e
 
 echo "=========================================="
-echo "NeuroSploit with Claude Sonnet 3.5"
+echo "TazoSploit with Claude Sonnet 3.5"
 echo "Production AI Pentesting"
 echo "=========================================="
 
@@ -36,7 +36,7 @@ echo "Mode: FULLY AUTONOMOUS"
 echo ""
 
 # Build image if needed
-docker build -t neurosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
+docker build -t tazosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
 
 echo ""
 echo "Starting Claude-powered penetration test..."
@@ -49,9 +49,9 @@ docker run --rm -it \
   -e LLM_MODEL="$LLM_MODEL" \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
   -v "$(pwd)/logs:/pentest/logs" \
-  -v "$(pwd)/../kali-executor/open-interpreter:/opt/neurosploit" \
-  neurosploit-kali:minimal \
-  python3 /opt/neurosploit/dynamic_agent.py \
+  -v "$(pwd)/../kali-executor/open-interpreter:/opt/tazosploit" \
+  tazosploit-kali:minimal \
+  python3 /opt/tazosploit/dynamic_agent.py \
   --target "$TARGET" \
   --objective "Perform a comprehensive security assessment on the target. Find vulnerabilities, exploit them, and extract any sensitive data you can access. Document all findings." \
   --max-iterations 30 2>&1 | tee logs/claude_run.log

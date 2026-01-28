@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Attack Graphs Integration Tests
+TazoSploit  v2 - Attack Graphs Integration Tests
 Tests for Phase 2 attack path visualization features
 """
 
@@ -203,7 +203,7 @@ def test_recommendations():
 def run_all_tests():
     """Run all attack graph tests"""
     print("=" * 80)
-    print("NeuroSploit SaaS v2 - Attack Graphs Integration Tests")
+    print("TazoSploit  v2 - Attack Graphs Integration Tests")
     print("=" * 80)
     
     tests_run = 0

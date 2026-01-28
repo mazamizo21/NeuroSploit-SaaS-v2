@@ -1,0 +1,98 @@
+crackmapexec:
+  description: "Network penetration testing tool for lateral movement, password spraying, and command execution"
+  category: "network"
+  install_cmd: "apt-get install -y crackmapexec"
+  verify_cmd: "crackmapexec --version"
+  examples:
+    - "crackmapexec smb 192.168.1.0/24 -u user -p pass"
+    - "crackmapexec smb target -u user -p pass -X whoami"
+    - "crackmapexec smb 192.168.1.0/24 -u user -H hash"
+    - "crackmapexec smb target --local-auth"
+
+impacket-psexec:
+  description: "Remotely execute commands via SMB using Impacket's psexec"
+  category: "windows"
+  install_cmd: "apt-get install -y impacket-scripts"
+  verify_cmd: "which impacket-psexec"
+  examples:
+    - "impacket-psexec target/user:pass@target hostname"
+    - "impacket-psexec -hashes :hash target/user@target hostname"
+
+impacket-wmiexec:
+  description: "Remotely execute commands via WMI using Impacket's wmiexec"
+  category: "windows"
+  install_cmd: "apt-get install -y impacket-scripts"
+  verify_cmd: "which impacket-wmiexec"
+  examples:
+    - "impacket-wmiexec target/user:pass@target 'whoami'"
+    - "impacket-wmiexec -hashes :hash target/user@target 'ipconfig'"
+
+impacket-smbexec:
+  description: "Remotely execute commands via SMB using Impacket's smbexec"
+  category: "windows"
+  install_cmd: "apt-get install -y impacket-scripts"
+  verify_cmd: "which impacket-smbexec"
+  examples:
+    - "impacket-smbexec target/user:pass@target hostname"
+    - "impacket-smbexec -hashes :hash target/user@target 'whoami'"
+
+impacket-secretsdump:
+  description: "Extract secrets from Windows registry (part of Impacket)"
+  category: "windows"
+  install_cmd: "apt-get install -y impacket-scripts"
+  verify_cmd: "which impacket-secretsdump"
+  examples:
+    - "impacket-secretsdump -hashes :hash target/user@target"
+
+impacket-getST:
+  description: "Request Kerberos service ticket using Impacket's getST"
+  category: "windows"
+  install_cmd: "apt-get install -y impacket-scripts"
+  verify_cmd: "which impacket-getST"
+  examples:
+    - "impacket-getST -spn 'HTTP/target' -hashes :hash domain/user"
+
+impacket-ticketConverter:
+  description: "Convert Kirbi tickets to CCACHE format using Impacket's ticketConverter"
+  category: "windows"
+  install_cmd: "apt-get install -y impacket-scripts"
+  verify_cmd: "which impacket-ticketConverter"
+  examples:
+    - "impacket-ticketConverter ticket.kirbi ticket.ccache"
+
+responder:
+  description: "LLMNR, NBT-NS, and MDNS poisoner and hash capture tool"
+  category: "network"
+  install_cmd: "apt-get install -y responder"
+  verify_cmd: "responder --help | head -n 1"
+  examples:
+    - "responder -I eth0"
+    - "responder -I eth0 -w"
+
+evil-winrm:
+  description: "WinRM shell for hacking with advanced features"
+  category: "windows"
+  install_cmd: "apt-get install -y evil-winrm"
+  verify_cmd: "evil-winrm --help | head -n 1"
+  examples:
+    - "evil-winrm -i target -u user -p pass"
+    - "evil-winrm -i target -u user -H hash"
+    - "evil-winrm -i target -u user -p 'pass' -s /path/to/scripts"
+
+freerdp:
+  description: "Remote Desktop Protocol client for Linux"
+  category: "windows"
+  install_cmd: "apt-get install -y freerdp2-x11"
+  verify_cmd: "xfreerdp --version"
+  examples:
+    - "xfreerdp /u:user /p:pass /v:target:3389"
+    - "xfreerdp /u:user /p:pass /v:target /dynamic-resolution"
+
+sshpass:
+  description: "Non-interactive SSH password provider for automation"
+  category: "network"
+  install_cmd: "apt-get install -y sshpass"
+  verify_cmd: "sshpass -V"
+  examples:
+    - "sshpass -p 'password' ssh user@host 'whoami'"
+    - "sshpass -p 'password' ssh -N -L 8080:localhost:80 user@host"

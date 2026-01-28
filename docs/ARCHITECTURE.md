@@ -1,8 +1,8 @@
-# NeuroSploit SaaS v2 - Enterprise Architecture
+# TazoSploit  v2 - Enterprise Architecture
 
 ## Executive Summary
 
-NeuroSploit SaaS v2 is a multi-tenant, AI-powered penetration testing platform built with security-first principles. It separates the **Control Plane** (customer management) from the **Execution Plane** (pentest workers) to minimize blast radius and ensure tenant isolation.
+TazoSploit  v2 is a multi-tenant, AI-powered penetration testing platform built with security-first principles. It separates the **Control Plane** (customer management) from the **Execution Plane** (pentest workers) to minimize blast radius and ensure tenant isolation.
 
 ---
 
@@ -12,7 +12,7 @@ NeuroSploit SaaS v2 is a multi-tenant, AI-powered penetration testing platform b
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              CONTROL PLANE                                       │
 │  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │                         Frontend (Next.js SaaS)                          │    │
+│  │                         Frontend (Next.js )                          │    │
 │  │  • Tenant Onboarding    • Auth (Clerk + MFA)    • Dashboard              │    │
 │  │  • Scope Management     • Billing/Quotas        • Audit Logs             │    │
 │  │  • Policy Config        • Approvals             • Reports                │    │
@@ -386,7 +386,7 @@ async def create_job(tenant_id: str, scope_id: str, job_config: JobConfig):
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: neurosploit-worker
+  name: tazosploit-worker
 spec:
   privileged: false
   runAsUser:
@@ -418,7 +418,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: neurosploit-worker
+    name: tazosploit-worker
   minReplicas: 2
   maxReplicas: 100
   metrics:
@@ -439,7 +439,7 @@ spec:
 ## 8. Project Structure
 
 ```
-neurosploit-saas-v2/
+tazosploit-saas-v2/
 ├── docker-compose.yml              # Local development
 ├── docker-compose.prod.yml         # Production overrides
 ├── kubernetes/                     # K8s manifests
@@ -447,7 +447,7 @@ neurosploit-saas-v2/
 │   ├── execution-plane/
 │   └── monitoring/
 │
-├── frontend/                       # Next.js SaaS (ixartz/SaaS-Boilerplate)
+├── frontend/                       # Next.js  (ixartz/-Boilerplate)
 │   ├── src/
 │   │   ├── app/                    # App Router pages
 │   │   ├── components/             # React components
@@ -481,7 +481,7 @@ neurosploit-saas-v2/
 │   │   └── tool_runner.py
 │   └── Dockerfile
 │
-├── neurosploit-core/               # Fresh clone of CyberSecurityUP/NeuroSploit
+├── tazosploit-core/               # Fresh clone of CyberSecurityUP/TazoSploit
 │   ├── core/
 │   │   ├── agents/                 # Original + custom agents
 │   │   ├── tools/
@@ -511,7 +511,7 @@ neurosploit-saas-v2/
 
 | Component | Technology | Reason |
 |-----------|------------|--------|
-| **Frontend** | Next.js 14 + Tailwind + Shadcn | ixartz/SaaS-Boilerplate, production-ready |
+| **Frontend** | Next.js 14 + Tailwind + Shadcn | ixartz/-Boilerplate, production-ready |
 | **Auth** | Clerk | MFA, social, passkeys, multi-tenant |
 | **Control Plane API** | FastAPI | Async, OpenAPI, Python ecosystem |
 | **Execution Scheduler** | Celery + Redis | Reliable job queue, rate limiting |
@@ -818,7 +818,7 @@ neurosploit-saas-v2/
 1. Attack path visualization (unique)
 2. MITRE ATT&CK integration (comprehensive)
 3. AI-driven (fully dynamic)
-4. Multi-tenant (SaaS-first)
+4. Multi-tenant (-first)
 5. Simple architecture (no frameworks)
 6. Cost-effective (10-50x cheaper)
 

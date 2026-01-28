@@ -400,7 +400,7 @@ curl http://localhost:8000/api/v1/attack-graphs/jobs/{job_id}/recommendations \
 
 **Phase 2 Status: COMPLETE ✅**
 
-Attack path visualization is now fully implemented and production-ready. This feature sets NeuroSploit apart from competitors by showing not just what vulnerabilities exist, but how they chain together into real attack scenarios.
+Attack path visualization is now fully implemented and production-ready. This feature sets TazoSploit apart from competitors by showing not just what vulnerabilities exist, but how they chain together into real attack scenarios.
 
 **Key Achievements:**
 - ✅ 4 database models
@@ -416,5 +416,5 @@ Attack path visualization is now fully implemented and production-ready. This fe
 ---
 
 **Built by:** Cascade AI  
-**Repository:** https://github.com/mazamizo21/NeuroSploit-SaaS-v2  
+**Repository:** https://github.com/mazamizo21/TazoSploit--v2  
 **Date:** January 11, 2026

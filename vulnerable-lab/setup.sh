@@ -1,10 +1,10 @@
 #!/bin/bash
-# NeuroSploit Enterprise Vulnerable Lab Setup Script
+# TazoSploit Enterprise Vulnerable Lab Setup Script
 
 set -e
 
 echo "=========================================="
-echo "NeuroSploit Enterprise Vulnerable Lab"
+echo "TazoSploit Enterprise Vulnerable Lab"
 echo "=========================================="
 
 # Colors
@@ -204,5 +204,5 @@ echo "PostgreSQL:       postgres / postgres"
 echo ""
 echo -e "${GREEN}Lab is ready for testing!${NC}"
 echo ""
-echo "To run NeuroSploit against this lab:"
+echo "To run TazoSploit against this lab:"
 echo "  ./run-test.sh"

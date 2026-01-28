@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - ML Prediction Service
+TazoSploit SaaS v2 - ML Prediction Service
 Machine learning for attack path prediction
 """
 

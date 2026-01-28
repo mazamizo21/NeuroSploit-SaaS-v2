@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - MITRE ATT&CK Service
+TazoSploit SaaS v2 - MITRE ATT&CK Service
 Loads, parses, and provides access to MITRE ATT&CK framework data
 """
 

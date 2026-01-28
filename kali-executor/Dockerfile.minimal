@@ -1,4 +1,4 @@
-# NeuroSploit SaaS v2 - Minimal Kali Container for Testing
+# TazoSploit  v2 - Minimal Kali Container for Testing
 # Faster build with essential tools only
 
 FROM kalilinux/kali-rolling:latest
@@ -28,13 +28,13 @@ RUN pip3 install --break-system-packages --no-cache-dir \
     open-interpreter || echo "Open Interpreter install skipped"
 
 # Copy agent code
-COPY open-interpreter/ /opt/neurosploit/
+COPY open-interpreter/ /opt/tazosploit/
 
 # Create symlinks for AI tools (websearch, docslookup, download)
-RUN chmod +x /opt/neurosploit/tools/*.py && \
-    ln -sf /opt/neurosploit/tools/websearch.py /usr/local/bin/websearch && \
-    ln -sf /opt/neurosploit/tools/docslookup.py /usr/local/bin/docslookup && \
-    ln -sf /opt/neurosploit/tools/download.py /usr/local/bin/download
+RUN chmod +x /opt/tazosploit/tools/*.py && \
+    ln -sf /opt/tazosploit/tools/websearch.py /usr/local/bin/websearch && \
+    ln -sf /opt/tazosploit/tools/docslookup.py /usr/local/bin/docslookup && \
+    ln -sf /opt/tazosploit/tools/download.py /usr/local/bin/download
 
 WORKDIR /pentest
 RUN mkdir -p /pentest/logs /pentest/output /pentest/memory
@@ -43,7 +43,7 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Set Python path
-ENV PYTHONPATH="/opt/neurosploit:$PYTHONPATH"
+ENV PYTHONPATH="/opt/tazosploit:$PYTHONPATH"
 
 # API keys for web search tools (set at runtime via docker run -e)
 ENV TAVILY_API_KEY=""
@@ -52,4 +52,4 @@ ENV TRAVERSAAL_API_KEY=""
 EXPOSE 9000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["python3", "/opt/neurosploit/dynamic_agent.py", "--help"]
+CMD ["python3", "/opt/tazosploit/dynamic_agent.py", "--help"]

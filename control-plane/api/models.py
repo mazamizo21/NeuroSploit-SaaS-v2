@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Database Models
+TazoSploit SaaS v2 - Database Models
 Multi-tenant data model with full audit logging
 """
 

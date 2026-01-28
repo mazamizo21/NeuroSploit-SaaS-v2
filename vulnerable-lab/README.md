@@ -1,4 +1,4 @@
-# NeuroSploit Enterprise Vulnerable Lab
+# TazoSploit Enterprise Vulnerable Lab
 
 Comprehensive multi-tier vulnerable environment for intense penetration testing.
 
@@ -180,7 +180,7 @@ docker-compose -f docker-compose.enterprise.yml ps
 | 9200 | Elasticsearch | Internal |
 | 5601 | Kibana | Internal |
 
-## 🧪 Testing with NeuroSploit
+## 🧪 Testing with TazoSploit
 
 ```bash
 # Run full enterprise pentest
@@ -189,8 +189,8 @@ docker run --rm -it \
   -e LLM_API_BASE="http://host.docker.internal:1234/v1" \
   -e LLM_MODEL="openai/gpt-oss-120b" \
   -v $(pwd)/logs:/pentest/logs \
-  neurosploit-kali:minimal \
-  python3 /opt/neurosploit/dynamic_agent.py \
+  tazosploit-kali:minimal \
+  python3 /opt/tazosploit/dynamic_agent.py \
   --target "10.0.1.1" \
   --objective "Perform a full enterprise penetration test. Start with the firewall, discover the DMZ services, exploit web vulnerabilities, pivot to internal network, access databases, and extract all sensitive data. Follow the complete MITRE ATT&CK kill chain." \
   --max-iterations 50

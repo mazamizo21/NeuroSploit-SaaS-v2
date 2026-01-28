@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Open Interpreter Configuration
+TazoSploit  v2 - Open Interpreter Configuration
 Configures Open Interpreter for LM Studio (dev) or Claude API (prod)
 """
 

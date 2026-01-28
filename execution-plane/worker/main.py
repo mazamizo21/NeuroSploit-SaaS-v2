@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Worker
+TazoSploit SaaS v2 - Worker
 Executes pentest jobs via Kali containers with Open Interpreter
 """
 
@@ -101,7 +101,7 @@ class Worker:
     async def _get_kali_container(self):
         """Get an available Kali container from the pool"""
         containers = self.docker_client.containers.list(
-            filters={"label": "neurosploit.role=kali-executor", "status": "running"}
+            filters={"label": "tazosploit.role=kali-executor", "status": "running"}
         )
         if not containers:
             raise Exception("No Kali containers available")

@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Attack Graph Service
+TazoSploit SaaS v2 - Attack Graph Service
 Build and analyze attack paths from pentest findings
 """
 

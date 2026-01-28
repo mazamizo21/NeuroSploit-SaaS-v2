@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Reports Router
+TazoSploit SaaS v2 - Reports Router
 API endpoints for risk scoring and report generation
 """
 

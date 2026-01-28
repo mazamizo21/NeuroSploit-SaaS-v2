@@ -1,0 +1,9 @@
+# Security: Never commit API credentials
+api_credentials.json
+*.key
+*.secret
+*.pem
+
+# Local config
+local_config.json
+.env

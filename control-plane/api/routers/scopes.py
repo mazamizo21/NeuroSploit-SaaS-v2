@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Scopes Router
+TazoSploit SaaS v2 - Scopes Router
 Target scope management and authorization
 """
 

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Run NeuroSploit against the Enterprise Vulnerable Lab
+# Run TazoSploit against the Enterprise Vulnerable Lab
 
 set -e
 
 echo "=========================================="
-echo "NeuroSploit Enterprise Pentest"
+echo "TazoSploit Enterprise Pentest"
 echo "=========================================="
 
 # Default values
@@ -25,7 +25,7 @@ echo ""
 
 # Build the Kali image if needed
 echo "Building Kali image..."
-docker build -t neurosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
+docker build -t tazosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
 
 echo ""
 echo "Starting penetration test..."
@@ -37,9 +37,9 @@ docker run --rm -it \
   -e LLM_API_BASE="$LLM_API_BASE" \
   -e LLM_MODEL="$LLM_MODEL" \
   -v "$(pwd)/logs:/pentest/logs" \
-  -v "$(pwd)/../kali-executor/open-interpreter:/opt/neurosploit" \
-  neurosploit-kali:minimal \
-  python3 /opt/neurosploit/dynamic_agent.py \
+  -v "$(pwd)/../kali-executor/open-interpreter:/opt/tazosploit" \
+  tazosploit-kali:minimal \
+  python3 /opt/tazosploit/dynamic_agent.py \
   --target "10.0.2.10" \
   --objective "Perform a comprehensive enterprise penetration test against this multi-tier network.
 

@@ -1,4 +1,4 @@
-# NeuroSploit SaaS v2 - Worker
+# TazoSploit SaaS v2 - Worker
 # Executes pentest jobs via Open Interpreter
 
 FROM python:3.11-slim

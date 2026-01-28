@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Advanced AI Agent
+TazoSploit SaaS v2 - Advanced AI Agent
 Intelligent tool selection, evasion techniques, and iterative approach
 
 Features:
@@ -19,7 +19,7 @@ from dataclasses import dataclass, asdict, field
 from enum import Enum
 
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("neurosploit.agent")
+logger = logging.getLogger("tazosploit.agent")
 
 
 class ToolCategory(Enum):

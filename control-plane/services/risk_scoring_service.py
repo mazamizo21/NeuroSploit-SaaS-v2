@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Risk Scoring Service
+TazoSploit SaaS v2 - Risk Scoring Service
 Calculates risk scores for jobs and tenants
 """
 

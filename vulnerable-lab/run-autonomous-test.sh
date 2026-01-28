@@ -5,7 +5,7 @@
 set -e
 
 echo "=========================================="
-echo "NeuroSploit AUTONOMOUS Mode"
+echo "TazoSploit AUTONOMOUS Mode"
 echo "NO HINTS - AI must discover everything"
 echo "=========================================="
 
@@ -24,7 +24,7 @@ echo "Mode: FULLY AUTONOMOUS - No hints provided"
 echo ""
 
 # Build image if needed
-docker build -t neurosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
+docker build -t tazosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
 
 echo ""
 echo "Starting AUTONOMOUS penetration test..."
@@ -37,9 +37,9 @@ docker run --rm -it \
   -e LLM_API_BASE="$LLM_API_BASE" \
   -e LLM_MODEL="$LLM_MODEL" \
   -v "$(pwd)/logs:/pentest/logs" \
-  -v "$(pwd)/../kali-executor/open-interpreter:/opt/neurosploit" \
-  neurosploit-kali:minimal \
-  python3 /opt/neurosploit/dynamic_agent.py \
+  -v "$(pwd)/../kali-executor/open-interpreter:/opt/tazosploit" \
+  tazosploit-kali:minimal \
+  python3 /opt/tazosploit/dynamic_agent.py \
   --target "$TARGET" \
   --objective "Perform a comprehensive security assessment on the target. Find vulnerabilities, exploit them, and extract any sensitive data you can access. Document all findings." \
   --max-iterations 50 2>&1 | tee logs/autonomous_run.log

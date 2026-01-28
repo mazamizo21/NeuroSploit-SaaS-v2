@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Full Integration Test
+TazoSploit  v2 - Full Integration Test
 Tests LLM -> Kali -> Target with complete logging
 """
 
@@ -178,7 +178,7 @@ def verify_logs():
 def main():
     """Run all integration tests"""
     print("=" * 60)
-    print("NeuroSploit SaaS v2 - Full Integration Test")
+    print("TazoSploit  v2 - Full Integration Test")
     print("=" * 60)
     
     target = os.getenv("TEST_TARGET", "http://host.docker.internal:8888")

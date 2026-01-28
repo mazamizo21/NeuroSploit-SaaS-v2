@@ -1,11 +1,11 @@
 #!/bin/bash
-# NeuroSploit SaaS v2 - Kali Executor Entrypoint
+# TazoSploit SaaS v2 - Kali Executor Entrypoint
 # Initializes Open Interpreter and waits for jobs
 
 set -e
 
 echo "=============================================="
-echo "NeuroSploit Kali Executor Starting..."
+echo "TazoSploit Kali Executor Starting..."
 echo "=============================================="
 
 # Log system info

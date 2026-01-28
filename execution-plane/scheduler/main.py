@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Job Scheduler
+TazoSploit SaaS v2 - Job Scheduler
 Distributes jobs from Control Plane to Workers
 """
 
@@ -18,7 +18,7 @@ structlog.configure(processors=[
 ])
 logger = structlog.get_logger()
 
-app = FastAPI(title="NeuroSploit Scheduler")
+app = FastAPI(title="TazoSploit Scheduler")
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CONTROL_PLANE_URL = os.getenv("CONTROL_PLANE_URL", "http://localhost:8000")

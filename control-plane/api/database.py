@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Database Configuration
+TazoSploit SaaS v2 - Database Configuration
 Async SQLAlchemy setup with PostgreSQL for multi-tenant architecture
 """
 
@@ -10,7 +10,7 @@ from sqlalchemy.orm import declarative_base
 # Database configuration
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://neurosploit:neurosploit_dev@localhost:5432/neurosploit"
+    "postgresql://tazosploit:tazosploit_dev@localhost:5432/tazosploit"
 )
 
 # Convert postgresql:// to postgresql+asyncpg:// for async support

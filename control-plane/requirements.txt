@@ -1,4 +1,4 @@
-# NeuroSploit SaaS v2 - Control Plane Dependencies
+# TazoSploit SaaS v2 - Control Plane Dependencies
 
 # Web framework
 fastapi>=0.109.0

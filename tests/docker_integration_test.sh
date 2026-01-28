@@ -1,11 +1,11 @@
 #!/bin/bash
-# NeuroSploit SaaS v2 - Docker Integration Tests
+# TazoSploit  v2 - Docker Integration Tests
 # Tests all Phase 1 features in actual Docker environment
 
 set -e  # Exit on error
 
 echo "================================================================================"
-echo "NeuroSploit SaaS v2 - Docker Integration Tests"
+echo "TazoSploit  v2 - Docker Integration Tests"
 echo "================================================================================"
 echo ""
 
@@ -53,7 +53,7 @@ sleep 10
 
 # Test PostgreSQL
 test_start "PostgreSQL Connection"
-if docker exec neurosploit-postgres pg_isready -U neurosploit > /dev/null 2>&1; then
+if docker exec tazosploit-postgres pg_isready -U tazosploit > /dev/null 2>&1; then
     test_pass "PostgreSQL is running and accepting connections"
 else
     test_fail "PostgreSQL connection failed"
@@ -61,7 +61,7 @@ fi
 
 # Test Redis
 test_start "Redis Connection"
-if docker exec neurosploit-redis redis-cli ping | grep -q "PONG"; then
+if docker exec tazosploit-redis redis-cli ping | grep -q "PONG"; then
     test_pass "Redis is running and responding"
 else
     test_fail "Redis connection failed"
@@ -165,7 +165,7 @@ echo "--------------------------------------------------------------------------
 
 # Test database tables exist
 test_start "Database Schema - Check Tables"
-TABLES=$(docker exec neurosploit-postgres psql -U neurosploit -d neurosploit -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null | tr -d ' ')
+TABLES=$(docker exec tazosploit-postgres psql -U tazosploit -d tazosploit -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null | tr -d ' ')
 if [ "$TABLES" -gt 0 ]; then
     test_pass "Database schema created ($TABLES tables)"
 else

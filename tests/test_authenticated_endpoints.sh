@@ -5,7 +5,7 @@
 set -e
 
 echo "================================================================================"
-echo "NeuroSploit SaaS v2 - Authenticated Endpoints Test"
+echo "TazoSploit  v2 - Authenticated Endpoints Test"
 echo "================================================================================"
 echo ""
 

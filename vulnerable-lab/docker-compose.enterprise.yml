@@ -1,4 +1,4 @@
-# NeuroSploit Enterprise Vulnerable Lab
+# TazoSploit Enterprise Vulnerable Lab
 # Comprehensive multi-tier environment for intense testing
 #
 # Components:
@@ -374,7 +374,7 @@ services:
       - elasticsearch
 
   # =============================================================================
-  # ATTACKER (Kali with NeuroSploit)
+  # ATTACKER (Kali with TazoSploit)
   # =============================================================================
   
   kali-attacker:
@@ -390,7 +390,7 @@ services:
       - LLM_MODEL=openai/gpt-oss-120b
     volumes:
       - ./logs:/pentest/logs
-      - ../kali-executor/open-interpreter:/opt/neurosploit
+      - ../kali-executor/open-interpreter:/opt/tazosploit
     privileged: true
     stdin_open: true
     tty: true

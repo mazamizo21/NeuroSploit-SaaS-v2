@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Phase 1 Integration Tests
+TazoSploit  v2 - Phase 1 Integration Tests
 End-to-end testing of all Phase 1 features
 """
 
@@ -13,7 +13,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../control-plane'))
 
 print("=" * 80)
-print("NeuroSploit SaaS v2 - Phase 1 Integration Tests")
+print("TazoSploit  v2 - Phase 1 Integration Tests")
 print("=" * 80)
 print()
 

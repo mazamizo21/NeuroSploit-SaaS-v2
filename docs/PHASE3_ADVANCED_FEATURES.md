@@ -463,7 +463,7 @@ async def predict_attack_paths(job_id: UUID):
 # tests/load/locustfile.py
 from locust import HttpUser, task, between
 
-class NeuroSploitUser(HttpUser):
+class TazoSploitUser(HttpUser):
     wait_time = between(1, 3)
     
     def on_start(self):

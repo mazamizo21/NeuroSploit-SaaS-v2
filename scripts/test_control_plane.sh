@@ -1,11 +1,11 @@
 #!/bin/bash
-# NeuroSploit SaaS v2 - Control Plane Test Script
+# TazoSploit  v2 - Control Plane Test Script
 # Tests the Control Plane API endpoints
 
 set -e
 
 echo "=============================================="
-echo "NeuroSploit SaaS v2 - Control Plane Tests"
+echo "TazoSploit  v2 - Control Plane Tests"
 echo "=============================================="
 
 API_URL="${API_URL:-http://localhost:8000}"
@@ -32,7 +32,7 @@ fi
 echo ""
 echo "Testing root endpoint..."
 ROOT=$(curl -s "$API_URL/")
-if echo "$ROOT" | grep -q "NeuroSploit"; then
+if echo "$ROOT" | grep -q "TazoSploit"; then
     pass "Root endpoint works"
 else
     fail "Root endpoint failed"

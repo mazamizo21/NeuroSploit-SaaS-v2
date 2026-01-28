@@ -1,9 +1,0 @@
-
-Windows Registry Editor Version 5.00
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\ORL\WinVNC3]
-"RemoveTrayIcon"=dword:00000001
-"DisableTrayIcon"=dword:00000001
-"DisableLocalInputs"=dword:00000001
-"AllowLoopback"=dword:00000000
-"AuthRequired"=dword:00000001

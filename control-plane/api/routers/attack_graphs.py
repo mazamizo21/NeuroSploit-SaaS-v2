@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Attack Graphs Router
+TazoSploit SaaS v2 - Attack Graphs Router
 API endpoints for attack path visualization
 """
 

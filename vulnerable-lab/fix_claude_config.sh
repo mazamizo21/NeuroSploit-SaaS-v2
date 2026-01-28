@@ -35,7 +35,7 @@ echo ""
 
 echo "## Updated Script"
 echo "---------------"
-grep -A 5 "python3 /opt/neurosploit" run-unlimited-test.sh
+grep -A 5 "python3 /opt/tazosploit" run-unlimited-test.sh
 echo ""
 
 echo "## Session File Naming Issue"

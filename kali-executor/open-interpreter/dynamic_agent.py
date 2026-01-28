@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NeuroSploit SaaS v2 - Dynamic AI Agent
+TazoSploit  v2 - Dynamic AI Agent
 Fully AI-driven with NO hardcoded solutions.
 The AI decides which tools to use, how to approach problems, and how to troubleshoot.
 """
@@ -21,7 +21,7 @@ try:
 except (OSError, PermissionError):
     # Fallback to temp directory if /pentest is not writable (e.g., on macOS)
     import tempfile
-    LOG_DIR = os.path.join(tempfile.gettempdir(), "neurosploit_logs")
+    LOG_DIR = os.path.join(tempfile.gettempdir(), "tazosploit_logs")
     os.makedirs(LOG_DIR, exist_ok=True)
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -402,9 +402,9 @@ Be smart. Don't repeat yourself. Make progress.
             self.failed_commands[tool] += 1
             
             if self.failed_commands[tool] == 1:
-                hints.append(f"⚠️ `{tool}` not found. Use `websearch \"kali linux {tool} package name\"` to find the correct package.")
+                hints.append(f"⚠️ `{tool}` not found. YOU MUST INSTALL IT.\nRun: `apt-cache search {tool}` then `apt-get install -y <package_name>`")
             elif self.failed_commands[tool] >= 2:
-                hints.append(f"🛑 `{tool}` failed {self.failed_commands[tool]} times. You MUST search for the package or try a different tool.")
+                hints.append(f"🛑 `{tool}` failed {self.failed_commands[tool]} times. You MUST install it via apt-get or use a different tool.")
         
         # Track downloads
         if 'download' in execution.content.lower() and execution.success:
@@ -587,7 +587,14 @@ Be smart. Don't repeat yourself. Make progress.
             if memory_context:
                 initial_prompt += f"\n{memory_context}\n\n"
         
-        initial_prompt += "You are now autonomous. Begin your assessment. Decide your approach and execute."
+        initial_prompt += """
+**AVAILABLE TOOLS**:
+- `websearch "query"`: Search the internet (Tavily/Bravo) for CVEs, exploits, or docs.
+- `docslookup "tool"`: Get syntax and usage for security tools.
+- `download "url"`: Download files to current directory.
+- `apt-get install -y package`: Install any missing tools.
+
+You are now autonomous. Begin your assessment. Decide your approach and execute."""
         
         self.conversation.append({"role": "user", "content": initial_prompt})
         
@@ -786,7 +793,7 @@ Continue the assessment - provide the next commands."""
 def main():
     import argparse
     
-    parser = argparse.ArgumentParser(description="NeuroSploit Dynamic AI Agent")
+    parser = argparse.ArgumentParser(description="TazoSploit Dynamic AI Agent")
     parser.add_argument("--target", help="Target (IP, URL, or range)")
     parser.add_argument("--objective", help="What to accomplish")
     parser.add_argument("--max-iterations", type=int, default=15, help="Max iterations")

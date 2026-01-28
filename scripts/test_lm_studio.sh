@@ -1,9 +1,9 @@
 #!/bin/bash
-# NeuroSploit SaaS v2 - LM Studio Connection Test
+# TazoSploit  v2 - LM Studio Connection Test
 # Tests connectivity between Kali container and LM Studio
 
 echo "=============================================="
-echo "NeuroSploit SaaS v2 - LM Studio Connection Test"
+echo "TazoSploit  v2 - LM Studio Connection Test"
 echo "=============================================="
 
 GREEN='\033[0;32m'

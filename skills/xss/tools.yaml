@@ -1,0 +1,51 @@
+xsstrike:
+  description: "Advanced XSS detection and exploitation tool with fuzzing, scanning, and payload generation"
+  category: "exploitation"
+  install_cmd: "apt-get install -y xsstrike"
+  verify_cmd: "xsstrike --version"
+  examples:
+    - "xsstrike -u 'http://target/page?param=value'"
+    - "xsstrike -u 'http://target/page?param=value' --crawl"
+    - "xsstrike -u 'http://target/page?param=value' --blind"
+
+xsser:
+  description: "Automated cross-site scripting framework and exploitation tool"
+  category: "exploitation"
+  install_cmd: "apt-get install -y xsser"
+  verify_cmd: "xsser | head -n 1"
+  examples:
+    - "xsser -u 'http://target/page?param=value'"
+    - "xsser -u 'http://target/page?param=value' --cookie='session=abc123'"
+
+dalfox:
+  description: "Fast XSS parameter scanner and analysis tool"
+  category: "exploitation"
+  install_cmd: "apt-get install -y dalfox"
+  verify_cmd: "dalfox version"
+  examples:
+    - "dalfox url 'http://target/page?param=value'"
+    - "dalfox url 'http://target/page?param=value' --bw 'param'"
+
+beef:
+  description: "Browser Exploitation Framework - hook browsers and exploit them"
+  category: "post-exploitation"
+  install_cmd: "apt-get install -y beef-xss"
+  verify_cmd: "beef-xss version | head -n 1"
+  examples:
+    - "beef-xss"
+
+burpsuite:
+  description: "Comprehensive web application security testing platform"
+  category: "web"
+  install_cmd: "apt-get install -y burpsuite"
+  verify_cmd: "burpsuite --version"
+  examples:
+    - "burpsuite"
+
+beef-xss:
+  description: "Browser Exploitation Framework command-line interface"
+  category: "post-exploitation"
+  install_cmd: "apt-get install -y beef-xss"
+  verify_cmd: "which beef-xss"
+  examples:
+    - "beef-xss"

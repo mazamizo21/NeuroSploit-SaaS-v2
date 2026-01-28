@@ -215,7 +215,7 @@ GET /api/v1/reports/tenants/me/trends - Risk trends
 
 ### Step 1: Run Integration Tests
 ```bash
-cd /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2
+cd /Users/tazjack/Documents/PenTest/TazoSploit--v2
 ./tests/docker_integration_test.sh
 ```
 
@@ -275,7 +275,7 @@ docker-compose -f docker-compose.infra.yml down
 
 We now have features that make enterprise platforms cost $50K-$500K/year:
 
-| Feature | Enterprise | NeuroSploit v2 |
+| Feature | Enterprise | TazoSploit v2 |
 |---------|-----------|----------------|
 | MITRE ATT&CK | ✅ | ✅ |
 | Continuous Scanning | ✅ | ✅ |
@@ -290,7 +290,7 @@ We now have features that make enterprise platforms cost $50K-$500K/year:
 - ✅ 10-50x cheaper
 - ✅ Full transparency (complete logging)
 - ✅ Simple architecture (no LangChain/multi-agents)
-- ✅ Modern SaaS (multi-tenant from day one)
+- ✅ Modern  (multi-tenant from day one)
 
 ---
 
@@ -380,4 +380,4 @@ All 4 enterprise features are implemented, tested, and ready for production:
 
 **Built by:** Cascade AI  
 **Date:** January 11, 2026  
-**Repository:** https://github.com/mazamizo21/NeuroSploit-SaaS-v2
+**Repository:** https://github.com/mazamizo21/TazoSploit--v2

@@ -1,10 +1,10 @@
 #!/bin/bash
-# NeuroSploit with GPT-4 - Production-Grade AI Pentesting
+# TazoSploit with GPT-4 - Production-Grade AI Pentesting
 
 set -e
 
 echo "=========================================="
-echo "NeuroSploit with GPT-4"
+echo "TazoSploit with GPT-4"
 echo "Production AI Pentesting"
 echo "=========================================="
 
@@ -24,7 +24,7 @@ echo "Mode: FULLY AUTONOMOUS"
 echo ""
 
 # Build image if needed
-docker build -t neurosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
+docker build -t tazosploit-kali:minimal -f ../kali-executor/Dockerfile.minimal ../kali-executor 2>&1 | tail -3
 
 echo ""
 echo "Starting GPT-4-powered penetration test..."
@@ -38,9 +38,9 @@ docker run --rm -it \
   -e OPENAI_API_KEY="$OPENAI_API_KEY" \
   -e TARGET="$TARGET" \
   -v "$(pwd)/logs:/pentest/logs" \
-  -v "$(pwd)/../kali-executor/open-interpreter:/opt/neurosploit" \
-  neurosploit-kali:minimal \
-  python3 /opt/neurosploit/dynamic_agent.py \
+  -v "$(pwd)/../kali-executor/open-interpreter:/opt/tazosploit" \
+  tazosploit-kali:minimal \
+  python3 /opt/tazosploit/dynamic_agent.py \
   --target "$TARGET" \
   --objective "Perform a comprehensive security assessment on the target. Find vulnerabilities, exploit them, and extract any sensitive data you can access. Document all findings." 2>&1 | tee logs/gpt4_run.log
 

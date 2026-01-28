@@ -1,13 +1,13 @@
 """
-NeuroSploit SaaS v2 - Load Testing with Locust
+TazoSploit  v2 - Load Testing with Locust
 Tests API performance under load
 """
 
 from locust import HttpUser, task, between
 import random
 
-class NeuroSploitUser(HttpUser):
-    """Simulates a user interacting with NeuroSploit API"""
+class TazoSploitUser(HttpUser):
+    """Simulates a user interacting with TazoSploit API"""
     
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
     

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Live Log Monitor for NeuroSploit
+Live Log Monitor for TazoSploit
 Watches LLM interaction logs and reports significant events
 """
 
@@ -116,7 +116,7 @@ class LogMonitor:
     
     def monitor(self, interval=2):
         """Monitor logs continuously"""
-        print("🔍 NeuroSploit Log Monitor Started")
+        print("🔍 TazoSploit Log Monitor Started")
         print(f"📂 Watching: {self.log_dir}")
         print(f"🔄 Refresh interval: {interval}s")
         print(f"{'='*70}\n")

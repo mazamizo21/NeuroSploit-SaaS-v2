@@ -1,0 +1,44 @@
+sqlmap:
+  description: "Automated SQL injection and database takeover tool"
+  category: "exploitation"
+  install_cmd: "apt-get install -y sqlmap"
+  verify_cmd: "sqlmap --version"
+  examples:
+    - "sqlmap -u 'http://target/page?id=1' --batch --dbs"
+    - "sqlmap -u 'http://target/page?id=1' --batch --tables -D database_name"
+    - "sqlmap -u 'http://target/page?id=1' --batch -T users --dump"
+    - "sqlmap -u 'http://target/page?id=1' --batch --os-shell"
+    - "sqlmap -u 'http://target/page?id=1' --tamper=space2comment --batch"
+
+bbqsql:
+  description: "Blind SQL injection exploitation framework"
+  category: "exploitation"
+  install_cmd: "apt-get install -y bbqsql"
+  verify_cmd: "bbqsql --help | head -n 1"
+  examples:
+    - "bbqsql -u 'http://target/page?id=1' -b 'benchmark' --data='id=1'"
+
+sqlninja:
+  description: "SQL injection exploitation tool for SQL Server"
+  category: "exploitation"
+  install_cmd: "apt-get install -y sqlninja"
+  verify_cmd: "sqlninja -h | head -n 1"
+  examples:
+    - "sqlninja -m target.conf"
+
+havij:
+  description: "Automated SQL injection tool"
+  category: "exploitation"
+  install_cmd: "apt-get install -y havij"
+  verify_cmd: "havij --help | head -n 1"
+  examples:
+    - "havij -u 'http://target/page?id=1'"
+
+commix:
+  description: "Automated OS command injection and exploitation tool"
+  category: "exploitation"
+  install_cmd: "apt-get install -y commix"
+  verify_cmd: "commix --version"
+  examples:
+    - "commix -u 'http://target/page?cmd=test' --batch"
+    - "commix -u 'http://target/page?cmd=test' --batch --os-shell"

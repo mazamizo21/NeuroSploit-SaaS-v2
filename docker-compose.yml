@@ -1,21 +1,21 @@
-# NeuroSploit SaaS v2 - Development Docker Compose
+# TazoSploit SaaS v2 Development Docker Compose
 # Implements Control Plane / Execution Plane separation
 
-# NeuroSploit SaaS v2 - Full Stack
+# TazoSploit SaaS v2 Full Stack
 # Use docker-compose.infra.yml for infrastructure only
 
 services:
   # =============================================================================
   # INFRASTRUCTURE SERVICES
   # =============================================================================
-  
+
   postgres:
     image: postgres:15-alpine
-    container_name: neurosploit-postgres
+    container_name: tazosploit-postgres
     environment:
-      POSTGRES_DB: neurosploit
-      POSTGRES_USER: neurosploit
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-neurosploit_dev}
+      POSTGRES_DB: tazosploit
+      POSTGRES_USER: tazosploit
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tazosploit_dev}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./control-plane/db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -24,14 +24,14 @@ services:
     networks:
       - control-plane-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U neurosploit"]
+      test: [ "CMD-SHELL", "pg_isready -U tazosploit" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: neurosploit-redis
+    container_name: tazosploit-redis
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data
@@ -41,7 +41,7 @@ services:
       - control-plane-network
       - execution-plane-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -49,14 +49,14 @@ services:
   # =============================================================================
   # CONTROL PLANE SERVICES
   # =============================================================================
-  
+
   control-plane-api:
     build:
       context: ./control-plane
       dockerfile: Dockerfile
-    container_name: neurosploit-control-api
+    container_name: tazosploit-control-api
     environment:
-      - DATABASE_URL=postgresql://neurosploit:${DB_PASSWORD:-neurosploit_dev}@postgres:5432/neurosploit
+      - DATABASE_URL=postgresql://tazosploit:${DB_PASSWORD:-tazosploit_dev}@postgres:5432/tazosploit
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -80,12 +80,12 @@ services:
   # =============================================================================
   # EXECUTION PLANE SERVICES
   # =============================================================================
-  
+
   job-scheduler:
     build:
       context: ./execution-plane
       dockerfile: Dockerfile.scheduler
-    container_name: neurosploit-scheduler
+    container_name: tazosploit-scheduler
     environment:
       - REDIS_URL=redis://redis:6379/0
       - CONTROL_PLANE_URL=http://control-plane-api:8000
@@ -132,7 +132,7 @@ services:
   # =============================================================================
   # KALI EXECUTION CONTAINERS (Pool)
   # =============================================================================
-  
+
   kali-executor:
     build:
       context: ./kali-executor
@@ -147,10 +147,10 @@ services:
     cap_drop:
       - ALL
     cap_add:
-      - NET_RAW  # Required for nmap, etc.
+      - NET_RAW # Required for nmap, etc.
     security_opt:
       - no-new-privileges:true
-    read_only: false  # Tools need to write temp files
+    read_only: false # Tools need to write temp files
     tmpfs:
       - /tmp:size=1G
       - /run:size=100M
@@ -168,18 +168,18 @@ services:
   # =============================================================================
   # LOCAL LLM (Development Only)
   # =============================================================================
-  
-  # LM Studio runs on host - connect via host.docker.internal:1234
+
+  # LM Studio runs on host connect via host.docker.internal:1234
   # In production, replace with Claude API
 
   # =============================================================================
   # OBSERVABILITY SERVICES
   # =============================================================================
-  
+
   # Grafana for dashboards
   grafana:
     image: grafana/grafana:latest
-    container_name: neurosploit-grafana
+    container_name: tazosploit-grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -195,7 +195,7 @@ services:
   # Prometheus for metrics
   prometheus:
     image: prom/prometheus:latest
-    container_name: neurosploit-prometheus
+    container_name: tazosploit-prometheus
     ports:
       - "9090:9090"
     volumes:
@@ -208,10 +208,10 @@ services:
   # =============================================================================
   # DEVELOPMENT TARGET (DVWA)
   # =============================================================================
-  
+
   dvwa:
     image: vulnerables/web-dvwa
-    container_name: neurosploit-dvwa
+    container_name: tazosploit-dvwa
     ports:
       - "8888:80"
     networks:
@@ -220,22 +220,22 @@ services:
       - dev
 
 # =============================================================================
-# NETWORKS - Isolation between planes
+# NETWORKS Isolation between planes
 # =============================================================================
 
 networks:
   control-plane-network:
     driver: bridge
-    name: neurosploit-control
-    
+    name: tazosploit-control
+
   execution-plane-network:
     driver: bridge
-    name: neurosploit-execution
-    
+    name: tazosploit-execution
+
   kali-network:
     driver: bridge
-    name: neurosploit-kali
-    internal: true  # No external internet by default
+    name: tazosploit-kali
+    internal: true # No external internet by default
 
 # =============================================================================
 # VOLUMES

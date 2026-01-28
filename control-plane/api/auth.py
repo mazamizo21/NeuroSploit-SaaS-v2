@@ -1,5 +1,5 @@
 """
-NeuroSploit SaaS v2 - Authentication Module
+TazoSploit SaaS v2 - Authentication Module
 JWT-based authentication with multi-tenant support
 """
 

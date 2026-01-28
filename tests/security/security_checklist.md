@@ -1,4 +1,4 @@
-# NeuroSploit SaaS v2 - Security Audit Checklist
+# TazoSploit  v2 - Security Audit Checklist
 
 ## Authentication & Authorization
 

@@ -261,7 +261,7 @@ class ComprehensiveReport:
     def generate_markdown_report(self) -> str:
         """Generate comprehensive markdown report"""
         report = []
-        report.append("# 🎯 NeuroSploit Comprehensive Exploitation Report")
+        report.append("# 🎯 TazoSploit Comprehensive Exploitation Report")
         report.append(f"\n**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         
         # Executive Summary

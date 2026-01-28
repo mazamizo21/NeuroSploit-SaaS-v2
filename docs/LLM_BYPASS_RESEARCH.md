@@ -1,4 +1,4 @@
-# LLM Bypass Research: PentestGPT vs PentAGI vs NeuroSploit
+# LLM Bypass Research: PentestGPT vs PentAGI vs TazoSploit
 
 ## Executive Summary
 
@@ -152,7 +152,7 @@ From their documentation:
 
 ## 3. Comparison Matrix
 
-| Feature | PentAGI | PentestGPT | NeuroSploit v2 | Winner |
+| Feature | PentAGI | PentestGPT | TazoSploit v2 | Winner |
 |---------|---------|------------|----------------|--------|
 | **LLM Bypass Techniques** |
 | Authorization Framework | ✅ Explicit | ✅ Implicit | ⚠️ Weak | PentAGI |
@@ -178,14 +178,14 @@ From their documentation:
 | Multi-User | ✅ | ❌ | ❌ | PentAGI |
 | Team Delegation | ✅ | ❌ | ❌ | PentAGI |
 | Shared Knowledge | ✅ | ❌ | ❌ | PentAGI |
-| **SaaS Features** |
+| ** Features** |
 | Web UI | ✅ (React) | ❌ (CLI only) | ✅ (FastAPI) | Tie |
 | API | ✅ (GraphQL+REST) | ❌ | ✅ (REST) | Tie |
 | Multi-Tenant | ✅ | ❌ | ✅ | Tie |
 | **Simplicity** |
-| Setup Complexity | ⚠️ High (12+ services) | ✅ Simple | ✅ Simple | NeuroSploit |
-| Code Complexity | ⚠️ High (Go+React) | ⚠️ Medium (Python) | ✅ Low (Python) | NeuroSploit |
-| Dependencies | ⚠️ Many (Neo4j, etc.) | ✅ Few | ✅ Few | NeuroSploit |
+| Setup Complexity | ⚠️ High (12+ services) | ✅ Simple | ✅ Simple | TazoSploit |
+| Code Complexity | ⚠️ High (Go+React) | ⚠️ Medium (Python) | ✅ Low (Python) | TazoSploit |
+| Dependencies | ⚠️ Many (Neo4j, etc.) | ✅ Few | ✅ Few | TazoSploit |
 | **Cost** |
 | Infrastructure | ⚠️ High ($500+/mo) | ✅ Low ($50/mo) | ✅ Low ($100/mo) | PentestGPT |
 | Maintenance | ⚠️ High | ✅ Low | ✅ Low | Tie |
@@ -217,10 +217,10 @@ From their documentation:
 
 ---
 
-## 5. What NeuroSploit Does Better
+## 5. What TazoSploit Does Better
 
 1. **Simplicity** - Single agent, no complex multi-agent orchestration
-2. **SaaS Architecture** - Multi-tenant, API-first, modern web UI
+2. ** Architecture** - Multi-tenant, API-first, modern web UI
 3. **Full Transparency** - Complete I/O logging, every LLM decision captured
 4. **AI-Driven Flexibility** - AI decides approach dynamically, no pre-defined playbooks
 5. **Cost Efficiency** - ~$100/mo vs PentAGI's $500+/mo
@@ -230,7 +230,7 @@ From their documentation:
 
 ---
 
-## 6. Critical Gaps in NeuroSploit
+## 6. Critical Gaps in TazoSploit
 
 ### A. Authorization Framework (CRITICAL)
 
@@ -431,7 +431,7 @@ Continue until the full audit is complete.
 
 **Conclusion:** PentestGPT can execute exploits, especially with human guidance.
 
-### NeuroSploit v2: PARTIAL ⚠️
+### TazoSploit v2: PARTIAL ⚠️
 
 **Current State:**
 - Educational framing: ✅
@@ -440,14 +440,14 @@ Continue until the full audit is complete.
 - Prohibition against warnings: ❌
 - Failure recovery: ⚠️ (basic)
 
-**Conclusion:** NeuroSploit can execute some exploits but may get blocked on:
+**Conclusion:** TazoSploit can execute some exploits but may get blocked on:
 - Commands that LLM perceives as "too dangerous"
 - Situations where LLM adds authorization warnings
 - Tool failures without clear alternatives
 
 ---
 
-## 9. Action Items for NeuroSploit
+## 9. Action Items for TazoSploit
 
 ### Immediate (Do Now)
 
@@ -514,7 +514,7 @@ Continue until the full audit is complete.
 5. **Failure Recovery** - Don't get stuck, try alternatives
 6. **Structured Execution** - Tool calls, not plain text
 
-### What NeuroSploit Should Mirror
+### What TazoSploit Should Mirror
 
 1. ✅ **Authorization Framework** - Copy PentAGI's exact wording
 2. ✅ **Prohibited Behaviors** - Ban warnings and disclaimers
@@ -523,7 +523,7 @@ Continue until the full audit is complete.
 5. ⚠️ **Multi-Agent System** - Consider for Phase 2 (adds complexity)
 6. ⚠️ **Knowledge Graph** - Consider for Phase 3 (expensive)
 
-### What NeuroSploit Should NOT Mirror
+### What TazoSploit Should NOT Mirror
 
 1. ❌ **Complex Architecture** - Keep single agent simplicity
 2. ❌ **12+ Services** - Avoid PentAGI's infrastructure bloat
@@ -541,9 +541,9 @@ Continue until the full audit is complete.
 4. Prohibition against warnings
 5. Failure recovery protocols
 
-**NeuroSploit's competitive advantages:**
+**TazoSploit's competitive advantages:**
 1. Simplicity (single agent)
-2. SaaS architecture (multi-tenant)
+2.  architecture (multi-tenant)
 3. Cost efficiency (10x cheaper)
 4. Full transparency (complete logging)
 5. No framework lock-in

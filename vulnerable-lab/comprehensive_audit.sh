@@ -5,7 +5,7 @@ echo "# 🔍 COMPREHENSIVE SECURITY AUDIT - ALL AGENT FILES"
 echo "===================================================="
 echo ""
 
-AGENT_DIR="/Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/kali-executor/open-interpreter"
+AGENT_DIR="/Users/tazjack/Documents/PenTest/TazoSploit--v2/kali-executor/open-interpreter"
 
 echo "## 1. SEARCHING FOR HARDCODED PASSWORDS"
 echo "----------------------------------------"
@@ -73,6 +73,6 @@ echo "## 8. ANALYZING EXECUTION LOGS FOR DISCOVERY METHOD"
 echo "----------------------------------------------------"
 echo ""
 echo "### How did AI get the password? Checking first 10 iterations:"
-grep "p@ssw0rd\|mysql.*root" /Users/tazjack/Documents/PenTest/NeuroSploit-SaaS-v2/vulnerable-lab/logs/agent_executions.jsonl 2>/dev/null | jq -r 'select(.iteration <= 10) | "Iteration \(.iteration): \(.content[:200])"' | head -10
+grep "p@ssw0rd\|mysql.*root" /Users/tazjack/Documents/PenTest/TazoSploit--v2/vulnerable-lab/logs/agent_executions.jsonl 2>/dev/null | jq -r 'select(.iteration <= 10) | "Iteration \(.iteration): \(.content[:200])"' | head -10
 echo ""
 
