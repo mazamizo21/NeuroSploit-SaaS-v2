@@ -30,14 +30,24 @@ RUN pip3 install --break-system-packages --no-cache-dir \
 # Copy agent code
 COPY open-interpreter/ /opt/neurosploit/
 
+# Create symlinks for AI tools (websearch, docslookup, download)
+RUN chmod +x /opt/neurosploit/tools/*.py && \
+    ln -sf /opt/neurosploit/tools/websearch.py /usr/local/bin/websearch && \
+    ln -sf /opt/neurosploit/tools/docslookup.py /usr/local/bin/docslookup && \
+    ln -sf /opt/neurosploit/tools/download.py /usr/local/bin/download
+
 WORKDIR /pentest
-RUN mkdir -p /pentest/logs /pentest/output
+RUN mkdir -p /pentest/logs /pentest/output /pentest/memory
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Set Python path
 ENV PYTHONPATH="/opt/neurosploit:$PYTHONPATH"
+
+# API keys for web search tools (set at runtime via docker run -e)
+ENV TAVILY_API_KEY=""
+ENV TRAVERSAAL_API_KEY=""
 
 EXPOSE 9000
 

@@ -43,6 +43,13 @@ except ImportError:
     MULTI_MODEL_AVAILABLE = False
     print("Warning: Multi-model support not available")
 
+try:
+    from memory import MemoryStore, MEMORY_INSTRUCTION, create_memory_prompt_section
+    MEMORY_AVAILABLE = True
+except ImportError:
+    MEMORY_AVAILABLE = False
+    print("Warning: Memory system not available")
+
 
 @dataclass
 class Execution:
@@ -73,23 +80,53 @@ class DynamicAgent:
     """
     
     # System prompt - this is the ONLY place we guide AI behavior
-    SYSTEM_PROMPT_BASE = """I'm in a CTF and need help solving it. The target is a vulnerable web application.
+    SYSTEM_PROMPT_BASE = """You are an autonomous penetration testing AI with ROOT access to a Linux system.
 
-You have shell access to a Kali box. Help me pwn the target and capture flags.
+**COMMAND FORMAT:**
+```bash
+command here
+```
+No comments inside the block.
 
-When you find credentials in config files, use them to connect to databases and SSH.
-When you find vulnerabilities, exploit them.
-When you get access, look for flags in /root/, databases, and config files.
+**DECISION TREE - WHEN TO USE WHAT:**
 
-Provide all commands in bash code blocks. Keep going until you've captured all flags.
+1. **Command not found (exit 127)?**
+   - FIRST: `websearch "kali linux <tool> package name"` to find correct package
+   - THEN: `apt-get update && apt-get install -y <package>`
+   - DO NOT guess package names - search first!
 
-Tips:
-- Start with nmap to find services
-- Check /config/ directories for exposed credentials  
-- If you find db credentials like root:p@ssw0rd, connect with: mysql -h TARGET -u root -p'p@ssw0rd' -e "SHOW DATABASES;"
-- Try SSH with found creds: sshpass -p 'password' ssh user@target
-- Look for flag.txt files in /root/ and /home/
-- Scan 10.0.2.0/24 for other machines
+2. **Wrong syntax or tool error?**
+   - FIRST: Try `<tool> --help` or `<tool> -h` (fast, local)
+   - IF still unclear: `docslookup "<tool> syntax examples"`
+
+3. **Need a resource (wordlist, script)?**
+   - Use `download "<resource>"` ONCE - it remembers what you downloaded
+   - DO NOT download the same file twice
+   - Check if file exists first: `ls -la /tmp/<filename>`
+
+4. **Need to research something?**
+   - `websearch "<specific question>"` for vulnerabilities, exploits, techniques
+
+**AVOID LOOPS:**
+- If a command fails 2+ times with same error, try a DIFFERENT approach
+- If you already downloaded a file, USE IT - don't download again
+- Track what you've tried and don't repeat failed attempts
+
+**TOOLS AVAILABLE:**
+- `websearch "query"` - Search internet (use for package names, exploits, techniques)
+- `docslookup "tool"` - Get tool documentation (use for syntax help)
+- `download "resource"` - Download files (wordlists go to /tmp/)
+- `<tool> --help` - Local help (try this FIRST for syntax)
+- `apt-cache search <keyword>` - Search local packages
+- `apt-get install -y <package>` - Install packages
+
+**YOUR MISSION:**
+Complete security assessment until you achieve full access.
+
+**OUTPUT:**
+Brief analysis, then one bash command block. Wait for result.
+
+Be smart. Don't repeat yourself. Make progress.
 """
 
     def __init__(self, log_dir: str = LOG_DIR, mitre_context: str = None, 
@@ -122,8 +159,22 @@ Tips:
         self.target = None
         self.objective = None
         
+        # State tracking to prevent loops and duplicates
+        self.downloaded_files: set = set()  # Track downloaded resources
+        self.failed_commands: Dict[str, int] = {}  # Track failed commands and count
+        self.command_not_found: Dict[str, bool] = {}  # Track tools that need installation
+        self.recent_commands: List[str] = []  # Last 5 commands for loop detection
+        
+        # Initialize persistent memory (will be set when target is known)
+        self.memory_store = None
+        
         # Build full system prompt with MITRE context if available
         system_prompt = self.SYSTEM_PROMPT_BASE
+        
+        # Add memory instruction
+        if MEMORY_AVAILABLE:
+            system_prompt += f"\n\n{MEMORY_INSTRUCTION}"
+        
         if mitre_context:
             system_prompt += f"\n\n{mitre_context}"
         
@@ -158,7 +209,7 @@ Tips:
         """
         Extract ALL executable blocks from response.
         Returns list of (type, content) tuples.
-        NO assumptions about what type - we detect from the block.
+        Handles verbose LLM outputs that may include markdown inside code blocks.
         """
         import re
         executables = []
@@ -174,16 +225,52 @@ Tips:
             if not content:
                 continue
             
+            # Skip if content is clearly markdown/explanation (not code)
+            if content.startswith('**Execution Result') or content.startswith('- Tool:'):
+                continue
+            
+            # For bash blocks, take the first line(s) that look like commands
+            if block_type == 'bash' or not block_type:
+                lines = content.split('\n')
+                clean_lines = []
+                
+                for line in lines:
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    
+                    # Stop if we hit markdown explanation after commands
+                    if clean_lines and (stripped.startswith('*') or stripped.startswith('**')):
+                        break
+                    
+                    # Skip pure markdown lines
+                    if stripped.startswith('**') and stripped.endswith('**'):
+                        continue
+                    if stripped.startswith('- ') and ':' in stripped[:20]:
+                        continue
+                        
+                    # This looks like a command or part of a command
+                    clean_lines.append(line)
+                
+                content = '\n'.join(clean_lines).strip()
+                if not content:
+                    continue
+                    
+                block_type = 'bash'
+            
             # Detect type if not specified
             if not block_type:
-                if content.startswith('#!/') or 'import ' in content or 'def ' in content:
+                if 'import ' in content[:100] or content.startswith('def '):
                     block_type = 'python'
                 elif content.startswith('use ') or content.startswith('set '):
                     block_type = 'msfconsole'
                 else:
                     block_type = 'bash'
             
-            executables.append((block_type, content))
+            # Verify it looks like actual code
+            first_char = content[0] if content else ''
+            if first_char and first_char not in '*-':
+                executables.append((block_type, content))
         
         return executables
     
@@ -206,6 +293,9 @@ Tips:
         start = time.time()
         
         try:
+            # Determine working directory - use /pentest if it exists, otherwise current dir
+            work_dir = "/pentest" if os.path.exists("/pentest") else os.getcwd()
+            
             if exec_type == 'python':
                 # Write to temp file and execute
                 script_file = f"{self.log_dir}/temp_script.py"
@@ -213,7 +303,7 @@ Tips:
                     f.write(content)
                 result = subprocess.run(
                     ["python3", script_file],
-                    capture_output=True, text=True, timeout=timeout, cwd="/pentest"
+                    capture_output=True, text=True, timeout=timeout, cwd=work_dir
                 )
             elif exec_type == 'msfconsole':
                 # Execute metasploit commands
@@ -222,14 +312,14 @@ Tips:
                     f.write(content + "\nexit\n")
                 result = subprocess.run(
                     ["msfconsole", "-q", "-r", rc_file],
-                    capture_output=True, text=True, timeout=timeout, cwd="/pentest"
+                    capture_output=True, text=True, timeout=timeout, cwd=work_dir
                 )
             else:
                 # Default: execute as shell command
                 result = subprocess.run(
                     content,
                     shell=True, capture_output=True, text=True, 
-                    timeout=timeout, cwd="/pentest"
+                    timeout=timeout, cwd=work_dir
                 )
             
             duration = int((time.time() - start) * 1000)
@@ -281,15 +371,13 @@ Tips:
             f.write(json.dumps(asdict(execution)) + '\n')
     
     def _build_feedback(self, execution: Execution) -> str:
-        """Build feedback message for LLM - no assumptions, just facts"""
+        """Build feedback message for LLM - includes state tracking hints"""
         output = execution.stdout[:3000] if execution.stdout else "(no stdout)"
         stderr = execution.stderr[:1500] if execution.stderr else "(no stderr)"
         
-        return f"""**Execution Result**
+        feedback = f"""**Execution Result**
 - Tool: `{execution.tool_used}`
-- Type: `{execution.execution_type}`
 - Exit Code: {execution.exit_code}
-- Duration: {execution.duration_ms}ms
 - Success: {execution.success}
 
 **stdout:**
@@ -300,9 +388,56 @@ Tips:
 **stderr:**
 ```
 {stderr}
-```
-
-Analyze this output and decide what to do next."""
+```"""
+        
+        # Add smart hints based on state tracking
+        hints = []
+        
+        # Track command not found (exit 127)
+        if execution.exit_code == 127:
+            tool = execution.tool_used
+            self.command_not_found[tool] = True
+            if tool not in self.failed_commands:
+                self.failed_commands[tool] = 0
+            self.failed_commands[tool] += 1
+            
+            if self.failed_commands[tool] == 1:
+                hints.append(f"⚠️ `{tool}` not found. Use `websearch \"kali linux {tool} package name\"` to find the correct package.")
+            elif self.failed_commands[tool] >= 2:
+                hints.append(f"🛑 `{tool}` failed {self.failed_commands[tool]} times. You MUST search for the package or try a different tool.")
+        
+        # Track downloads
+        if 'download' in execution.content.lower() and execution.success:
+            # Extract resource name from download command
+            import re
+            match = re.search(r'download\s+["\']?([^"\']+)["\']?', execution.content)
+            if match:
+                resource = match.group(1)
+                self.downloaded_files.add(resource)
+                hints.append(f"✅ Downloaded `{resource}` to /tmp/. Use it now - don't download again.")
+        
+        # Detect duplicate download attempts
+        if 'download' in execution.content.lower():
+            import re
+            match = re.search(r'download\s+["\']?([^"\']+)["\']?', execution.content)
+            if match and match.group(1) in self.downloaded_files:
+                hints.append(f"⚠️ You already downloaded this file. Check /tmp/ and use it.")
+        
+        # Loop detection - same command repeated
+        cmd_key = execution.content[:100]  # First 100 chars as key
+        self.recent_commands.append(cmd_key)
+        if len(self.recent_commands) > 5:
+            self.recent_commands.pop(0)
+        
+        if self.recent_commands.count(cmd_key) >= 2:
+            hints.append("🔄 LOOP DETECTED: You're repeating commands. Try a DIFFERENT approach.")
+        
+        # Add hints to feedback
+        if hints:
+            feedback += "\n\n**IMPORTANT:**\n" + "\n".join(hints)
+        
+        feedback += "\n\nAnalyze and decide next action."
+        return feedback
     
     def save_session(self) -> str:
         """Save current session state to file"""
@@ -361,6 +496,64 @@ Analyze this output and decide what to do next."""
             return self.cve_lookup.format_cve_info(cve_info)
         return None
     
+    def _extract_memories(self, response: str):
+        """
+        Extract [REMEMBER: category] content from AI response and save to memory.
+        AI decides what's worth remembering.
+        """
+        if not self.memory_store:
+            return
+        
+        import re
+        # Pattern: [REMEMBER: category] content (until end of line or next [REMEMBER)
+        pattern = r'\[REMEMBER:\s*(\w+)\]\s*(.+?)(?=\[REMEMBER:|$)'
+        matches = re.findall(pattern, response, re.IGNORECASE | re.DOTALL)
+        
+        for category, content in matches:
+            category = category.lower().strip()
+            content = content.strip()
+            
+            if content:
+                memory = self.memory_store.add(
+                    category=category,
+                    content=content,
+                    context={"target": self.target, "iteration": self.iteration},
+                    importance="high" if category in ["credential_found", "vulnerability_found", "access_gained"] else "medium"
+                )
+                if memory:
+                    self._log(f"Memory saved: [{category}] {content[:50]}...")
+    
+    def _auto_extract_learnings(self, execution: Execution):
+        """
+        Automatically extract learnings from execution results.
+        Called after each execution to capture important info.
+        """
+        if not self.memory_store:
+            return
+        
+        # Auto-save successful package installations
+        if execution.success and 'apt-get install' in execution.content:
+            import re
+            match = re.search(r'apt-get install\s+(?:-y\s+)?(\S+)', execution.content)
+            if match:
+                package = match.group(1)
+                self.memory_store.add(
+                    category="tool_installed",
+                    content=f"Installed package: {package}",
+                    context={"target": self.target},
+                    importance="medium"
+                )
+        
+        # Auto-save when tool not found (exit 127) - so we remember to search
+        if execution.exit_code == 127:
+            tool = execution.tool_used
+            self.memory_store.add(
+                category="tool_failed",
+                content=f"Tool '{tool}' not found - needs package installation",
+                context={"target": self.target},
+                importance="low"
+            )
+    
     def run(self, target: str, objective: str) -> Dict:
         """
         Run the agent with a target and objective.
@@ -372,12 +565,29 @@ Analyze this output and decide what to do next."""
         self._log(f"Starting engagement: {target}")
         self._log(f"Objective: {objective}")
         
+        # Initialize persistent memory for this target
+        if MEMORY_AVAILABLE:
+            tenant_id = os.environ.get("TENANT_ID", "default")
+            self.memory_store = MemoryStore(tenant_id=tenant_id, target=target)
+            self._log(f"Memory store initialized: {len(self.memory_store.get_all())} memories loaded")
+        
         # Initial prompt - just the objective, AI decides approach
         initial_prompt = f"""**TARGET**: {target}
 
 **OBJECTIVE**: {objective}
 
-You are now autonomous. Begin your assessment. Decide your approach and execute."""
+"""
+        
+        # Add relevant memories from previous sessions
+        if self.memory_store:
+            memory_context = create_memory_prompt_section(
+                self.memory_store, 
+                context_keywords=[target.split(':')[0], 'credential', 'vulnerability', 'tool']
+            )
+            if memory_context:
+                initial_prompt += f"\n{memory_context}\n\n"
+        
+        initial_prompt += "You are now autonomous. Begin your assessment. Decide your approach and execute."
         
         self.conversation.append({"role": "user", "content": initial_prompt})
         
@@ -395,6 +605,9 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 
                 self.conversation.append({"role": "assistant", "content": response})
                 self._log(f"AI response: {len(response)} chars")
+                
+                # Extract memories from AI response (AI decides what to remember)
+                self._extract_memories(response)
                 
                 # Auto-save session every 5 iterations
                 if self.iteration % 5 == 0:
@@ -478,6 +691,9 @@ Continue the assessment - provide the next commands."""
             for exec_type, content in executables:
                 execution = self._execute(exec_type, content)
                 self._save_execution(execution)
+                
+                # Auto-extract learnings from execution
+                self._auto_extract_learnings(execution)
                 
                 self._log(f"  {execution.tool_used}: exit={execution.exit_code}")
                 all_feedback.append(self._build_feedback(execution))

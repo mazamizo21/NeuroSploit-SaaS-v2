@@ -47,10 +47,12 @@ class LLMClient:
         self.is_claude = "anthropic.com" in self.api_base or "claude" in self.model.lower()
         self.is_openai = "api.openai.com" in self.api_base or "gpt" in self.model.lower()
         self.is_gpt5 = "gpt-5" in self.model.lower()  # GPT-5 uses different parameter names
+        self.is_zhipu = "z.ai" in self.api_base or "zhipu" in self.api_base or "glm" in self.model.lower()
         self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         self.openai_key = os.getenv("OPENAI_API_KEY")
+        self.zhipu_key = os.getenv("ZHIPU_API_KEY")
         
-        logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude}, OpenAI: {self.is_openai}, GPT-5: {self.is_gpt5})")
+        logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude}, OpenAI: {self.is_openai}, GPT-5: {self.is_gpt5}, Zhipu: {self.is_zhipu})")
     
     def _estimate_tokens(self, text: str) -> int:
         """Rough token estimation (4 chars per token)"""
@@ -107,7 +109,47 @@ class LLMClient:
             messages = self._trim_messages(messages, max_context_tokens=131072)
         
         try:
-            if self.is_claude:
+            if self.is_zhipu:
+                # Zhipu GLM API format (OpenAI-compatible with different endpoint)
+                if not self.zhipu_key:
+                    raise ValueError("ZHIPU_API_KEY not set")
+                
+                # Use configured API base or default to z.ai
+                url = f"{self.api_base}/chat/completions" if not self.api_base.endswith('/chat/completions') else self.api_base
+                if 'z.ai' not in url and 'zhipu' not in url:
+                    url = "https://api.z.ai/api/coding/paas/v4/chat/completions"
+                
+                headers = {
+                    "Authorization": f"Bearer {self.zhipu_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                payload = {
+                    "model": self.model,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature
+                }
+                
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=1000  # GLM can be slow
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data["choices"][0]["message"]["content"]
+                    usage = data.get("usage", {})
+                    prompt_tokens = usage.get("prompt_tokens", 0)
+                    completion_tokens = usage.get("completion_tokens", 0)
+                elif response.status_code == 401:
+                    raise ValueError(f"Invalid Zhipu API key: {response.text}")
+                else:
+                    raise ValueError(f"Zhipu API error {response.status_code}: {response.text}")
+            
+            elif self.is_claude:
                 # Claude API format (using requests like NeuroSploit)
                 if not self.anthropic_key:
                     raise ValueError("ANTHROPIC_API_KEY not set")

@@ -166,13 +166,75 @@ class MITREService:
         ]
     
     def get_techniques_for_tool(self, tool_name: str) -> List[Dict]:
-        """Get techniques associated with a tool"""
+        """Get techniques associated with a tool - checks mapping first, then infers dynamically"""
         if not self._loaded:
             self.load()
         
         tool_name_lower = tool_name.lower()
+        
+        # First check explicit mapping
         technique_ids = self.tool_technique_map.get(tool_name_lower, [])
-        return [self.techniques[tid] for tid in technique_ids if tid in self.techniques]
+        if technique_ids:
+            return [self.techniques[tid] for tid in technique_ids if tid in self.techniques]
+        
+        # Dynamic inference - search techniques by tool name or related keywords
+        return self.infer_techniques_for_tool(tool_name_lower)
+    
+    def infer_techniques_for_tool(self, tool_name: str) -> List[Dict]:
+        """Dynamically infer MITRE techniques based on tool name and description matching"""
+        if not self._loaded:
+            self.load()
+        
+        # Common tool categories and their associated tactics
+        tool_categories = {
+            'scan': ['reconnaissance', 'discovery'],
+            'enum': ['discovery', 'reconnaissance'],
+            'brute': ['credential-access'],
+            'crack': ['credential-access'],
+            'dump': ['credential-access', 'collection'],
+            'exploit': ['initial-access', 'execution', 'privilege-escalation'],
+            'shell': ['execution', 'persistence'],
+            'inject': ['initial-access', 'execution'],
+            'proxy': ['command-and-control'],
+            'pivot': ['lateral-movement'],
+            'tunnel': ['command-and-control', 'exfiltration'],
+            'fuzz': ['initial-access', 'reconnaissance'],
+            'sql': ['initial-access', 'collection'],
+            'xss': ['initial-access'],
+            'web': ['initial-access', 'reconnaissance'],
+            'smb': ['lateral-movement', 'discovery'],
+            'ssh': ['lateral-movement', 'persistence'],
+            'rdp': ['lateral-movement'],
+            'dns': ['reconnaissance', 'exfiltration'],
+            'sniff': ['credential-access', 'collection'],
+            'keylog': ['credential-access', 'collection'],
+            'backdoor': ['persistence'],
+            'rootkit': ['persistence', 'defense-evasion'],
+            'rat': ['command-and-control', 'persistence'],
+            'c2': ['command-and-control'],
+            'exfil': ['exfiltration'],
+            'recon': ['reconnaissance'],
+            'priv': ['privilege-escalation'],
+            'esc': ['privilege-escalation'],
+        }
+        
+        # Find matching tactics based on tool name
+        matching_tactics = set()
+        for keyword, tactics in tool_categories.items():
+            if keyword in tool_name:
+                matching_tactics.update(tactics)
+        
+        # If no matches, default to reconnaissance (most tools start there)
+        if not matching_tactics:
+            matching_tactics = {'reconnaissance', 'discovery'}
+        
+        # Get techniques for matching tactics
+        results = []
+        for tactic in matching_tactics:
+            techniques = self.get_techniques_by_tactic(tactic)
+            results.extend(techniques[:5])  # Limit per tactic
+        
+        return results[:20]  # Return top 20 most relevant
     
     def search_techniques(self, query: str) -> List[Dict]:
         """Search techniques by name or description"""
@@ -205,41 +267,15 @@ class MITREService:
     
     def get_ai_context(self, tool_name: Optional[str] = None) -> str:
         """
-        Generate MITRE ATT&CK context for AI system prompt
-        If tool_name provided, include specific techniques for that tool
+        Generate minimal MITRE ATT&CK context - AI discovers techniques dynamically
         """
         if not self._loaded:
             self.load()
         
-        context = """
-# MITRE ATT&CK Framework Context
-
-You have access to the MITRE ATT&CK framework for understanding adversary tactics and techniques.
-
-## Tactics (High-Level Objectives):
-"""
-        for tactic_id, tactic in sorted(self.tactics.items()):
-            context += f"- **{tactic['name']}** ({tactic_id}): {tactic['description'][:100]}...\n"
-        
-        if tool_name:
-            techniques = self.get_techniques_for_tool(tool_name)
-            if techniques:
-                context += f"\n## Techniques for {tool_name}:\n"
-                for tech in techniques[:10]:  # Limit to 10 to avoid token bloat
-                    context += f"- **{tech['id']}**: {tech['name']} - {tech['description'][:150]}...\n"
-        
-        context += """
-## Your Responsibilities:
-1. When executing commands, identify which MITRE ATT&CK technique(s) you are using
-2. Tag your findings with the appropriate technique ID (e.g., T1595 for Active Scanning)
-3. Explain which tactic you are pursuing (e.g., Reconnaissance, Initial Access)
-4. Consider the full attack chain and which techniques to use next
-
-## Technique ID Format:
-- Main techniques: T1234
-- Sub-techniques: T1234.001
-
-Always reference techniques by their ID when documenting findings.
+        # Minimal context - just inform AI that MITRE framework is available
+        context = f"""
+MITRE ATT&CK framework available with {len(self.techniques)} techniques across {len(self.tactics)} tactics.
+Tag findings with technique IDs (T1234 format) as you discover them.
 """
         return context
 
