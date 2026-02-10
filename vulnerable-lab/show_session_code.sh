@@ -34,7 +34,7 @@ echo "## Current Behavior"
 echo "------------------"
 echo ""
 echo "1. Agent starts:"
-echo "   self.session_id = f"session_{datetime.now()...}"  # Always new!"
+echo '   self.session_id = f"session_{datetime.now()...}"  # Always new!'
 echo ""
 echo "2. Agent ends:"
 echo "   Session saved: /pentest/logs/session_session_20260112_164953.json"
@@ -55,4 +55,3 @@ echo ""
 
 echo "This is a missed opportunity for true resume capability!"
 echo ""
-

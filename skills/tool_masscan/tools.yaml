@@ -1,0 +1,9 @@
+masscan:
+  description: High-speed TCP port scanner
+  category: scanning
+  install_cmd: sudo apt install masscan
+  verify_cmd: masscan --version
+  examples:
+    - masscan -p80,443 10.0.0.0/24
+    - masscan -p0-65535 10.0.0.0/24 --rate 1000
+    - masscan -c scan.conf

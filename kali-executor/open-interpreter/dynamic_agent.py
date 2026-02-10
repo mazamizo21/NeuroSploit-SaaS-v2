@@ -28,6 +28,17 @@ except (OSError, PermissionError):
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+# ─── LLM Profile System ─────────────────────────────────────────────────
+try:
+    from llm_profiles import resolve_profile, apply_profile, get_profile_summary
+    _profile = resolve_profile()
+    _applied = apply_profile(_profile)
+    print(f"[PROFILE] {_profile.get('_name', 'unknown')} ({_profile.get('_source', '?')})")
+except Exception as _e:
+    print(f"[PROFILE] Failed to load profiles: {_e} — using env defaults")
+    _profile = {}
+# ─────────────────────────────────────────────────────────────────────────
+
 
 def _resolve_skills_dir() -> str:
     candidates = [
@@ -454,6 +465,18 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         # Default to skip so a single stubborn vuln doesn't hard-stop the entire exploit phase.
         self.exploit_proof_fail_mode = (os.getenv("EXPLOITATION_PROOF_FAIL_MODE", "skip") or "skip").lower().strip()
         self.hard_stop_reason: Optional[str] = None
+
+        # ── Profile-controlled parameters ──
+        self.classify_curl_strict = os.getenv("CLASSIFY_CURL_STRICT", "true").lower() in ("1", "true", "yes")
+        self.classify_auth_curl_as_exploit = os.getenv("CLASSIFY_AUTH_CURL_AS_EXPLOIT", "false").lower() in ("1", "true", "yes")
+        self.exploit_mode_token_cap = int(os.getenv("EXPLOIT_MODE_TOKEN_CAP", "768"))
+        self.count_blocked_as_iteration = os.getenv("COUNT_BLOCKED_AS_ITERATION", "true").lower() in ("1", "true", "yes")
+        self.max_gate_messages_in_context = int(os.getenv("MAX_GATE_MESSAGES_IN_CONTEXT", "5"))
+        self.block_redundant_exploits = os.getenv("BLOCK_REDUNDANT_EXPLOITS", "true").lower() in ("1", "true", "yes")
+        self.redundant_exploit_strictness = os.getenv("REDUNDANT_EXPLOIT_STRICTNESS", "medium").lower().strip()
+        self.gate_message_verbosity = os.getenv("GATE_MESSAGE_VERBOSITY", "normal").lower().strip()
+        self._gate_message_count_in_context = 0  # Track gate messages for capping
+
         # Start in exploit-only posture when exploit phase is active.
         try:
             exploit_mode = os.getenv("EXPLOIT_MODE", "explicit_only").lower()
@@ -3729,7 +3752,7 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 # Dynamic token cap: exploit-focused iterations need fewer response tokens
                 _effective_max = self.max_completion_tokens
                 if self.force_exploit_next or self.exploit_pipeline_active:
-                    _effective_max = min(_effective_max, 768)
+                    _effective_max = min(_effective_max, self.exploit_mode_token_cap)
                 max_tokens = max(self.min_completion_tokens, _effective_max)
                 temperature = self.llm_temperature
                 llm_retry_max = int(os.getenv("LLM_ERROR_RETRY_MAX", "3"))
@@ -3862,53 +3885,80 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                     intent = self._classify_command_intent(content or "")
                     if intent != "exploit":
                         self.force_exploit_reprompts += 1
-                        self.blocked_attempt_count += 1  # Fix #6: track for auto-complete threshold
+                        if self.count_blocked_as_iteration:
+                            self.blocked_attempt_count += 1  # Fix #6: track for auto-complete threshold
+                        else:
+                            # Don't count blocked iterations — roll back the iteration counter
+                            self.iteration = max(0, self.iteration - 1)
                         self._log(
                             f"EXPLOIT GATE: blocked non-exploit command (intent={intent}) reprompt={self.force_exploit_reprompts}",
                             "WARN",
                         )
-                        # Build enriched reprompt with vuln context and templates
-                        reprompt = "❌ POLICY: An exploitation attempt is REQUIRED next. Do not run more enumeration/recon.\n\n"
-                        focus_vid = self.current_vuln_focus_id
-                        focus_vuln = self.vulns_found.get(focus_vid) if focus_vid else None
-                        if not focus_vuln:
-                            pending_vulns = self._get_unproven_vulns() if self.enforce_exploit_proof else self._get_unattempted_vulns()
-                            if pending_vulns:
-                                focus_vuln = pending_vulns[0]
-                        if focus_vuln and isinstance(focus_vuln, dict):
-                            fv_type = focus_vuln.get("type", "unknown")
-                            fv_target = focus_vuln.get("target", self.target or "unknown")
-                            reprompt += f"🎯 Focus: **{fv_type}** at {fv_target}\n"
-                            tried = focus_vuln.get("techniques_tried", [])
-                            tried_cmds = [a.get("command", "")[:100] for a in focus_vuln.get("attempts", [])[-3:]]
-                            if tried:
-                                reprompt += f"Techniques already tried: {', '.join(tried)}\n"
-                            if tried_cmds:
-                                reprompt += "DO NOT repeat these:\n"
-                                for tc in tried_cmds:
-                                    reprompt += f"  - `{tc}`\n"
-                            templates = self._get_exploit_templates_for_vuln(fv_type, fv_target)
-                            if templates:
-                                reprompt += "\nTry one of these DIFFERENT approaches:\n"
-                                for ti, tmpl in enumerate(templates[:3], 1):
-                                    reprompt += f"{ti}. ```bash\n{tmpl}\n```\n"
+                        
+                        # ── Gate message verbosity control ──
+                        if self.gate_message_verbosity == "none":
+                            reprompt = "❌ Run an exploit command."
+                        elif self.gate_message_verbosity == "minimal":
+                            focus_vid = self.current_vuln_focus_id
+                            focus_vuln = self.vulns_found.get(focus_vid) if focus_vid else None
+                            fv_type = focus_vuln.get("type", "unknown") if focus_vuln and isinstance(focus_vuln, dict) else "unknown"
+                            reprompt = f"❌ Run an exploit command. Target: {fv_type} at {self.target or 'unknown'}."
                         else:
-                            reprompt += (
-                                "Provide ONE exploitation command now (sqlmap --dump, LFI file read, RCE attempt, "
-                                "or restricted endpoint data dump with proof)."
-                            )
-                        # Spec 010: Append arsenal suggestions to force-exploit reprompt
-                        try:
+                            # Normal / full verbosity (original behavior)
+                            reprompt = "❌ POLICY: An exploitation attempt is REQUIRED next. Do not run more enumeration/recon.\n\n"
+                            focus_vid = self.current_vuln_focus_id
+                            focus_vuln = self.vulns_found.get(focus_vid) if focus_vid else None
+                            if not focus_vuln:
+                                pending_vulns = self._get_unproven_vulns() if self.enforce_exploit_proof else self._get_unattempted_vulns()
+                                if pending_vulns:
+                                    focus_vuln = pending_vulns[0]
                             if focus_vuln and isinstance(focus_vuln, dict):
-                                a_section = self._build_arsenal_suggestions(
-                                    focus_vuln.get("type", ""),
-                                    focus_vuln.get("target", self.target or ""),
+                                fv_type = focus_vuln.get("type", "unknown")
+                                fv_target = focus_vuln.get("target", self.target or "unknown")
+                                reprompt += f"🎯 Focus: **{fv_type}** at {fv_target}\n"
+                                tried = focus_vuln.get("techniques_tried", [])
+                                tried_cmds = [a.get("command", "")[:100] for a in focus_vuln.get("attempts", [])[-3:]]
+                                if tried:
+                                    reprompt += f"Techniques already tried: {', '.join(tried)}\n"
+                                if tried_cmds:
+                                    reprompt += "DO NOT repeat these:\n"
+                                    for tc in tried_cmds:
+                                        reprompt += f"  - `{tc}`\n"
+                                if self.gate_message_verbosity == "full":
+                                    templates = self._get_exploit_templates_for_vuln(fv_type, fv_target)
+                                    if templates:
+                                        reprompt += "\nTry one of these DIFFERENT approaches:\n"
+                                        for ti, tmpl in enumerate(templates[:3], 1):
+                                            reprompt += f"{ti}. ```bash\n{tmpl}\n```\n"
+                                else:
+                                    templates = self._get_exploit_templates_for_vuln(fv_type, fv_target)
+                                    if templates:
+                                        reprompt += f"\nExample: ```bash\n{templates[0]}\n```\n"
+                            else:
+                                reprompt += (
+                                    "Provide ONE exploitation command now (sqlmap --dump, LFI file read, RCE attempt, "
+                                    "or restricted endpoint data dump with proof)."
                                 )
-                                if a_section:
-                                    reprompt += f"\n{a_section}"
-                        except Exception:
-                            pass
-                        self.conversation.append({"role": "user", "content": reprompt})
+                            # Spec 010: Append arsenal suggestions (only in full/normal verbosity)
+                            if self.gate_message_verbosity in ("full", "normal"):
+                                try:
+                                    if focus_vuln and isinstance(focus_vuln, dict):
+                                        a_section = self._build_arsenal_suggestions(
+                                            focus_vuln.get("type", ""),
+                                            focus_vuln.get("target", self.target or ""),
+                                        )
+                                        if a_section:
+                                            reprompt += f"\n{a_section}"
+                                except Exception:
+                                    pass
+                        
+                        # ── Cap gate messages in context ──
+                        self._gate_message_count_in_context += 1
+                        if self._gate_message_count_in_context <= self.max_gate_messages_in_context:
+                            self.conversation.append({"role": "user", "content": reprompt})
+                        else:
+                            # Over cap — replace the oldest gate message instead of adding
+                            self._log(f"GATE MSG CAP: {self._gate_message_count_in_context}/{self.max_gate_messages_in_context}, skipping append", "INFO")
                         # In strict proof mode, do not fail-open. Keep forcing exploitation and occasionally reset context.
                         if self.enforce_exploit_proof:
                             if self.force_exploit_reprompts >= self.exploit_gate_hard_reset_after:
@@ -4190,11 +4240,12 @@ Continue the assessment - provide the next commands."""
                     continue
 
                 # Block redundant exploit attempts already marked not exploitable
-                redundant_exploit = self._block_redundant_exploit(content)
-                if redundant_exploit:
-                    self._log(f"BLOCKED redundant exploit attempt: {content[:80]}", "WARN")
-                    all_feedback.append(redundant_exploit)
-                    continue
+                if self.block_redundant_exploits:
+                    redundant_exploit = self._block_redundant_exploit(content)
+                    if redundant_exploit:
+                        self._log(f"BLOCKED redundant exploit attempt: {content[:80]}", "WARN")
+                        all_feedback.append(redundant_exploit)
+                        continue
 
                 # Skip redundant recon artifact rewrites
                 redundant_warning = self._redundant_artifact_write(content)
@@ -4469,6 +4520,21 @@ Continue the assessment - provide the next commands."""
                     return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
             if any(m in cmd_lower for m in injection_markers + exploit_markers):
                 return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
+            
+            # ── Profile-controlled curl classification ──
+            # In relaxed/unleashed mode, classify auth curls and POST curls as exploit
+            if self.classify_auth_curl_as_exploit:
+                if any(m in cmd_lower for m in auth_markers):
+                    return "exploit"
+                # POST/PUT/DELETE with data = likely exploit attempt
+                if any(m in cmd_lower for m in ("-x post", "-x put", "-x delete", "--data", " -d ")):
+                    return "exploit"
+            
+            # In non-strict mode, classify all curls to target as "other" (not enum)
+            # so they pass through gates instead of being blocked
+            if not self.classify_curl_strict:
+                return "other"
+            
             return "enum"
 
         # Headless browser / DOM dump used to prove XSS is an exploitation step.

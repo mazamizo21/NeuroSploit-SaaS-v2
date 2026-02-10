@@ -60,18 +60,95 @@ class CVELookup:
         response.raise_for_status()
         
         data = response.json()
-        
-        if not data or "id" not in data:
+        if not data:
             return None
-        
-        # Extract CVSS score
+
+        # Handle new CIRCL CVE 5.1 format
+        if "cveMetadata" in data:
+            meta = data.get("cveMetadata", {})
+            cna = (data.get("containers", {}) or {}).get("cna", {}) or {}
+
+            resolved_id = meta.get("cveId") or cve_id
+
+            # Description
+            description = "No description available"
+            for desc in cna.get("descriptions", []) or []:
+                if desc.get("lang") == "en" and desc.get("value"):
+                    description = desc.get("value")
+                    break
+
+            # CVSS / severity (best-effort)
+            cvss_score = 0.0
+            severity = "UNKNOWN"
+            metrics = cna.get("metrics", []) or []
+            for metric in metrics:
+                for key in ("cvssV3_1", "cvssV3_0", "cvssV3", "cvssV2"):
+                    if key in metric:
+                        cvss = metric[key]
+                        cvss_score = float(cvss.get("baseScore", 0.0) or 0.0)
+                        severity = (cvss.get("baseSeverity") or severity).upper()
+                        break
+                if severity != "UNKNOWN":
+                    break
+                if "other" in metric:
+                    other = metric.get("other", {}).get("content", {})
+                    if isinstance(other, dict):
+                        sev = other.get("other") or other.get("severity")
+                        if sev:
+                            severity = str(sev).upper()
+
+            if cvss_score > 0 and severity == "UNKNOWN":
+                if cvss_score >= 9.0:
+                    severity = "CRITICAL"
+                elif cvss_score >= 7.0:
+                    severity = "HIGH"
+                elif cvss_score >= 4.0:
+                    severity = "MEDIUM"
+                else:
+                    severity = "LOW"
+
+            # References
+            references = []
+            for ref in cna.get("references", []) or []:
+                url = ref.get("url")
+                if url:
+                    references.append(url)
+                if len(references) >= 5:
+                    break
+
+            # CPE / affected (best-effort)
+            cpe = []
+            for affected in cna.get("affected", []) or []:
+                vendor = affected.get("vendor", "")
+                product = affected.get("product", "")
+                for ver in (affected.get("versions") or [])[:3]:
+                    version = ver.get("version") or ver.get("lessThan") or ""
+                    if vendor or product or version:
+                        cpe.append(f"{vendor}:{product}:{version}".strip(":"))
+                if len(cpe) >= 5:
+                    break
+
+            return CVEInfo(
+                cve_id=resolved_id,
+                description=description,
+                severity=severity,
+                cvss_score=cvss_score,
+                published_date=meta.get("datePublished") or meta.get("dateUpdated") or "Unknown",
+                references=references,
+                cpe=cpe,
+                source="CIRCL"
+            )
+
+        # Legacy CIRCL format (pre-5.1)
+        if "id" not in data:
+            return None
+
         cvss_score = 0.0
         if "cvss" in data:
             cvss_score = float(data["cvss"])
         elif "impact" in data and "baseMetricV3" in data["impact"]:
             cvss_score = data["impact"]["baseMetricV3"]["cvssV3"]["baseScore"]
-        
-        # Determine severity
+
         severity = "UNKNOWN"
         if cvss_score >= 9.0:
             severity = "CRITICAL"
@@ -81,17 +158,15 @@ class CVELookup:
             severity = "MEDIUM"
         elif cvss_score > 0:
             severity = "LOW"
-        
-        # Extract references
+
         references = []
         if "references" in data:
             references = [ref.get("url", "") for ref in data["references"][:5]]
-        
-        # Extract CPE
+
         cpe = []
         if "vulnerable_configuration" in data:
             cpe = data["vulnerable_configuration"][:5]
-        
+
         return CVEInfo(
             cve_id=cve_id,
             description=data.get("summary", "No description available"),

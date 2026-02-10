@@ -1,0 +1,25 @@
+id: service_dns
+name: DNS Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for DNS.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- dns_records.json
+- subdomains.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Authoritative servers identified
+- Subdomains enumerated and validated
+safety_notes:
+- Avoid brute force unless explicitly authorized
+tags:
+- dns

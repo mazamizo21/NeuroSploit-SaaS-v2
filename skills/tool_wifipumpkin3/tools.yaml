@@ -1,0 +1,7 @@
+wifipumpkin3:
+  description: Wireless rogue AP framework
+  category: exploitation
+  install_cmd: sudo apt install wifipumpkin3
+  verify_cmd: wifipumpkin3 --help
+  examples:
+    - wifipumpkin3 --help

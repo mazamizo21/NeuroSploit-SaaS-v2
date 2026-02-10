@@ -1,0 +1,9 @@
+dnschef:
+  description: DNS proxy for spoofing/analysis
+  category: defense_evasion
+  install_cmd: sudo apt install dnschef
+  verify_cmd: dnschef -h
+  examples:
+    - dnschef --interface 127.0.0.1
+    - dnschef --fakeip 192.0.2.1 --fakedomains example.com
+    - dnschef --logfile dnschef.log

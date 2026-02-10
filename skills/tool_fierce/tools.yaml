@@ -1,0 +1,9 @@
+fierce:
+  description: DNS reconnaissance tool
+  category: reconnaissance
+  install_cmd: sudo apt install fierce
+  verify_cmd: fierce --help
+  examples:
+    - fierce --domain example.com --subdomains admin accounts
+    - fierce --domain example.com --traverse 10
+    - fierce --domain example.com --connect

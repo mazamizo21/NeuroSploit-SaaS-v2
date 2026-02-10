@@ -1,0 +1,25 @@
+id: sql_injection
+name: SQL Injection
+category: exploitation
+phase: EXPLOIT
+priority: 80
+target_types:
+  - lab
+  - external
+description: Detect and exploit SQL injection vulnerabilities to extract data safely.
+mitre_techniques:
+  - T1190
+inputs:
+  - vulns.json
+outputs:
+  - evidence.json
+  - findings.json
+  - creds.json
+prerequisites:
+  - vulns
+success_criteria:
+  - SQL injection confirmed
+  - Data extracted with evidence
+safety_notes:
+  - Minimize data extracted to verify impact
+  - Do not modify data unless explicitly authorized

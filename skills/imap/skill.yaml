@@ -1,0 +1,25 @@
+id: service_imap
+name: IMAP Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for IMAP.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- imap_info.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- IMAP service identified
+- Access controls validated safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or data access workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- imap

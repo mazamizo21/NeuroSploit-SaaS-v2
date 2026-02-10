@@ -1,0 +1,24 @@
+id: tool_hashcat
+name: "Tool: Hashcat"
+category: credential_access
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Advanced password recovery tool with modes, rules, and masks.
+mitre_techniques:
+  - T1110
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with hashcat
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - hashcat
+  - password

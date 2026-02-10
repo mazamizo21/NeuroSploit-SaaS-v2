@@ -1,0 +1,67 @@
+git:
+  description: "Git CLI for repository cloning and metadata"
+  category: "scm"
+  install_cmd: "apt-get install -y git"
+  verify_cmd: "git --version"
+  examples:
+    - "git ls-remote https://github.com/org/repo.git"
+    - "git clone --depth 1 https://github.com/org/repo.git"
+
+gh:
+  description: "GitHub CLI for org and repo inventory"
+  category: "scm"
+  install_cmd: "apt-get install -y gh"
+  verify_cmd: "gh --version"
+  examples:
+    - "gh auth status"
+    - "gh repo list org --limit 200"
+
+glab:
+  description: "GitLab CLI for project inventory"
+  category: "scm"
+  install_cmd: "apt-get install -y glab"
+  verify_cmd: "glab --version"
+  examples:
+    - "glab auth status"
+    - "glab repo list --all"
+
+azure-devops-cli:
+  description: "Azure DevOps extension for Azure CLI"
+  category: "scm"
+  install_cmd: "az extension add --name azure-devops"
+  verify_cmd: "az devops -h"
+  examples:
+    - "az devops configure --defaults organization=https://dev.azure.com/org project=proj"
+    - "az repos list"
+
+curl:
+  description: "HTTP client for REST API inventory"
+  category: "scm"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s https://api.github.com/orgs/org/repos"
+
+gitleaks:
+  description: "Secrets scanning for authorized repos"
+  category: "scm"
+  install_cmd: "apt-get install -y gitleaks"
+  verify_cmd: "gitleaks version"
+  examples:
+    - "gitleaks detect --source /path/to/repo --redact"
+
+trufflehog:
+  description: "Secrets scanning for authorized repos"
+  category: "scm"
+  install_cmd: "curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin"
+  verify_cmd: "trufflehog --version"
+  examples:
+    - "trufflehog git https://github.com/org/repo.git"
+
+summarize_scm_inventory:
+  description: "Summarize SCM discovery outputs into an inventory report"
+  category: "scm"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/scm/scripts/summarize_scm_inventory.py --help"
+  examples:
+    - "python3 skills/scm/scripts/summarize_scm_inventory.py --repos repos.json --users users.json --out scm_inventory.json"

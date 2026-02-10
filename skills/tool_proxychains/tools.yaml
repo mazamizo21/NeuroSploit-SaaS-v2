@@ -1,0 +1,8 @@
+proxychains:
+  description: Proxy chaining wrapper
+  category: network_evasion
+  install_cmd: sudo apt install proxychains
+  verify_cmd: proxychains -h
+  examples:
+    - proxychains nmap -sT -Pn 10.0.0.10
+    - proxychains curl http://example.com

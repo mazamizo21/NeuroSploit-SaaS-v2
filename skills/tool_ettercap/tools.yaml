@@ -1,0 +1,8 @@
+ettercap:
+  description: MITM framework
+  category: defense_evasion
+  install_cmd: sudo apt install ettercap-text-only
+  verify_cmd: ettercap -h
+  examples:
+    - ettercap -T -M arp:remote /10.0.0.1/ /10.0.0.2/
+    - ettercap -T -q -i eth0 -M arp /10.0.0.1/ /10.0.0.2/

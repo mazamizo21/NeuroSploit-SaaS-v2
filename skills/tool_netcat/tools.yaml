@@ -1,0 +1,9 @@
+netcat:
+  description: TCP/UDP networking utility
+  category: network_evasion
+  install_cmd: sudo apt install netcat
+  verify_cmd: nc -h
+  examples:
+    - nc -vz 10.0.0.10 22
+    - nc -lvp 4444
+    - nc 10.0.0.10 4444 < file.bin

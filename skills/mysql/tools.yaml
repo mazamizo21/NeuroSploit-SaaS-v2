@@ -1,0 +1,23 @@
+mysql:
+  description: "MySQL client for authentication and metadata queries"
+  category: "database"
+  install_cmd: "apt-get install -y mariadb-client"
+  verify_cmd: "mysql --version"
+  examples:
+    - "mysql -h target -u user -p"
+
+nmap:
+  description: "Nmap MySQL scripts for version and configuration"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p3306 --script mysql-info,mysql-variables target"
+
+parse_mysql_show:
+  description: "Parse MySQL SHOW command output into JSON evidence"
+  category: "database"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/mysql/scripts/parse_mysql_show.py --help"
+  examples:
+    - "python3 skills/mysql/scripts/parse_mysql_show.py --input mysql_show.txt --out db_access.json"

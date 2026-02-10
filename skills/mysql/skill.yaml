@@ -1,0 +1,25 @@
+id: service_mysql
+name: MySQL Service
+category: service
+phase: ''
+priority: 55
+target_types:
+- lab
+- external
+description: Service-specific enumeration for MySQL.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- db_access.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- MySQL service identified and authenticated safely
+- Database visibility and grants documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+tags:
+- mysql
+- mariadb

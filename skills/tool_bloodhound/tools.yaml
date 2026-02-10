@@ -1,0 +1,7 @@
+bloodhound:
+  description: BloodHound CE UI for AD graph analysis
+  category: analysis
+  install_cmd: sudo apt install bloodhound
+  verify_cmd: bloodhound --version
+  examples:
+    - bloodhound --help

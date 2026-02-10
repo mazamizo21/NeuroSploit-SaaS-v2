@@ -1,0 +1,95 @@
+{
+  "test_id": "test-1769632443",
+  "target": "http://localhost:8080",
+  "test_type": "web",
+  "started_at": "2026-01-28T20:34:03.563433+00:00",
+  "phases": [
+    {
+      "phase": "Skills Manager",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:34:03.563667+00:00",
+      "details": "Loading all available skills from marketplace"
+    },
+    {
+      "phase": "Skills Manager",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:34:03.563676+00:00",
+      "details": "Skills manager failed: 'list' object has no attribute 'items'"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:34:03.563679+00:00",
+      "details": "Testing job creation and management"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:34:03.563859+00:00",
+      "details": "Successfully created test job"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:34:03.563862+00:00",
+      "details": "Checking reconnaissance capabilities"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:34:03.563881+00:00",
+      "details": "Reconnaissance test failed: cannot use 'skills.skills_manager.SkillMetadata' as a dict key (unhashable type: 'SkillMetadata')"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:34:03.563884+00:00",
+      "details": "Initializing multi-agent session"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:34:03.563887+00:00",
+      "details": "Multi-agent test failed: type object 'datetime.datetime' has no attribute 'UTC'"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:34:03.563889+00:00",
+      "details": "Checking vulnerability scanning capabilities"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:34:03.563899+00:00",
+      "details": "Vulnerability scanning test failed: cannot use 'skills.skills_manager.SkillMetadata' as a dict key (unhashable type: 'SkillMetadata')"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:34:03.563901+00:00",
+      "details": "Checking report generation capabilities"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:34:03.563910+00:00",
+      "details": "Report generation test failed: cannot use 'skills.skills_manager.SkillMetadata' as a dict key (unhashable type: 'SkillMetadata')"
+    }
+  ],
+  "findings": [],
+  "errors": [
+    "Skills manager failed: 'list' object has no attribute 'items'",
+    "Reconnaissance test failed: cannot use 'skills.skills_manager.SkillMetadata' as a dict key (unhashable type: 'SkillMetadata')",
+    "Multi-agent test failed: type object 'datetime.datetime' has no attribute 'UTC'",
+    "Vulnerability scanning test failed: cannot use 'skills.skills_manager.SkillMetadata' as a dict key (unhashable type: 'SkillMetadata')",
+    "Report generation test failed: cannot use 'skills.skills_manager.SkillMetadata' as a dict key (unhashable type: 'SkillMetadata')"
+  ],
+  "metrics": {
+    "total_time": 0.00024509429931640625,
+    "phases_completed": 1,
+    "tools_used": [],
+    "findings_count": 0
+  },
+  "completed_at": "2026-01-28T20:34:03.563913+00:00"
+}

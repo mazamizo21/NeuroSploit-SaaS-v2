@@ -1,0 +1,24 @@
+id: tool_sqlninja
+name: "Tool: sqlninja"
+category: exploitation
+phase: EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: SQL Server injection tool focused on Microsoft SQL Server exploitation.
+mitre_techniques:
+  - T1190
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with sqlninja
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - sqlninja
+  - sqli

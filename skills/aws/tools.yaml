@@ -1,0 +1,40 @@
+awscli:
+  description: "AWS CLI for account and service inventory"
+  category: "cloud"
+  install_cmd: "apt-get install -y awscli"
+  verify_cmd: "aws --version"
+  examples:
+    - "aws sts get-caller-identity"
+    - "aws s3api list-buckets"
+
+prowler:
+  description: "AWS security assessment tool (read-only)"
+  category: "cloud"
+  install_cmd: "python3 -m pip install prowler"
+  verify_cmd: "prowler --version"
+  examples:
+    - "prowler aws -M json"
+
+scoutsuite:
+  description: "Multi-cloud security auditing tool (read-only)"
+  category: "cloud"
+  install_cmd: "python3 -m pip install scoutsuite"
+  verify_cmd: "scout --help"
+  examples:
+    - "scout aws --report-dir /tmp/scout-report"
+
+trivy:
+  description: "Vulnerability scanner for container images and artifacts"
+  category: "cloud"
+  install_cmd: "apt-get install -y trivy"
+  verify_cmd: "trivy --version"
+  examples:
+    - "trivy image --severity HIGH,CRITICAL my-image:tag"
+
+summarize_aws_inventory:
+  description: "Summarize AWS CLI JSON outputs into a single inventory report"
+  category: "cloud"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/aws/scripts/summarize_aws_inventory.py --help"
+  examples:
+    - "python3 skills/aws/scripts/summarize_aws_inventory.py --caller sts.json --account account.json --buckets s3.json --security-groups sg.json --instances ec2.json --out cloud_inventory.json"

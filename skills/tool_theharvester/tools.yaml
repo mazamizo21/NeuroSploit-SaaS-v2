@@ -1,0 +1,7 @@
+theharvester:
+  description: OSINT collection for domains
+  category: reconnaissance
+  install_cmd: sudo apt install theharvester
+  verify_cmd: theHarvester -h
+  examples:
+    - theHarvester -h

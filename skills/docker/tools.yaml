@@ -1,0 +1,41 @@
+docker:
+  description: "Docker CLI for daemon inventory and configuration validation"
+  category: "container"
+  install_cmd: "apt-get install -y docker.io"
+  verify_cmd: "docker --version"
+  examples:
+    - "docker -H tcp://target:2375 version"
+    - "docker -H tcp://target:2375 info"
+    - "docker -H tcp://target:2375 ps -a"
+
+docker-bench-security:
+  description: "CIS benchmark checks for Docker hosts"
+  category: "container"
+  install_cmd: "git clone https://github.com/docker/docker-bench-security"
+  verify_cmd: "sh docker-bench-security/docker-bench-security.sh -h"
+  examples:
+    - "sh docker-bench-security/docker-bench-security.sh"
+
+trivy:
+  description: "Container and filesystem vulnerability scanning"
+  category: "vuln"
+  install_cmd: "apt-get install -y trivy"
+  verify_cmd: "trivy --version"
+  examples:
+    - "trivy image nginx:latest"
+
+nmap:
+  description: "Nmap discovery for Docker daemon ports"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p2375,2376 target"
+
+summarize_docker_info:
+  description: "Summarize docker info and ps outputs into JSON evidence"
+  category: "container"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/docker/scripts/summarize_docker_info.py --help"
+  examples:
+    - "python3 skills/docker/scripts/summarize_docker_info.py --info docker_info.txt --ps docker_ps.txt --out docker_inventory.json"

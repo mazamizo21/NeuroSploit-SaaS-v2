@@ -1,0 +1,25 @@
+id: tool_netcat
+name: "Tool: Netcat"
+category: network_evasion
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: TCP/UDP utility for connection testing, file transfer, and simple relays.
+mitre_techniques:
+  - T1046
+  - T1105
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with netcat
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - netcat
+  - network

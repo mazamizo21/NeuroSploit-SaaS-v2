@@ -1,0 +1,8 @@
+netexec:
+  description: Network execution framework for SMB/WinRM/LDAP
+  category: lateral_movement
+  install_cmd: sudo apt install netexec
+  verify_cmd: netexec --help
+  examples:
+    - netexec smb 10.0.0.0/24 -u user -p pass --shares
+    - netexec winrm 10.0.0.10 -u user -p pass --exec-method wmi

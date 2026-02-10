@@ -1,0 +1,21 @@
+id: reporting
+name: Reporting
+category: reporting
+phase: REPORT
+priority: 90
+target_types:
+- lab
+- external
+description: Produce final report with evidence and remediation.
+mitre_techniques: []
+inputs:
+- findings.json
+outputs:
+- report.json
+- report.md
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Report generated with evidence and remediation
+safety_notes: []

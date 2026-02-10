@@ -215,12 +215,21 @@ class SecurityAudit:
     def check_docker_security(self):
         """Check Docker container security"""
         try:
+            # Prefer current container name, fallback to legacy
+            container_name = "tazosploit-api"
             result = subprocess.run(
-                ["docker", "inspect", "tazosploit-control-api"],
+                ["docker", "inspect", container_name],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
+            if result.returncode != 0:
+                result = subprocess.run(
+                    ["docker", "inspect", "tazosploit-control-api"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
             
             if result.returncode == 0:
                 config = json.loads(result.stdout)[0]

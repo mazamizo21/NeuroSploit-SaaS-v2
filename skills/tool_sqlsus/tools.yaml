@@ -1,0 +1,8 @@
+sqlsus:
+  description: MySQL injection tool
+  category: exploitation
+  install_cmd: sudo apt install sqlsus
+  verify_cmd: sqlsus --help
+  examples:
+    - sqlsus -c sqlsus.conf
+    - sqlsus --help

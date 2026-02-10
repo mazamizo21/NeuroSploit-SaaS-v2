@@ -13,6 +13,7 @@ The TazoSploit Skills System allows you to:
 
 Skills are self-contained modules that include:
 - Documentation (SKILL.md)
+- Metadata for routing (skill.yaml)
 - Tool configurations (tools.yaml)
 - Implementation code (main.py)
 - Dependencies (requirements.txt)
@@ -169,6 +170,7 @@ Create a custom skill from template.
 - `impact` - System impact operations
 - `reporting` - Report generation
 - `monitoring` - Continuous monitoring
+- `service` - Service-specific playbooks (http, ssh, smb, databases)
 - `custom` - Custom skills
 
 **Examples:**
@@ -551,11 +553,34 @@ Want to contribute a skill to the marketplace?
 4. Include working examples
 5. Submit a pull request or contact maintainers
 
+## Adding a New Skill (Checklist)
+
+1. Start from the template in `skills/_example/` and rename the folder.
+2. Add `skill.yaml` with `id`, `name`, `category`, `outputs`, and `tags`.
+3. Add `SKILL.md` with scope rules, methodology, deep dives, evidence collection, and consolidation.
+4. Add `tools.yaml` with tool definitions and examples.
+5. Add `references/` for deep-dive guides and `scripts/` for parsers if needed.
+6. Rebuild the catalog: `make skills-catalog`.
+7. Validate documentation: `make skills-check` or `make skills-all`.
+
 ## References
 
 - [Skill Catalog](skills/SKILL_CATALOG.md) - All available skills
 - [Skill Template](skills/SKILL_TEMPLATE.md) - Development template
 - [MITRE ATT&CK](https://attack.mitre.org/) - Framework for techniques
+
+## Maintenance
+
+```bash
+# Rebuild the skill catalog files
+make skills-catalog
+
+# Run catalog and documentation checks
+make skills-check
+
+# Run both steps in sequence
+make skills-all
+```
 
 ## Support
 

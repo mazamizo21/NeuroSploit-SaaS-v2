@@ -1,0 +1,26 @@
+id: tool_dnsenum
+name: "Tool: dnsenum"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: Multi-threaded DNS enumeration with whois and reverse lookups.
+mitre_techniques:
+  - T1590
+  - T1593
+  - T1596
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with dnsenum
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - dnsenum
+  - dns

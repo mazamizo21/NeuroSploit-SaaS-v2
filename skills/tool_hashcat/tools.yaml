@@ -1,0 +1,9 @@
+hashcat:
+  description: Password recovery tool
+  category: credential_access
+  install_cmd: sudo apt install hashcat
+  verify_cmd: hashcat --help
+  examples:
+    - hashcat -m 0 -a 0 hashes.txt wordlist.txt
+    - hashcat -m 1000 -a 3 hashes.txt ?l?l?l?l?l?l
+    - hashcat --show -m 0 hashes.txt

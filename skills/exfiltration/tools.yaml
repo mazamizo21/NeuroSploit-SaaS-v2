@@ -1,0 +1,81 @@
+system_tools:
+  description: "Built-in OS utilities for locating sensitive files"
+  category: "post_exploitation"
+  install_cmd: ""
+  verify_cmd: ""
+  examples:
+    - "find / -type f -name '*.env' 2>/dev/null"
+    - "grep -R \"password\" -n /etc 2>/dev/null"
+    - "tar -czf sample.tar.gz /path/to/sample"
+
+redact_samples:
+  description: "Redact sensitive patterns from evidence samples"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/exfiltration/scripts/redact_samples.py --help"
+  examples:
+    - "python3 skills/exfiltration/scripts/redact_samples.py --input sample.txt --out evidence.json"
+
+smbclient:
+  description: "SMB client for validating file share access"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y smbclient"
+  verify_cmd: "smbclient --help"
+  examples:
+    - "smbclient -L //target -U user%pass"
+
+psql:
+  description: "PostgreSQL client for metadata checks"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y postgresql-client"
+  verify_cmd: "psql --version"
+  examples:
+    - "psql -h target -U user -c '\\l'"
+
+mysql:
+  description: "MySQL client for metadata checks"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y mysql-client"
+  verify_cmd: "mysql --version"
+  examples:
+    - "mysql -h target -u user -p -e 'SHOW DATABASES;'"
+
+mongosh:
+  description: "MongoDB shell for metadata checks"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y mongodb-clients"
+  verify_cmd: "mongosh --version"
+  examples:
+    - "mongosh --host target --eval 'db.getMongo().getDBNames()'"
+
+redis-cli:
+  description: "Redis client for metadata checks"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y redis-tools"
+  verify_cmd: "redis-cli --version"
+  examples:
+    - "redis-cli -h target INFO"
+
+scp:
+  description: "Secure copy for authorized evidence transfer"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y openssh-client"
+  verify_cmd: "scp -V"
+  examples:
+    - "scp sample.txt user@host:/tmp/"
+
+rsync:
+  description: "File synchronization for authorized evidence transfer"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y rsync"
+  verify_cmd: "rsync --version"
+  examples:
+    - "rsync -avz sample/ user@host:/tmp/sample/"
+
+socat:
+  description: "Bidirectional data transfer tool (authorized only)"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y socat"
+  verify_cmd: "socat -h"
+  examples:
+    - "socat -V"

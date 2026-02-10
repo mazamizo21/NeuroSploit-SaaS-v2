@@ -1,0 +1,9 @@
+aircrack-ng:
+  description: Wi-Fi auditing suite
+  category: scanning
+  install_cmd: sudo apt install aircrack-ng
+  verify_cmd: aircrack-ng --help
+  examples:
+    - airmon-ng check kill
+    - airodump-ng wlan0mon
+    - aircrack-ng -w wordlist.txt capture.cap

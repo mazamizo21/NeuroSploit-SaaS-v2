@@ -1,0 +1,27 @@
+id: tool_responder
+name: 'Tool: Responder'
+category: credential_access
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+- lab
+- external
+description: LLMNR/NBNS/mDNS poisoning and credential capture.
+mitre_techniques:
+- T1187
+- T1557
+inputs: []
+outputs:
+- evidence.json
+- findings.json
+prerequisites: []
+success_criteria:
+- Access validated with responder
+safety_notes:
+- Respect scope and authorization gates
+- Avoid persistence unless explicitly allowed
+tags:
+- responder
+- llmnr
+- nbns
+- mdns

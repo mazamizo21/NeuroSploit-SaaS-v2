@@ -1,0 +1,103 @@
+linpeas:
+  description: "Linux privilege escalation checks (read-only posture enumeration)"
+  category: "host"
+  install_cmd: "apt-get install -y peass"
+  verify_cmd: "linpeas.sh -h"
+  examples:
+    - "./linpeas.sh -q"
+
+lynis:
+  description: "Linux security auditing and hardening checks"
+  category: "host"
+  install_cmd: "apt-get install -y lynis"
+  verify_cmd: "lynis --version"
+  examples:
+    - "lynis audit system"
+
+linux-exploit-suggester:
+  description: "Kernel advisory mapping for potential local privilege escalation"
+  category: "host"
+  install_cmd: "git clone https://github.com/The-Z-Labs/linux-exploit-suggester"
+  verify_cmd: "./linux-exploit-suggester/linux-exploit-suggester.sh -h"
+  examples:
+    - "./linux-exploit-suggester/linux-exploit-suggester.sh"
+
+linux_inventory:
+  description: "Parse uname/lsb/id outputs into JSON inventory"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/linux_inventory.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/linux_inventory.py --uname uname.txt --lsb lsb_release.txt --id id.txt --sudo sudo.txt --out linux_host_inventory.json"
+
+auditd_status_parser:
+  description: "Parse auditctl -s output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/parse_auditd_status.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/parse_auditd_status.py --input auditctl.txt --out auditd_status.json"
+
+sshd_config_parser:
+  description: "Parse sshd -T output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/parse_sshd_config.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/parse_sshd_config.py --input sshd_config.txt --out sshd_effective.json"
+
+firewall_status_parser:
+  description: "Parse firewall status output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/parse_firewall_status.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/parse_firewall_status.py --input firewall.txt --out firewall_status.json"
+
+sudoers_parser:
+  description: "Parse sudo -l output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/parse_sudoers.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/parse_sudoers.py --input sudo.txt --out sudoers.json"
+
+cron_parser:
+  description: "Parse crontab output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/parse_cron_list.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/parse_cron_list.py --input crontab.txt --out cron_entries.json"
+
+merge_posture:
+  description: "Merge Linux host evidence into a posture summary"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/merge_posture.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/merge_posture.py --inventory linux_host_inventory.json --firewall firewall_status.json --auditd auditd_status.json --sshd sshd_effective.json --sudoers sudoers.json --cron cron_entries.json --out linux_security_posture.json"
+
+normalize_findings:
+  description: "Normalize Linux findings into a common schema"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/normalize_findings.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/normalize_findings.py --input findings_raw.json --out findings.json"
+
+package_evidence:
+  description: "Package Linux host evidence JSON files into a single bundle"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/package_evidence.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/package_evidence.py --inputs linux_host_inventory.json linux_security_posture.json findings.json --out linux_evidence_bundle.json"
+
+summarize_findings:
+  description: "Summarize normalized findings by severity"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/linux_host/scripts/summarize_findings.py --help"
+  examples:
+    - "python3 skills/linux_host/scripts/summarize_findings.py --input findings.json --out findings_summary.json"

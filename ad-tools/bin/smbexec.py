@@ -1,0 +1,1 @@
+/Users/tazjack/.venvs/ad-security-tools/bin/smbexec.py

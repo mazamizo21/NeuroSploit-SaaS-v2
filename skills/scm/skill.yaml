@@ -1,0 +1,29 @@
+id: service_scm
+name: SCM Service
+category: service
+phase: ""
+priority: 50
+target_types:
+  - lab
+  - external
+description: Service-specific enumeration for source control platforms.
+mitre_techniques: []
+inputs:
+  - services.json
+outputs:
+  - scm_inventory.json
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - SCM platform identified and scoped
+  - Repo inventory captured safely
+safety_notes:
+  - Avoid brute force unless explicitly authorized
+  - External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+  - Secrets scanning requires explicit authorization
+tags:
+  - scm
+  - git
+  - github
+  - gitlab

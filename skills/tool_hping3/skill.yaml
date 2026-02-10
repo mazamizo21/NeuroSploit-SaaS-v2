@@ -1,0 +1,25 @@
+id: tool_hping3
+name: "Tool: hping3"
+category: defense_evasion
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Packet crafting and probing tool for network testing.
+mitre_techniques:
+  - T1046
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with hping3
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - hping3
+  - packet
+  - network

@@ -1,0 +1,25 @@
+id: service_rdp
+name: RDP Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for RDP.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- rdp_info.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- RDP security settings documented
+- Access validation completed safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External interactive sessions require explicit authorization (external_exploit=explicit_only)
+tags:
+- rdp

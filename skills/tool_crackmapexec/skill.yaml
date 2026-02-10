@@ -1,0 +1,30 @@
+id: tool_crackmapexec
+name: "Tool: CrackMapExec"
+category: lateral_movement
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Credential validation and remote execution framework (CME).
+mitre_techniques:
+  - T1021
+  - T1078
+
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with crackmapexec
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - crackmapexec
+  - cme
+  - smb
+  - winrm
+  - ldap
+

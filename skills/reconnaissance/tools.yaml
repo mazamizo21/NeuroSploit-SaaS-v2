@@ -112,3 +112,11 @@ eyewitness:
   verify_cmd: "eyewitness --help | head -n 1"
   examples:
     - "cat urls.txt | eyewitness --web -d /tmp/screenshots"
+
+parse_nmap_grepable:
+  description: "Parse Nmap grepable output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reconnaissance/scripts/parse_nmap_grepable.py --help"
+  examples:
+    - "python3 skills/reconnaissance/scripts/parse_nmap_grepable.py --input nmap.gnmap --out recon_hosts.json"

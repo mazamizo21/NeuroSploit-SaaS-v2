@@ -1,0 +1,26 @@
+id: service_kerberos
+name: KERBEROS Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for KERBEROS.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- kerberos_tickets.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Realm and KDC reachability verified
+- Ticket cache validated with provided credentials
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or abuse workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- kerberos
+- krb

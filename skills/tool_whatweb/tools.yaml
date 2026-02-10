@@ -1,0 +1,9 @@
+whatweb:
+  description: Web fingerprinting tool
+  category: reconnaissance
+  install_cmd: sudo apt install whatweb
+  verify_cmd: whatweb --help
+  examples:
+    - whatweb http://example.com
+    - whatweb --aggression 3 http://example.com
+    - whatweb -v http://example.com

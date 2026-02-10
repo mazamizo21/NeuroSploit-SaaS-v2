@@ -1,0 +1,71 @@
+autopsy:
+  description: "GUI forensic analysis platform for disk images"
+  category: "forensics"
+  install_cmd: "apt-get install -y autopsy"
+  verify_cmd: "autopsy --help"
+  examples:
+    - "autopsy"
+
+sleuthkit:
+  description: "CLI tools for file system and disk image analysis"
+  category: "forensics"
+  install_cmd: "apt-get install -y sleuthkit"
+  verify_cmd: "fls -V"
+  examples:
+    - "fls -r disk.img"
+
+volatility:
+  description: "Memory forensics framework"
+  category: "forensics"
+  install_cmd: "python3 -m pip install volatility3"
+  verify_cmd: "vol -h"
+  examples:
+    - "vol -f memory.raw windows.pslist"
+
+binwalk:
+  description: "Firmware and file carving utility"
+  category: "forensics"
+  install_cmd: "apt-get install -y binwalk"
+  verify_cmd: "binwalk --help"
+  examples:
+    - "binwalk -e firmware.bin"
+
+foremost:
+  description: "File carving utility"
+  category: "forensics"
+  install_cmd: "apt-get install -y foremost"
+  verify_cmd: "foremost -h"
+  examples:
+    - "foremost -i disk.img -o carved"
+
+scalpel:
+  description: "File carving utility with custom config"
+  category: "forensics"
+  install_cmd: "apt-get install -y scalpel"
+  verify_cmd: "scalpel -h"
+  examples:
+    - "scalpel disk.img -o scalpel_out"
+
+photorec:
+  description: "Recover files from disk images"
+  category: "forensics"
+  install_cmd: "apt-get install -y testdisk"
+  verify_cmd: "photorec --help"
+  examples:
+    - "photorec /log /d recovered disk.img"
+
+testdisk:
+  description: "Recover partitions and fix disk structures"
+  category: "forensics"
+  install_cmd: "apt-get install -y testdisk"
+  verify_cmd: "testdisk --help"
+  examples:
+    - "testdisk disk.img"
+
+exiftool:
+  description: "Read metadata from files and images"
+  category: "forensics"
+  install_cmd: "apt-get install -y exiftool"
+  verify_cmd: "exiftool -ver"
+  examples:
+    - "exiftool suspicious.jpg"

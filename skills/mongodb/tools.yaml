@@ -1,0 +1,40 @@
+mongosh:
+  description: "MongoDB shell for read-only queries and metadata inventory"
+  category: "database"
+  install_cmd: "apt-get install -y mongodb-mongosh"
+  verify_cmd: "mongosh --version"
+  examples:
+    - "mongosh mongodb://user:pass@target:27017/admin --eval 'db.adminCommand({buildInfo:1})'"
+    - "mongosh mongodb://user:pass@target:27017/admin --eval 'db.adminCommand({listDatabases:1})'"
+
+mongodump:
+  description: "MongoDB database dump tool (explicit authorization only)"
+  category: "database"
+  install_cmd: "apt-get install -y mongodb-database-tools"
+  verify_cmd: "mongodump --version"
+  examples:
+    - "mongodump --uri='mongodb://user:pass@target:27017/admin' --db admin --gzip"
+
+nosqlmap:
+  description: "NoSQL injection testing (explicit authorization only)"
+  category: "vuln"
+  install_cmd: "apt-get install -y nosqlmap"
+  verify_cmd: "nosqlmap --help"
+  examples:
+    - "nosqlmap -u 'https://target/api/login' -p username,password"
+
+nmap:
+  description: "Nmap MongoDB scripts for version and info"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p27017 --script mongodb-info target"
+
+summarize_mongo_inventory:
+  description: "Summarize MongoDB shell JSON outputs into an inventory report"
+  category: "database"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/mongodb/scripts/summarize_mongo_inventory.py --help"
+  examples:
+    - "python3 skills/mongodb/scripts/summarize_mongo_inventory.py --build-info build_info.json --databases list_dbs.json --users users.json --roles roles.json --out mongodb_inventory.json"

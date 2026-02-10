@@ -1,0 +1,8 @@
+medusa:
+  description: Parallel login brute-force tool
+  category: credential_access
+  install_cmd: sudo apt install medusa
+  verify_cmd: medusa -h
+  examples:
+    - medusa -h 10.0.0.10 -u user -P wordlist.txt -M ssh
+    - medusa -H hosts.txt -U users.txt -P wordlist.txt -M smbnt

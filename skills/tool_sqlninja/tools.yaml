@@ -1,0 +1,8 @@
+sqlninja:
+  description: SQL Server injection tool
+  category: exploitation
+  install_cmd: sudo apt install sqlninja
+  verify_cmd: sqlninja -h
+  examples:
+    - sqlninja -m test -f sqlninja.conf
+    - sqlninja -m fingerprint -f sqlninja.conf

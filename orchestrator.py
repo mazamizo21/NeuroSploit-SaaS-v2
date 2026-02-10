@@ -211,7 +211,7 @@ class AgentOrchestrator:
         return score
     
     async def execute_task(self, task: AgentTask, agent: Agent = None) -> AgentResult:
-        """Execute a task (placeholder - actual execution depends on DynamicAgent)"""
+        """Execute a task using DynamicAgent or Kali container exec"""
         if agent is None:
             agent = self.assign_task(task)
             if agent is None:
@@ -222,23 +222,36 @@ class AgentOrchestrator:
                     error="No available agent to execute task"
                 )
         
-        # Placeholder execution - in real implementation, this would:
-        # 1. Configure DynamicAgent with required skills
-        # 2. Execute the pentest against target
-        # 3. Collect results and artifacts
+        start_time = datetime.now(timezone.utc)
         
-        # Simulate execution time
-        await asyncio.sleep(0.1)
-        
-        result = AgentResult(
-            task_id=task.task_id,
-            agent_id=agent.agent_id,
-            status=AgentStatus.COMPLETED,
-            findings=[],
-            artifacts=[],
-            execution_time=0.1,
-            metrics={}
-        )
+        try:
+            # Try to import and use DynamicAgent directly
+            result_data = await self._execute_with_dynamic_agent(task)
+            
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+            
+            result = AgentResult(
+                task_id=task.task_id,
+                agent_id=agent.agent_id,
+                status=AgentStatus.COMPLETED,
+                findings=result_data.get("findings", []),
+                artifacts=result_data.get("artifacts", []),
+                execution_time=execution_time,
+                metrics={
+                    "iterations": result_data.get("iterations", 0),
+                    "total_executions": result_data.get("total_executions", 0),
+                    "successful_executions": result_data.get("successful_executions", 0),
+                }
+            )
+        except Exception as e:
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+            result = AgentResult(
+                task_id=task.task_id,
+                agent_id=agent.agent_id,
+                status=AgentStatus.FAILED,
+                error=str(e),
+                execution_time=execution_time
+            )
         
         # Update agent status
         agent.status = AgentStatus.IDLE
@@ -247,6 +260,70 @@ class AgentOrchestrator:
         
         self.results[task.task_id] = result
         return result
+    
+    async def _execute_with_dynamic_agent(self, task: AgentTask) -> dict:
+        """Execute task using DynamicAgent (local) or Docker exec (container)"""
+        import subprocess
+        import tempfile
+        
+        # First, try Docker exec into a Kali container
+        try:
+            import docker
+            client = docker.from_env()
+            containers = client.containers.list(
+                filters={"status": "running"}
+            )
+            kali_containers = [c for c in containers if "kali" in c.name.lower()]
+            
+            if kali_containers:
+                container = kali_containers[0]
+                output_dir = f"/pentest/output/{task.task_id}"
+                container.exec_run(cmd=["mkdir", "-p", output_dir])
+                
+                cmd = [
+                    "python3", "/opt/open-interpreter/dynamic_agent.py",
+                    "--target", task.target,
+                    "--objective", task.description,
+                    "--max-iterations", str(min(task.timeout // 30, 50)),
+                    "--output-dir", output_dir
+                ]
+                
+                exec_result = container.exec_run(
+                    cmd=cmd,
+                    workdir="/pentest",
+                    demux=True
+                )
+                
+                stdout = exec_result.output[0].decode(errors="replace") if exec_result.output[0] else ""
+                
+                # Try to read report
+                report_result = container.exec_run(cmd=["cat", f"{output_dir}/findings.json"])
+                if report_result.exit_code == 0:
+                    return json.loads(report_result.output.decode())
+                
+                return {"output": stdout, "findings": []}
+        except ImportError:
+            pass
+        except Exception as e:
+            # Fall through to local execution
+            pass
+        
+        # Fallback: try local DynamicAgent import
+        try:
+            import sys
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), "kali-executor", "open-interpreter"))
+            from dynamic_agent import DynamicAgent as LocalAgent
+            
+            with tempfile.TemporaryDirectory() as tmpdir:
+                agent = LocalAgent(log_dir=tmpdir)
+                agent.max_iterations = min(task.timeout // 30, 50)
+                report = agent.run(task.target, task.description)
+                return report
+        except ImportError:
+            raise RuntimeError(
+                "Cannot execute task: no Kali containers running and DynamicAgent not importable locally. "
+                "Start TazoSploit with ./start.sh first."
+            )
     
     async def execute_parallel(self, tasks: List[AgentTask], max_concurrent: int = 3) -> List[AgentResult]:
         """Execute multiple tasks in parallel with concurrency limit"""
@@ -351,12 +428,33 @@ class AgentOrchestrator:
         }
 
 
+    # These methods were incorrectly placed after asyncio.run() — moved back into class
+    
+    def get_agents(self) -> Dict[str, Agent]:
+        """Get all registered agents"""
+        return self.agents.copy()
+
+    def get_agent(self, agent_id: str) -> Optional[Agent]:
+        """Get a specific agent by ID"""
+        return self.agents.get(agent_id)
+
+    def get_agent_status(self, agent_id: str) -> Optional[AgentStatus]:
+        """Get current status of a specific agent"""
+        agent = self.agents.get(agent_id)
+        return agent.status if agent else None
+
+    def get_all_agent_statuses(self) -> Dict[str, AgentStatus]:
+        """Get status of all agents"""
+        return {
+            agent_id: agent.status
+            for agent_id, agent in self.agents.items()
+        }
+
+
 if __name__ == "__main__":
-    # Test orchestrator
     async def test_orchestrator():
         orchestrator = AgentOrchestrator()
         
-        # Create tasks
         task1 = orchestrator.create_task(
             description="Scan network for open ports",
             target="192.168.1.0/24",
@@ -371,22 +469,11 @@ if __name__ == "__main__":
             priority=8
         )
         
-        task3 = orchestrator.create_task(
-            description="Extract credentials from compromised system",
-            target="192.168.1.100",
-            skills_required=["credential_access"],
-            priority=7,
-            dependencies=[task2.task_id]  # Depends on successful exploitation
-        )
-        
-        # Execute tasks in parallel (task3 will wait for task2)
         results = await orchestrator.execute_parallel([task1, task2], max_concurrent=2)
         
-        # Print results
         for result in results:
             print(f"Task {result.task_id}: {result.status}")
         
-        # Get status
         print("\nOrchestrator Status:")
         print(json.dumps(orchestrator.get_status(), indent=2))
     

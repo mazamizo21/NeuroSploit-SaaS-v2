@@ -1,0 +1,43 @@
+vault:
+  description: "HashiCorp Vault CLI for secrets inventory and policy review"
+  category: "cloud"
+  install_cmd: "apt-get install -y vault"
+  verify_cmd: "vault version"
+  examples:
+    - "vault status -format=json"
+    - "vault kv list secret/"
+
+awscli:
+  description: "AWS CLI for Secrets Manager inventory"
+  category: "cloud"
+  install_cmd: "apt-get install -y awscli"
+  verify_cmd: "aws --version"
+  examples:
+    - "aws sts get-caller-identity"
+    - "aws secretsmanager list-secrets"
+
+azure-cli:
+  description: "Azure CLI for Key Vault inventory"
+  category: "cloud"
+  install_cmd: "apt-get install -y azure-cli"
+  verify_cmd: "az --version"
+  examples:
+    - "az account show"
+    - "az keyvault secret list --vault-name <vault>"
+
+gcloud:
+  description: "Google Cloud CLI for Secret Manager inventory"
+  category: "cloud"
+  install_cmd: "apt-get install -y google-cloud-cli"
+  verify_cmd: "gcloud --version"
+  examples:
+    - "gcloud auth list"
+    - "gcloud secrets list"
+
+policy_diff:
+  description: "Diff two policy JSON documents and emit a summary"
+  category: "governance"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 --version"
+  examples:
+    - "python3 skills/secrets_manager/scripts/policy_diff.py --before before.json --after after.json --out policy_diff.json"

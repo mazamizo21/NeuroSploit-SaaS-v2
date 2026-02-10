@@ -1,0 +1,23 @@
+xfreerdp:
+  description: "RDP client for authentication validation and security checks"
+  category: "network"
+  install_cmd: "apt-get install -y freerdp2-x11"
+  verify_cmd: "xfreerdp /version"
+  examples:
+    - "xfreerdp /v:target /u:user /p:pass /cert:ignore /auth-only"
+
+nmap:
+  description: "Nmap RDP scripts for NTLM info and encryption settings"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p3389 --script rdp-ntlm-info,rdp-enum-encryption target"
+
+parse_rdp_nmap:
+  description: "Parse Nmap RDP script output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/rdp/scripts/parse_rdp_nmap.py --help"
+  examples:
+    - "python3 skills/rdp/scripts/parse_rdp_nmap.py --input rdp_nmap.txt --out rdp_info.json"

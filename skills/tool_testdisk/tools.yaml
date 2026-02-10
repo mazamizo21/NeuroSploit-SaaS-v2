@@ -1,0 +1,8 @@
+testdisk:
+  description: Data recovery tool for partitions/files
+  category: forensics
+  install_cmd: sudo apt install testdisk
+  verify_cmd: testdisk --help
+  examples:
+    - testdisk /log
+    - photorec /log

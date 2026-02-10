@@ -1,0 +1,9 @@
+dnsrecon:
+  description: DNS enumeration and scanning tool
+  category: reconnaissance
+  install_cmd: sudo apt install dnsrecon
+  verify_cmd: dnsrecon -h
+  examples:
+    - dnsrecon -d example.com -t std
+    - dnsrecon -d example.com -D /usr/share/wordlists/dnsmap.txt -t brt
+    - dnsrecon -d example.com -t axfr

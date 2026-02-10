@@ -1,0 +1,23 @@
+id: tool_crunch
+name: "Tool: Crunch"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: Wordlist generator with patterns and permutations.
+mitre_techniques: []
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with crunch
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - crunch
+  - wordlist

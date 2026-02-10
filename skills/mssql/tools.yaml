@@ -1,0 +1,31 @@
+tsql:
+  description: "FreeTDS client for SQL Server authentication and queries"
+  category: "database"
+  install_cmd: "apt-get install -y freetds-bin"
+  verify_cmd: "tsql -C"
+  examples:
+    - "tsql -H target -p 1433 -U user -P pass"
+
+sqlcmd:
+  description: "SQL Server command-line client (go-sqlcmd)"
+  category: "database"
+  install_cmd: "apt-get install -y sqlcmd"
+  verify_cmd: "sqlcmd -?"
+  examples:
+    - "sqlcmd -S target -U user -P pass -Q \"SELECT @@VERSION\""
+
+nmap:
+  description: "Nmap SQL Server scripts for version and configuration"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p1433 --script ms-sql-info,ms-sql-ntlm-info target"
+
+parse_sqlcmd_json:
+  description: "Extract JSON from sqlcmd output and summarize records"
+  category: "database"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/mssql/scripts/parse_sqlcmd_json.py --help"
+  examples:
+    - "python3 skills/mssql/scripts/parse_sqlcmd_json.py --input sqlcmd.out --out db_access.json"

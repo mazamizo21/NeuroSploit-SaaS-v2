@@ -1,0 +1,26 @@
+id: service_kubernetes
+name: Kubernetes Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for Kubernetes.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- k8s_inventory.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- API access scope confirmed
+- Inventory captured safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- kubernetes
+- k8s

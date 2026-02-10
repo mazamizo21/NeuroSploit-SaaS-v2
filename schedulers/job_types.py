@@ -41,8 +41,8 @@ class JobPriority(str, Enum):
 @dataclass
 class BaseJobConfig:
     """Base configuration for all job types"""
-    job_type: JobType
     name: str
+    job_type: JobType
     description: Optional[str] = None
     priority: JobPriority = JobPriority.NORMAL
     timeout: int = 3600  # Default 1 hour timeout

@@ -1,0 +1,25 @@
+id: tool_smtp_user_enum
+name: "Tool: smtp-user-enum"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: SMTP user enumeration via VRFY/EXPN/RCPT methods.
+mitre_techniques:
+  - T1590
+  - T1593
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with smtp_user_enum
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - smtp-user-enum
+  - smtp

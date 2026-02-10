@@ -1,0 +1,7 @@
+autopsy:
+  description: Autopsy digital forensics platform
+  category: forensics
+  install_cmd: sudo apt install autopsy
+  verify_cmd: autopsy --help
+  examples:
+    - autopsy --help

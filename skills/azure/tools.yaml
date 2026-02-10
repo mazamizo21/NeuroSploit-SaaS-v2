@@ -1,0 +1,32 @@
+azure-cli:
+  description: "Azure CLI for subscription and resource inventory"
+  category: "cloud"
+  install_cmd: "apt-get install -y azure-cli"
+  verify_cmd: "az version"
+  examples:
+    - "az account show"
+    - "az group list"
+
+scoutsuite:
+  description: "Multi-cloud security auditing tool (read-only)"
+  category: "cloud"
+  install_cmd: "python3 -m pip install scoutsuite"
+  verify_cmd: "scout --help"
+  examples:
+    - "scout azure --report-dir /tmp/scout-report"
+
+trivy:
+  description: "Vulnerability scanner for container images and artifacts"
+  category: "cloud"
+  install_cmd: "apt-get install -y trivy"
+  verify_cmd: "trivy --version"
+  examples:
+    - "trivy image --severity HIGH,CRITICAL my-image:tag"
+
+summarize_azure_inventory:
+  description: "Summarize Azure CLI JSON outputs into a single inventory report"
+  category: "cloud"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/azure/scripts/summarize_azure_inventory.py --help"
+  examples:
+    - "python3 skills/azure/scripts/summarize_azure_inventory.py --account-show account.json --account-list subscriptions.json --storage-accounts storage.json --keyvaults vaults.json --vms vms.json --role-assignments roles.json --out cloud_inventory.json"

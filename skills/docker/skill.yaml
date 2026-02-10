@@ -1,0 +1,25 @@
+id: service_docker
+name: Docker Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for Docker.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- docker_inventory.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Docker daemon access scope confirmed
+- Inventory captured safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- docker

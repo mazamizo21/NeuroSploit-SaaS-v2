@@ -1,0 +1,24 @@
+id: tool_ettercap
+name: "Tool: Ettercap"
+category: defense_evasion
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: MITM framework for sniffing, interception, and filtering on LANs.
+mitre_techniques:
+  - T1557
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with ettercap
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - ettercap
+  - mitm

@@ -1,0 +1,8 @@
+recon-ng:
+  description: Web reconnaissance framework
+  category: reconnaissance
+  install_cmd: sudo apt install recon-ng
+  verify_cmd: recon-ng -h
+  examples:
+    - recon-ng -w workspace
+    - recon-ng -h

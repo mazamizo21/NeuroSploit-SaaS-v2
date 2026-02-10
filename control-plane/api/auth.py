@@ -62,15 +62,26 @@ def decode_token(token: str) -> TokenData:
             detail="Invalid token"
         )
 
+INTERNAL_SERVICE_KEY = os.getenv("SECRET_KEY", "dev-secret-change-in-production")
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> CurrentUser:
     """Get current authenticated user"""
-    token_data = decode_token(credentials.credentials)
+    token = credentials.credentials
     
-    # For development, create a mock user if not in DB
-    # In production, this would verify the user exists
+    # Allow internal service auth (for worker -> control-plane)
+    if token == f"internal-{INTERNAL_SERVICE_KEY}":
+        return CurrentUser(
+            id="b0000000-0000-0000-0000-000000000001",
+            tenant_id="a0000000-0000-0000-0000-000000000001",
+            email="system@tazosploit.local",
+            role="admin"
+        )
+    
+    token_data = decode_token(token)
+    
     return CurrentUser(
         id=token_data.user_id,
         tenant_id=token_data.tenant_id,

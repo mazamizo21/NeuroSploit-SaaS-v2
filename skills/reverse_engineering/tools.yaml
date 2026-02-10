@@ -1,0 +1,39 @@
+ghidra:
+  description: "Decompile and analyze binaries"
+  category: "analysis"
+  install_cmd: "apt-get install -y ghidra"
+  verify_cmd: "ghidraRun --help"
+  examples:
+    - "ghidraRun"
+
+radare2:
+  description: "Disassemble and analyze binaries from the CLI"
+  category: "analysis"
+  install_cmd: "apt-get install -y radare2"
+  verify_cmd: "r2 -v"
+  examples:
+    - "r2 -A sample.bin"
+
+objdump:
+  description: "Inspect ELF/PE headers and disassembly"
+  category: "analysis"
+  install_cmd: "apt-get install -y binutils"
+  verify_cmd: "objdump --version"
+  examples:
+    - "objdump -x sample.bin"
+
+strings:
+  description: "Extract printable strings from binaries"
+  category: "analysis"
+  install_cmd: "apt-get install -y binutils"
+  verify_cmd: "strings --version"
+  examples:
+    - "strings -a sample.bin | head -n 50"
+
+python3:
+  description: "Custom analysis scripts for parsing outputs"
+  category: "analysis"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 --version"
+  examples:
+    - "python3 scripts/extract_iocs.py --input sample.bin"

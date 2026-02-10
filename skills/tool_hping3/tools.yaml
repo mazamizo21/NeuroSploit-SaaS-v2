@@ -1,0 +1,8 @@
+hping3:
+  description: Packet crafting and probing utility
+  category: defense_evasion
+  install_cmd: sudo apt install hping3
+  verify_cmd: hping3 --help
+  examples:
+    - hping3 -S -p 80 10.0.0.10
+    - hping3 --scan 1-1024 -S 10.0.0.10

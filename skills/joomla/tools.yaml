@@ -1,0 +1,40 @@
+joomscan:
+  description: "OWASP Joomla scanner for core and component enumeration"
+  category: "web"
+  install_cmd: "apt-get install -y joomscan"
+  verify_cmd: "joomscan -h"
+  examples:
+    - "joomscan -u https://target"
+    - "joomscan --enumerate-components -u https://target"
+
+nuclei:
+  description: "Template-based web vulnerability scanner"
+  category: "web"
+  install_cmd: "apt-get install -y nuclei"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u https://target -tags joomla"
+
+nikto:
+  description: "Web server scanner for common issues"
+  category: "web"
+  install_cmd: "apt-get install -y nikto"
+  verify_cmd: "nikto -Version"
+  examples:
+    - "nikto -h https://target"
+
+nmap:
+  description: "Nmap web scripts for CMS detection"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p80,443 --script http-joomla-brute target"
+
+parse_joomscan:
+  description: "Parse Joomscan output into inventory evidence"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/joomla/scripts/parse_joomscan.py --help"
+  examples:
+    - "python3 skills/joomla/scripts/parse_joomscan.py --input joomscan.txt --out joomla_inventory.json"

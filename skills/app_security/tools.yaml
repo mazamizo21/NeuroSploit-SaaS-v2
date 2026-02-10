@@ -1,0 +1,127 @@
+httpx:
+  description: "Web probing for application inventory"
+  category: "web"
+  install_cmd: "apt-get install -y httpx"
+  verify_cmd: "httpx -version"
+  examples:
+    - "httpx -u https://target -title -status-code -web-server"
+
+katana:
+  description: "Web crawler for endpoint discovery"
+  category: "web"
+  install_cmd: "CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest"
+  verify_cmd: "katana -h"
+  examples:
+    - "katana -u https://target -d 2 -jc -rl 50"
+
+nuclei:
+  description: "Template-based scanner for non-destructive checks"
+  category: "web"
+  install_cmd: "apt-get install -y nuclei"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u https://target -tags misconfig,exposure"
+
+burpsuite:
+  description: "Web security testing suite"
+  category: "web"
+  install_cmd: "apt-get install -y burpsuite"
+  verify_cmd: "burpsuite --version"
+  examples:
+    - "burpsuite"
+
+arjun:
+  description: "HTTP parameter discovery (low rate)"
+  category: "web"
+  install_cmd: "apt-get install -y arjun"
+  verify_cmd: "arjun --help"
+  examples:
+    - "arjun -u https://target/api -m GET"
+
+ffuf:
+  description: "Content discovery with conservative rate limits"
+  category: "web"
+  install_cmd: "apt-get install -y ffuf"
+  verify_cmd: "ffuf -h"
+  examples:
+    - "ffuf -u https://target/FUZZ -w wordlist.txt -rate 20"
+
+sqlmap:
+  description: "SQL injection validation (explicit authorization only)"
+  category: "web"
+  install_cmd: "apt-get install -y sqlmap"
+  verify_cmd: "sqlmap --version"
+  examples:
+    - "sqlmap -u 'https://target?id=1' --batch --risk=1 --level=1"
+
+dalfox:
+  description: "XSS validation (explicit authorization only)"
+  category: "web"
+  install_cmd: "apt-get install -y dalfox"
+  verify_cmd: "dalfox version"
+  examples:
+    - "dalfox url https://target/search?q=test"
+
+headers_to_json:
+  description: "Parse HTTP response headers into JSON evidence"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/headers_to_json.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/headers_to_json.py --headers headers.txt --out app_security_findings.json"
+
+rate_limit_report:
+  description: "Extract rate limit headers into a JSON summary"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/rate_limit_report.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/rate_limit_report.py --input headers.json --out rate_limit_evidence.json"
+
+merge_findings:
+  description: "Merge multiple JSON evidence files into a unified document"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/merge_findings.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/merge_findings.py --inputs headers.json rate_limit.json --out app_security_findings.json"
+
+idor_log_parser:
+  description: "Parse IDOR validation logs into JSON"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/idors_to_json.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/idors_to_json.py --input idor.log --out idor_findings.json"
+
+nuclei_findings_parser:
+  description: "Convert nuclei JSONL output to findings JSON"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/nuclei_to_findings.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/nuclei_to_findings.py --input nuclei.jsonl --out nuclei_findings.json"
+
+redact_findings:
+  description: "Redact sensitive values from findings JSON"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/redact_findings.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/redact_findings.py --input findings.json --out findings_redacted.json"
+
+package_evidence:
+  description: "Package app security evidence JSON files into a single bundle"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/package_evidence.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/package_evidence.py --inputs app_inventory.json app_security_findings.json --out app_security_bundle.json"
+
+summarize_findings:
+  description: "Summarize findings by severity and category"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/app_security/scripts/summarize_findings.py --help"
+  examples:
+    - "python3 skills/app_security/scripts/summarize_findings.py --input app_security_findings.json --out findings_summary.json"

@@ -1,0 +1,9 @@
+feroxbuster:
+  description: Recursive web content discovery
+  category: scanning
+  install_cmd: sudo apt install feroxbuster
+  verify_cmd: feroxbuster -h
+  examples:
+    - feroxbuster -u http://example.com -w wordlist.txt
+    - feroxbuster -u http://example.com -x php,js
+    - feroxbuster -u http://example.com -C 403,404

@@ -402,11 +402,11 @@ python3 -c "from skills.nmap_skill.main import get_skill; print(get_skill().exec
 
 ### Created Documentation
 - `docs/SKILLS_SYSTEM.md` - Complete skills system guide
+- `docs/SCHEDULER.md` - Scheduler user guide
 - `skills/SKILL_CATALOG.md` - All available skills
 - `skills/SKILL_TEMPLATE.md` - Skill development template
 
 ### TODO Documentation
-- `docs/SCHEDULER.md` - Scheduler user guide
 - Update `docs/ARCHITECTURE.md` - Add scheduler/skills sections
 
 ## 8. Usage Examples

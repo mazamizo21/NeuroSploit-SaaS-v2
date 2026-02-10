@@ -1,0 +1,8 @@
+hydra:
+  description: Network login cracker
+  category: credential_access
+  install_cmd: sudo apt install hydra
+  verify_cmd: hydra -h
+  examples:
+    - hydra -l user -P wordlist.txt ssh://10.0.0.10
+    - hydra -L users.txt -P wordlist.txt http-post-form '/login.php:username=^USER^&password=^PASS^:F=invalid'

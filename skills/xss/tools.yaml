@@ -49,3 +49,11 @@ beef-xss:
   verify_cmd: "which beef-xss"
   examples:
     - "beef-xss"
+
+parse_dalfox_json:
+  description: "Parse dalfox JSON output into evidence"
+  category: "exploitation"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/xss/scripts/parse_dalfox_json.py --help"
+  examples:
+    - "python3 skills/xss/scripts/parse_dalfox_json.py --input dalfox.json --out evidence.json"

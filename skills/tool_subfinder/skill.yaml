@@ -1,0 +1,25 @@
+id: tool_subfinder
+name: "Tool: subfinder"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: Passive subdomain discovery using curated sources.
+mitre_techniques:
+  - T1593
+  - T1596
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with subfinder
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - subfinder
+  - subdomain

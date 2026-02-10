@@ -1,0 +1,24 @@
+id: tool_bully
+name: "Tool: Bully"
+category: exploitation
+phase: EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: WPS attack tool with PixieWPS integration and robust options.
+mitre_techniques:
+  - T1110
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with bully
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - bully
+  - wps

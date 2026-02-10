@@ -1,0 +1,63 @@
+httpx:
+  description: "Web probing for gateway fingerprinting"
+  category: "web"
+  install_cmd: "apt-get install -y httpx"
+  verify_cmd: "httpx -version"
+  examples:
+    - "httpx -u https://target -title -server -status-code -web-server"
+
+sslscan:
+  description: "TLS configuration scanner for gateway endpoints"
+  category: "network"
+  install_cmd: "apt-get install -y sslscan"
+  verify_cmd: "sslscan --version"
+  examples:
+    - "sslscan target:443"
+
+nmap:
+  description: "Nmap service discovery for gateway endpoints"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p80,443,8443 target"
+
+katana:
+  description: "Web crawler for API documentation and route discovery"
+  category: "web"
+  install_cmd: "CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest"
+  verify_cmd: "katana -h"
+  examples:
+    - "katana -u https://target -d 2 -jc -rl 50"
+
+kiterunner:
+  description: "API route discovery using wordlists"
+  category: "web"
+  install_cmd: "git clone https://github.com/assetnote/kiterunner && cd kiterunner && make build && ln -s $(pwd)/dist/kr /usr/local/bin/kr"
+  verify_cmd: "kr --help"
+  examples:
+    - "kr scan target.com -A=apiroutes-210228:20000 -x 5 --ignore-length=34"
+
+curl:
+  description: "HTTP client for fetching OpenAPI specs and metadata"
+  category: "web"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s https://target/openapi.json"
+
+nuclei:
+  description: "Template-based scanner for known API gateway issues"
+  category: "web"
+  install_cmd: "apt-get install -y nuclei"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u https://target -tags api,misconfig"
+
+summarize_gateway_inventory:
+  description: "Summarize API gateway discovery outputs into a unified inventory"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/api_gateway/scripts/summarize_gateway_inventory.py --help"
+  examples:
+    - "python3 skills/api_gateway/scripts/summarize_gateway_inventory.py --httpx httpx.json --nuclei nuclei.json --out api_gateway_inventory.json"

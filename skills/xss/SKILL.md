@@ -1,72 +1,47 @@
 # Cross-Site Scripting (XSS) Skill
 
 ## Overview
-Exploiting cross-site scripting vulnerabilities to execute arbitrary JavaScript in victim browsers, leading to session hijacking, credential theft, and malicious actions.
+Service-first methodology for validating XSS with safe, non-destructive payloads and clear evidence.
+
+## Scope Rules
+1. Only operate on explicitly in-scope applications and parameters.
+2. External targets: exploitation beyond proof-of-execution requires explicit authorization (external_exploit=explicit_only).
+3. Use non-destructive payloads only; do not exfiltrate data.
+4. Stored XSS tests require explicit authorization and minimal impact.
 
 ## Methodology
 
-### 1. XSS Detection
-- Identify injection points in reflected, stored, and DOM-based XSS
-- Test all input vectors: GET/POST parameters, cookies, headers, URL fragments
-- Determine XSS type: Reflected, Stored, or DOM-based
+### 1. Detection
+- Identify reflected, stored, and DOM-based injection points.
+- Confirm sink context and encoding requirements.
 
-### 2. Reflected XSS Exploitation
-- Craft payloads to execute JavaScript in context
-- Bypass basic filters: encoding, alternative methods
-- Test for payload length limitations
+### 2. Safe Proof of Execution
+- Use minimal payloads to prove execution.
+- Capture response evidence and screenshots.
 
-### 3. Stored XSS Exploitation
-- Identify persistent injection points
-- Test payload persistence
-- Exploit to affect multiple users
+### 3. CSP and Mitigations
+- Capture CSP headers and execution blockers.
+- Note mitigations for remediation guidance.
 
-### 4. DOM-Based XSS Exploitation
-- Identify vulnerable JavaScript sinks
-- Exploit client-side vulnerabilities
-- Test in various browsers
+### 4. Explicit-Only Advanced Actions
+- Credential capture, session theft, or browser exploitation requires explicit authorization.
 
-### 5. XSS Payload Development
-- Cookie/session theft: `document.cookie`
-- Credential capture: Fake login forms
-- Keylogging: JavaScript keylogger
-- Screenshot capture: html2canvas
-- Browser history: `window.history`
-
-### 6. Advanced Techniques
-- BeEF (Browser Exploitation Framework) integration
-- XSS phishing and social engineering
-- XSS worms (self-propagating XSS)
-- Bypass WAF with obfuscation techniques
-
-### 7. Automated Scanning
-- Use XSStrike for advanced XSS detection
-- Use Xsser for automated exploitation
-- Use Burp Suite's Scanner
-
-## MITRE ATT&CK Mappings
-- T1190 - Exploit Public-Facing Application
-- T1189 - Drive-by Compromise
-- T1203 - Exploitation for Client Execution
-- T1059.007 - JavaScript (XSS payload execution)
-
-## Tools Available
-- XSStrike: Advanced XSS detection and exploitation tool
-- Xsser: Cross-site scripting framework
-- dalfox: Fast XSS parameter scanner and analysis tool
-- BeEF: Browser Exploitation Framework
-- burpsuite: Web application security testing platform
+## Deep Dives
+Load references when needed:
+1. XSS types and sinks: `references/types_and_sinks.md`
+2. Safe payloads: `references/safe_payloads.md`
+3. Context and encoding: `references/context_encoding.md`
+4. CSP validation: `references/csp_validation.md`
+5. Explicit-only advanced actions: `references/explicit_only_advanced.md`
 
 ## Evidence Collection
-1. Proof-of-concept XSS payloads
-2. Screenshots of successful XSS execution
-3. Captured cookies/sessions
-4. Browser console output
-5. BeEF hook browser screenshots
-6. WAF bypass payloads
+1. `evidence.json` with parameter, context, and payload evidence (parse dalfox JSON if used).
+2. `findings.json` with validated impact and redacted proof.
+
+## Evidence Consolidation
+Use `parse_dalfox_json.py` to convert dalfox JSON/JSONL output into `evidence.json`.
 
 ## Success Criteria
-- XSS vulnerability confirmed (at least one type)
-- Proof-of-concept payload demonstrated
-- At least one session/credential captured if possible
-- BeEF hook deployed successfully if applicable
-- All XSS vectors documented
+- XSS vulnerability confirmed with safe payloads.
+- Context and mitigation factors documented.
+- Evidence captured without data exfiltration.

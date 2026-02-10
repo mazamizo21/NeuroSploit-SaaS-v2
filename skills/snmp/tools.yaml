@@ -1,0 +1,40 @@
+snmpwalk:
+  description: "Net-SNMP client for walking OIDs (read-only)"
+  category: "network"
+  install_cmd: "apt-get install -y snmp"
+  verify_cmd: "snmpwalk -V"
+  examples:
+    - "snmpwalk -v2c -c public target system"
+    - "snmpbulkwalk -v2c -c public target interfaces"
+
+snmp-check:
+  description: "SNMP enumeration script for structured system details"
+  category: "network"
+  install_cmd: "apt-get install -y snmpcheck"
+  verify_cmd: "snmp-check -h"
+  examples:
+    - "snmp-check -c public -v 2c target"
+
+onesixtyone:
+  description: "Fast community string discovery (explicit authorization only)"
+  category: "auth"
+  install_cmd: "apt-get install -y onesixtyone"
+  verify_cmd: "onesixtyone -h"
+  examples:
+    - "onesixtyone -c communities.txt -i targets.txt"
+
+nmap:
+  description: "Nmap SNMP scripts for discovery"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -sU -p161 --script snmp-info,snmp-sysdescr target"
+
+parse_snmpwalk:
+  description: "Parse snmpwalk output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/snmp/scripts/parse_snmpwalk.py --help"
+  examples:
+    - "python3 skills/snmp/scripts/parse_snmpwalk.py --input snmpwalk.txt --out snmp_inventory.json"

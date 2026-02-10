@@ -1,0 +1,9 @@
+gobuster:
+  description: Directory/DNS/vhost brute forcing
+  category: scanning
+  install_cmd: sudo apt install gobuster
+  verify_cmd: gobuster -h
+  examples:
+    - gobuster dir -u http://example.com -w wordlist.txt
+    - gobuster dns -d example.com -w wordlist.txt
+    - gobuster vhost -u http://example.com -w wordlist.txt

@@ -1,0 +1,8 @@
+wfuzz:
+  description: Web fuzzer
+  category: scanning
+  install_cmd: sudo apt install wfuzz
+  verify_cmd: wfuzz -h
+  examples:
+    - wfuzz -c -z file,wordlist.txt --hc 404 http://example.com/FUZZ
+    - wfuzz -z list,a-b-c http://example.com/FUZZ

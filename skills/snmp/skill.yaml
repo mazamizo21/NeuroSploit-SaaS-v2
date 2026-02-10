@@ -1,0 +1,25 @@
+id: service_snmp
+name: SNMP Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for SNMP.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- snmp_inventory.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- SNMP version and access level confirmed
+- System OIDs enumerated safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- snmp

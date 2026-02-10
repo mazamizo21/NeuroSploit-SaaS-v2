@@ -1,0 +1,40 @@
+ike-scan:
+  description: "IPsec/IKE VPN discovery and fingerprinting"
+  category: "network"
+  install_cmd: "apt-get install -y ike-scan"
+  verify_cmd: "ike-scan --version"
+  examples:
+    - "ike-scan -M target"
+
+openvpn:
+  description: "OpenVPN client for configuration validation"
+  category: "network"
+  install_cmd: "apt-get install -y openvpn"
+  verify_cmd: "openvpn --version"
+  examples:
+    - "openvpn --config client.ovpn"
+
+sslscan:
+  description: "TLS configuration scanner for SSL VPN endpoints"
+  category: "network"
+  install_cmd: "apt-get install -y sslscan"
+  verify_cmd: "sslscan --version"
+  examples:
+    - "sslscan target:443"
+
+nmap:
+  description: "Nmap VPN discovery and service banners"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -sU -p500,4500 target"
+    - "nmap -sV -p1194,443 target"
+
+parse_ikescan:
+  description: "Parse ike-scan output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/vpn/scripts/parse_ikescan.py --help"
+  examples:
+    - "python3 skills/vpn/scripts/parse_ikescan.py --input ike_scan.txt --out vpn_inventory.json"

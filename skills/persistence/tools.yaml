@@ -1,0 +1,43 @@
+system_tools:
+  description: "Built-in OS utilities for checking persistence locations"
+  category: "post_exploitation"
+  install_cmd: ""
+  verify_cmd: ""
+  examples:
+    - "crontab -l"
+    - "ls -la /etc/cron.*"
+    - "systemctl list-timers --all"
+    - "schtasks /query /fo LIST /v"
+    - "reg query \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\""
+
+winpeas:
+  description: "Windows enumeration helper for persistence and misconfigurations"
+  category: "post_exploitation"
+  install_cmd: "echo 'Run on Windows host'"
+  verify_cmd: "echo 'See toolcard for usage'"
+  examples:
+    - "winPEASx64.exe"
+
+seatbelt:
+  description: "Windows security enumeration for persistence indicators"
+  category: "post_exploitation"
+  install_cmd: "echo 'Run on Windows host'"
+  verify_cmd: "echo 'See toolcard for usage'"
+  examples:
+    - "Seatbelt.exe -group=system"
+
+linpeas:
+  description: "Linux enumeration helper for persistence checks"
+  category: "post_exploitation"
+  install_cmd: "curl -L https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh -o /tmp/linpeas.sh"
+  verify_cmd: "bash /tmp/linpeas.sh -h"
+  examples:
+    - "bash /tmp/linpeas.sh"
+
+normalize_persistence:
+  description: "Normalize persistence notes into JSON inventory"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/persistence/scripts/normalize_persistence.py --help"
+  examples:
+    - "python3 skills/persistence/scripts/normalize_persistence.py --input persistence_notes.txt --out persistence_inventory.json"

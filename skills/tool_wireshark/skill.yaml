@@ -1,0 +1,25 @@
+id: tool_wireshark
+name: "Tool: Wireshark"
+category: forensics
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: GUI network protocol analyzer for inspecting pcaps.
+mitre_techniques:
+  - T1040
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with wireshark
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - wireshark
+  - pcap
+  - network

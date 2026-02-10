@@ -1,0 +1,24 @@
+id: tool_proxychains
+name: "Tool: Proxychains"
+category: network_evasion
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Force network traffic through proxy chains for scoped routing.
+mitre_techniques:
+  - T1090
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with proxychains
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - proxychains
+  - proxy

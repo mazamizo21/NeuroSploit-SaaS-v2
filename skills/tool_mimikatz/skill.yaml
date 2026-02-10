@@ -1,0 +1,27 @@
+id: tool_mimikatz
+name: "Tool: Mimikatz"
+category: credential_access
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Windows credential extraction and ticket operations.
+mitre_techniques:
+  - T1003
+  - T1558
+
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with mimikatz
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - mimikatz
+  - credentials
+

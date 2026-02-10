@@ -1,0 +1,32 @@
+id: service_azure
+name: AZURE Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for AZURE.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- cloud_inventory.json
+- cloud_identity.json
+- cloud_rbac.json
+- cloud_storage.json
+- cloud_keyvault.json
+- cloud_network.json
+- cloud_logging.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Tenant scope and subscription context confirmed
+- RBAC, storage, network, and logging posture documented
+- High-risk configurations documented with evidence
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- azure

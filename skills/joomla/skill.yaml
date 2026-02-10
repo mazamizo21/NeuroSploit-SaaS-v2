@@ -1,0 +1,25 @@
+id: service_joomla
+name: Joomla Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for Joomla.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- joomla_inventory.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Joomla inventory captured safely
+- Vulnerable components documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- joomla

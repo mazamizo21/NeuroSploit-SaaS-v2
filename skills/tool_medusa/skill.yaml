@@ -1,0 +1,24 @@
+id: tool_medusa
+name: "Tool: Medusa"
+category: credential_access
+phase: EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Parallel login brute-force tool with modular service support.
+mitre_techniques:
+  - T1110
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with medusa
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - medusa
+  - bruteforce

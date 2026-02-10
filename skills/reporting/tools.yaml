@@ -1,0 +1,167 @@
+jq:
+  description: "JSON query tool for assembling reports"
+  category: "reporting"
+  install_cmd: "apt-get install -y jq"
+  verify_cmd: "jq --version"
+  examples:
+    - "jq '.findings' report.json"
+
+assemble_report:
+  description: "Generate report.md and append generated_report into report.json"
+  category: "reporting"
+  install_cmd: "python3 -m pip install --upgrade pip"
+  verify_cmd: "python3 --version"
+  examples:
+    - "python3 skills/reporting/scripts/assemble_report.py --input-dir /pentest/output/<job_id>"
+
+merge_bundles:
+  description: "Merge evidence bundles into a single reporting bundle"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/merge_bundles.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/merge_bundles.py --inputs windows_evidence_bundle.json linux_evidence_bundle.json app_security_bundle.json --out reporting_bundle.json"
+
+normalize_findings:
+  description: "Normalize findings from multiple sources into a common schema"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/normalize_findings.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/normalize_findings.py --inputs findings_a.json findings_b.json --out findings_normalized.json"
+
+summarize_findings:
+  description: "Summarize findings by severity and category"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/summarize_findings.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/summarize_findings.py --input findings_normalized.json --out findings_summary.json"
+
+validate_bundle:
+  description: "Validate evidence bundle structure before reporting"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/validate_bundle.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/validate_bundle.py --input reporting_bundle.json --out bundle_validation.json"
+
+check_report_readiness:
+  description: "Check report artifacts exist before finalization"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/check_report_readiness.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/check_report_readiness.py --dir /pentest/output/<job_id> --out readiness.json"
+
+check_schema:
+  description: "Validate normalized findings schema"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/check_schema.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/check_schema.py --input findings_normalized.json --out schema_check.json"
+
+check_evidence_manifest:
+  description: "Validate evidence bundle summary against evidence keys"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/check_evidence_manifest.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/check_evidence_manifest.py --input reporting_bundle.json --out manifest_check.json"
+
+gate_report:
+  description: "Gate report generation based on readiness and validation checks"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/gate_report.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/gate_report.py --readiness readiness.json --bundle bundle_validation.json --schema schema_check.json --manifest manifest_check.json --out report_gate.json"
+
+summary_rollup:
+  description: "Roll up multiple findings summaries into one report summary"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/summary_rollup.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/summary_rollup.py --inputs windows_summary.json linux_summary.json app_summary.json --out report_summary.json"
+
+emit_schema:
+  description: "Emit the normalized findings schema as JSON"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/emit_schema.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/emit_schema.py --out findings_schema.json"
+
+emit_bundle_schema:
+  description: "Emit the evidence bundle schema as JSON"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/emit_bundle_schema.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/emit_bundle_schema.py --out bundle_schema.json"
+
+collect_artifacts:
+  description: "Collect report artifacts into an export directory"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/collect_artifacts.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/collect_artifacts.py --dir /pentest/output/<job_id> --out /pentest/output/<job_id>/export"
+
+hash_artifacts:
+  description: "Generate SHA256 hashes for exported artifacts"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/hash_artifacts.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/hash_artifacts.py --dir /pentest/output/<job_id>/export --out /pentest/output/<job_id>/export/checksums.sha256"
+
+package_export:
+  description: "Package export directory into a tar.gz archive"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/package_export.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/package_export.py --dir /pentest/output/<job_id>/export --out /pentest/output/<job_id>/export.tar.gz"
+
+verify_checksums:
+  description: "Verify SHA256 checksums for exported artifacts"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/verify_checksums.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/verify_checksums.py --dir /pentest/output/<job_id>/export --checksums /pentest/output/<job_id>/export/checksums.sha256 --out checksum_verify.json"
+
+write_manifest:
+  description: "Write a JSON manifest for exported artifacts"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/write_manifest.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/write_manifest.py --dir /pentest/output/<job_id>/export --out export_manifest.json"
+
+validate_manifest:
+  description: "Validate exported artifacts against a manifest"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/validate_manifest.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/validate_manifest.py --dir /pentest/output/<job_id>/export --manifest export_manifest.json --out manifest_verify.json"
+
+audit_log:
+  description: "Append export audit log entries"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/audit_log.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/audit_log.py --action export --actor system --details '{\"job\":\"<job_id>\"}' --out export_audit.log"
+
+write_export_metadata:
+  description: "Write export metadata for report bundles"
+  category: "reporting"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/reporting/scripts/write_export_metadata.py --help"
+  examples:
+    - "python3 skills/reporting/scripts/write_export_metadata.py --job <job_id> --actor system --out export_metadata.json"

@@ -11,9 +11,44 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
 import requests
+import random
+import threading
+import signal
+from contextlib import contextmanager
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("tazosploit.llm")
+
+
+@contextmanager
+def _hard_timeout(seconds: int, label: str = "operation"):
+    """Hard wall-clock timeout using SIGALRM (interrupts DNS hangs).
+
+    Notes:
+    - Only works in the main thread.
+    - Safe no-op in non-main threads.
+    """
+    try:
+        seconds = int(seconds or 0)
+    except Exception:
+        seconds = 0
+
+    if seconds <= 0 or threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def _handler(signum, frame):
+        raise TimeoutError(f"{label} hard timeout after {seconds}s")
+
+    old_handler = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, _handler)
+    # ITIMER_REAL is more precise than alarm()
+    signal.setitimer(signal.ITIMER_REAL, float(seconds))
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old_handler)
 
 @dataclass
 class LLMInteraction:
@@ -49,8 +84,19 @@ class LLMClient:
         self.is_gpt5 = "gpt-5" in self.model.lower()  # GPT-5 uses different parameter names
         self.is_zhipu = "z.ai" in self.api_base or "zhipu" in self.api_base or "glm" in self.model.lower()
         self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        self.anthropic_token = os.getenv("ANTHROPIC_TOKEN")  # Claude subscription token (setup-token)
         self.openai_key = os.getenv("OPENAI_API_KEY")
         self.zhipu_key = os.getenv("ZHIPU_API_KEY")
+        
+        # Determine Claude auth method: prefer subscription token (free) over API key (per-token billing)
+        if self.anthropic_token:
+            self.claude_auth_method = "subscription_token"
+            logger.info("Claude auth: using subscription token (Bearer auth) — no per-token billing")
+        elif self.anthropic_key:
+            self.claude_auth_method = "api_key"
+            logger.info("Claude auth: using API key (x-api-key header) — per-token billing")
+        else:
+            self.claude_auth_method = None
         
         logger.info(f"LLM Client initialized: {self.api_base} / {self.model} (Claude: {self.is_claude}, OpenAI: {self.is_openai}, GPT-5: {self.is_gpt5}, Zhipu: {self.is_zhipu})")
     
@@ -97,19 +143,113 @@ class LLMClient:
     def chat(self, messages: List[Dict], max_tokens: int = 2048, 
              temperature: float = 0.7) -> str:
         """Send chat completion request with full logging"""
+        import random  # Force import in function scope for Python 3.13 compatibility
         
         start_time = time.time()
         
-        # Trim messages for GPT-4o to stay under 30K TPM limit
-        # For local models, use much larger context (131072 tokens)
-        if self.is_openai and not self.is_gpt5:
+        # Trim messages to control costs and stay under context limits
+        # Claude: cap at 25K tokens to keep costs ~$0.03/iteration max
+        # OpenAI: cap at 20K for TPM limits
+        # Local: use full 131K context
+        if self.is_claude:
+            messages = self._trim_messages(messages, max_context_tokens=25000)
+        elif self.is_openai and not self.is_gpt5:
             messages = self._trim_messages(messages, max_context_tokens=20000)
         elif not self.is_openai and not self.is_claude:
             # Local LLM - use 131072 context
             messages = self._trim_messages(messages, max_context_tokens=131072)
         
         try:
-            if self.is_zhipu:
+            # Optional: keep LLM keys out of the Kali executor by calling an internal proxy.
+            # If LLM_PROXY_URL is set, we will POST the OpenAI-style payload to that URL.
+            proxy_url = os.getenv("LLM_PROXY_URL", "").strip()
+            proxy_token = os.getenv("LLM_PROXY_TOKEN", "").strip()
+            if proxy_url:
+                headers = {"Content-Type": "application/json"}
+                if proxy_token:
+                    headers["X-LLM-Proxy-Token"] = proxy_token
+
+                payload = {
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                }
+                provider_override = os.getenv("LLM_PROVIDER_OVERRIDE", "").strip()
+                if provider_override:
+                    payload["provider_override"] = provider_override
+
+                hard_timeout_s = int(os.getenv("LLM_HARD_TIMEOUT_SECONDS", "120"))
+                connect_timeout_s = float(os.getenv("LLM_CONNECT_TIMEOUT_SECONDS", "10"))
+                read_timeout_s = float(os.getenv("LLM_READ_TIMEOUT_SECONDS", "120"))
+                max_attempts = int(os.getenv("LLM_RETRY_MAX", "5"))
+                base_backoff = float(os.getenv("LLM_RETRY_BASE_SECONDS", "2"))
+
+                response = None
+                last_error = None
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        with _hard_timeout(hard_timeout_s, label="LLM proxy request"):
+                            response = requests.post(
+                                proxy_url,
+                                headers=headers,
+                                json=payload,
+                                timeout=(connect_timeout_s, read_timeout_s),
+                            )
+
+                        if response.status_code == 200:
+                            try:
+                                data = response.json()
+                                content = data.get("content") or data.get("choices", [{}])[0].get("message", {}).get("content")
+                            except Exception:
+                                content = None
+                            if content:
+                                break
+                            last_error = "empty_content"
+                            wait_time = min(base_backoff * (2 ** (attempt - 1)), 30)
+                            wait_time += wait_time * random.uniform(0.1, 0.3)
+                            logger.warning(
+                                f"LLM proxy returned empty content. Waiting {wait_time:.1f}s before retry {attempt}/{max_attempts}..."
+                            )
+                            time.sleep(wait_time)
+                            continue
+
+                        if response.status_code in (429, 500, 502, 503, 504):
+                            wait_time = min(base_backoff * (2 ** (attempt - 1)), 30)
+                            wait_time += wait_time * random.uniform(0.1, 0.3)
+                            logger.warning(
+                                f"LLM proxy transient error {response.status_code}. "
+                                f"Waiting {wait_time:.1f}s before retry {attempt}/{max_attempts}..."
+                            )
+                            time.sleep(wait_time)
+                            continue
+
+                            raise ValueError(f"LLM proxy error {response.status_code}: {response.text}")
+                    except requests.exceptions.RequestException as e:
+                        last_error = f"{type(e).__name__}"
+                        if attempt == max_attempts:
+                            raise
+                        wait_time = min(base_backoff * (2 ** (attempt - 1)), 30)
+                        wait_time += wait_time * random.uniform(0.1, 0.3)
+                        logger.warning(
+                            f"LLM proxy request failed ({type(e).__name__}). "
+                            f"Waiting {wait_time:.1f}s before retry {attempt}/{max_attempts}..."
+                        )
+                        time.sleep(wait_time)
+                        continue
+
+                if response is None or response.status_code != 200:
+                    raise ValueError(f"LLM proxy error {response.status_code if response else 'no response'}")
+
+                data = response.json()
+                content = data.get("content") or data.get("choices", [{}])[0].get("message", {}).get("content")
+                if content is None:
+                    raise ValueError(f"LLM proxy returned no content ({last_error or 'unknown'})")
+
+                usage = data.get("usage", {}) or {}
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+
+            elif self.is_zhipu:
                 # Zhipu GLM API format (OpenAI-compatible with different endpoint)
                 if not self.zhipu_key:
                     raise ValueError("ZHIPU_API_KEY not set")
@@ -131,13 +271,49 @@ class LLMClient:
                     "temperature": temperature
                 }
                 
-                response = requests.post(
-                    url,
-                    headers=headers,
-                    json=payload,
-                    timeout=1000  # GLM can be slow
-                )
-                
+                hard_timeout_s = int(os.getenv("LLM_HARD_TIMEOUT_SECONDS", "120"))
+                connect_timeout_s = float(os.getenv("LLM_CONNECT_TIMEOUT_SECONDS", "10"))
+                read_timeout_s = float(os.getenv("LLM_READ_TIMEOUT_SECONDS", "120"))
+                max_attempts = int(os.getenv("LLM_RETRY_MAX", "5"))
+                base_backoff = float(os.getenv("LLM_RETRY_BASE_SECONDS", "2"))
+
+                response = None
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        with _hard_timeout(hard_timeout_s, label="Zhipu LLM request"):
+                            response = requests.post(
+                                url,
+                                headers=headers,
+                                json=payload,
+                                timeout=(connect_timeout_s, read_timeout_s),
+                            )
+
+                        # Retry on transient upstream issues
+                        if response.status_code in (429, 500, 502, 503, 504):
+                            if attempt == max_attempts:
+                                raise ValueError(f"Zhipu API error {response.status_code}: {response.text}")
+                            wait_time = min(base_backoff * (2 ** (attempt - 1)), 60) + random.uniform(0.5, 2.0)
+                            logger.warning(
+                                f"Zhipu transient error {response.status_code}. Waiting {wait_time:.1f}s before retry {attempt}/{max_attempts}..."
+                            )
+                            time.sleep(wait_time)
+                            continue
+
+                        break
+
+                    except Exception as e:
+                        if attempt == max_attempts:
+                            raise
+                        wait_time = min(base_backoff * (2 ** (attempt - 1)), 60) + random.uniform(0.5, 2.0)
+                        logger.warning(
+                            f"Zhipu request failed ({type(e).__name__}). Waiting {wait_time:.1f}s before retry {attempt}/{max_attempts}..."
+                        )
+                        time.sleep(wait_time)
+                        continue
+
+                if response is None:
+                    raise ValueError("Zhipu request failed: no response")
+
                 if response.status_code == 200:
                     data = response.json()
                     content = data["choices"][0]["message"]["content"]
@@ -145,21 +321,14 @@ class LLMClient:
                     prompt_tokens = usage.get("prompt_tokens", 0)
                     completion_tokens = usage.get("completion_tokens", 0)
                 elif response.status_code == 401:
-                    raise ValueError(f"Invalid Zhipu API key: {response.text}")
+                    raise ValueError("Invalid Zhipu API key")
                 else:
                     raise ValueError(f"Zhipu API error {response.status_code}: {response.text}")
             
             elif self.is_claude:
-                # Claude API format (using requests like TazoSploit)
-                if not self.anthropic_key:
-                    raise ValueError("ANTHROPIC_API_KEY not set")
-                
-                url = "https://api.anthropic.com/v1/messages"
-                headers = {
-                    "x-api-key": self.anthropic_key,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json"
-                }
+                # Claude API - supports both API key (raw requests) and subscription token (SDK)
+                if not self.anthropic_token and not self.anthropic_key:
+                    raise ValueError("Neither ANTHROPIC_TOKEN nor ANTHROPIC_API_KEY is set")
                 
                 # Convert messages format for Claude
                 system_msg = None
@@ -170,32 +339,117 @@ class LLMClient:
                     else:
                         claude_messages.append(msg)
                 
-                payload = {
-                    "model": self.model,
-                    "messages": claude_messages,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature
-                }
-                if system_msg:
-                    payload["system"] = system_msg
+                import re as _re
+                import random  # Re-import for Python 3.13 scoping
+                max_retries = 8
                 
-                response = requests.post(
-                    url,
-                    headers=headers,
-                    json=payload,
-                    timeout=300
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    content = data["content"][0]["text"]
-                    usage = data.get("usage", {})
-                    prompt_tokens = usage.get("input_tokens", 0)
-                    completion_tokens = usage.get("output_tokens", 0)
-                elif response.status_code == 401:
-                    raise ValueError(f"Invalid Claude API key: {response.text}")
+                if self.claude_auth_method == "subscription_token":
+                    # Use Anthropic SDK for subscription tokens — mimics Claude Code's OAuth headers
+                    try:
+                        import anthropic
+                    except ImportError:
+                        raise ValueError("anthropic SDK required for subscription token auth. Run: pip install anthropic")
+                    
+                    if not hasattr(self, '_anthropic_client'):
+                        self._anthropic_client = anthropic.Anthropic(
+                            api_key=None,
+                            auth_token=self.anthropic_token,
+                            default_headers={
+                                "accept": "application/json",
+                                "anthropic-dangerous-direct-browser-access": "true",
+                                "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
+                                "user-agent": "claude-cli/2.1.2 (external, cli)",
+                                "x-app": "cli",
+                            },
+                        )
+                    
+                    for attempt in range(max_retries + 1):
+                        try:
+                            kwargs = {
+                                "model": self.model,
+                                "messages": claude_messages,
+                                "max_tokens": max_tokens,
+                                "temperature": temperature,
+                            }
+                            if system_msg:
+                                kwargs["system"] = system_msg
+                            
+                            resp = self._anthropic_client.messages.create(**kwargs)
+                            content = resp.content[0].text
+                            prompt_tokens = resp.usage.input_tokens
+                            completion_tokens = resp.usage.output_tokens
+                            break
+                        except anthropic.RateLimitError as e:
+                            if attempt == max_retries:
+                                raise ValueError(f"Claude rate limit exceeded after {max_retries} retries: {e}")
+                            wait_time = min(30 * (2 ** attempt), 300) + random.uniform(3, 10)
+                            logger.warning(f"Claude rate limited. Waiting {wait_time:.1f}s before retry {attempt + 1}/{max_retries}...")
+                            time.sleep(wait_time)
+                        except anthropic.APIStatusError as e:
+                            if e.status_code == 529:
+                                if attempt == max_retries:
+                                    raise ValueError(f"Claude API overloaded after {max_retries} retries: {e}")
+                                wait_time = min(60 * (2 ** attempt), 600) + random.uniform(5, 15)
+                                logger.warning(f"Claude overloaded. Waiting {wait_time:.1f}s...")
+                                time.sleep(wait_time)
+                            else:
+                                raise ValueError(f"Claude API error {e.status_code}: {e}")
                 else:
-                    raise ValueError(f"Claude API error {response.status_code}: {response.text}")
+                    # Use raw requests for API key auth
+                    url = "https://api.anthropic.com/v1/messages"
+                    headers = {
+                        "x-api-key": self.anthropic_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json"
+                    }
+                    
+                    payload = {
+                        "model": self.model,
+                        "messages": claude_messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature
+                    }
+                    if system_msg:
+                        payload["system"] = system_msg
+                    
+                    for attempt in range(max_retries + 1):
+                        response = requests.post(url, headers=headers, json=payload, timeout=300)
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            content = data["content"][0]["text"]
+                            usage = data.get("usage", {})
+                            prompt_tokens = usage.get("input_tokens", 0)
+                            completion_tokens = usage.get("output_tokens", 0)
+                            break
+                        elif response.status_code == 429:
+                            if attempt == max_retries:
+                                raise ValueError(f"Claude rate limit exceeded after {max_retries} retries: {response.text}")
+                            retry_after = response.headers.get("retry-after")
+                            if retry_after:
+                                wait_time = float(retry_after)
+                            else:
+                                try:
+                                    error_msg = response.json().get("error", {}).get("message", "")
+                                    wait_match = _re.search(r'try again in ([\d.]+)s', error_msg)
+                                    wait_time = float(wait_match.group(1)) if wait_match else min(30 * (2 ** attempt), 300)
+                                except Exception:
+                                    wait_time = min(30 * (2 ** attempt), 300)
+                            wait_time += wait_time * random.uniform(0.1, 0.3)
+                            logger.warning(f"Claude rate limited (429). Waiting {wait_time:.1f}s before retry {attempt + 1}/{max_retries}...")
+                            time.sleep(wait_time)
+                            continue
+                        elif response.status_code == 529:
+                            if attempt == max_retries:
+                                raise ValueError(f"Claude API overloaded (529) after {max_retries} retries: {response.text}")
+                            wait_time = min(60 * (2 ** attempt), 600) + random.uniform(5, 15)
+                            logger.warning(f"Claude API overloaded (529). Waiting {wait_time:.1f}s...")
+                            time.sleep(wait_time)
+                            continue
+                        elif response.status_code == 401:
+                            raise ValueError(f"Invalid Claude API key: {response.text}")
+                        else:
+                            raise ValueError(f"Claude API error {response.status_code}: {response.text}")
                 
             else:
                 # OpenAI-compatible format
@@ -234,18 +488,28 @@ class LLMClient:
                 elif response.status_code == 429:
                     # Rate limited - retry with exponential backoff
                     import re
-                    max_retries = 3
+                    import random  # Re-import for Python 3.13 scoping
+                    max_retries = 8
                     
                     for retry in range(max_retries):
-                        error_data = response.json()
-                        error_msg = error_data.get("error", {}).get("message", "")
+                        try:
+                            error_data = response.json()
+                            error_msg = error_data.get("error", {}).get("message", "")
+                        except Exception:
+                            error_msg = ""
                         
                         # Try to extract wait time from error message
                         wait_match = re.search(r'try again in ([\d.]+)s', error_msg)
-                        wait_time = float(wait_match.group(1)) if wait_match else 10.0
-                        wait_time += 2  # Add 2 second buffer
+                        if wait_match:
+                            wait_time = float(wait_match.group(1)) + 2
+                        else:
+                            # Exponential backoff: 30s, 60s, 120s, 240s, ...
+                            wait_time = min(30 * (2 ** retry), 300)
                         
-                        logger.warning(f"Rate limited. Waiting {wait_time}s before retry {retry + 1}/{max_retries}...")
+                        # Add jitter
+                        wait_time += wait_time * random.uniform(0.1, 0.3)
+                        
+                        logger.warning(f"Rate limited. Waiting {wait_time:.1f}s before retry {retry + 1}/{max_retries}...")
                         time.sleep(wait_time)
                         
                         # Retry the request with correct payload format
@@ -264,7 +528,7 @@ class LLMClient:
                             f"{self.api_base}/chat/completions",
                             headers=headers,
                             json=retry_payload,
-                            timeout=120
+                            timeout=300
                         )
                         
                         if response.status_code == 200:
@@ -320,10 +584,42 @@ class LLMClient:
             logger.error(f"LLM error: {e}")
             raise
     
+    def _calculate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
+        """Calculate cost in USD based on model pricing"""
+        # Pricing per 1M tokens (input, output)
+        pricing = {
+            "claude-sonnet-4-20250514": (3.0, 15.0),
+            "claude-3-5-haiku-latest": (0.80, 4.0),
+            "claude-3-haiku-20240307": (0.25, 1.25),
+            "claude-opus-4-5-20250514": (15.0, 75.0),
+            "claude-opus-4-6": (15.0, 75.0),
+            "gpt-4o": (2.50, 10.0),
+            "gpt-4o-mini": (0.15, 0.60),
+            "gpt-5": (10.0, 30.0),
+        }
+        
+        # Find matching pricing (partial match)
+        input_price, output_price = 0.0, 0.0
+        for model_key, (inp, outp) in pricing.items():
+            if model_key in self.model.lower() or self.model.lower() in model_key:
+                input_price, output_price = inp, outp
+                break
+        
+        if input_price == 0 and output_price == 0:
+            # Default estimate for unknown models
+            input_price, output_price = 3.0, 15.0
+        
+        cost = (prompt_tokens * input_price / 1_000_000) + (completion_tokens * output_price / 1_000_000)
+        return round(cost, 6)
+
     def _log_interaction(self, interaction: LLMInteraction):
         """Log interaction to file"""
         self.interactions.append(interaction)
         self.total_tokens += interaction.total_tokens
+        
+        # Calculate cost based on model
+        interaction.cost_usd = self._calculate_cost(interaction.prompt_tokens, interaction.completion_tokens)
+        self.total_cost += interaction.cost_usd
         
         log_file = os.path.join(self.log_dir, "llm_interactions.jsonl")
         with open(log_file, 'a') as f:
@@ -335,7 +631,9 @@ class LLMClient:
             "total_interactions": len(self.interactions),
             "total_tokens": self.total_tokens,
             "total_cost_usd": self.total_cost,
-            "avg_latency_ms": sum(i.latency_ms for i in self.interactions) / len(self.interactions) if self.interactions else 0
+            "avg_latency_ms": sum(i.latency_ms for i in self.interactions) / len(self.interactions) if self.interactions else 0,
+            "prompt_tokens": sum(i.prompt_tokens for i in self.interactions),
+            "completion_tokens": sum(i.completion_tokens for i in self.interactions),
         }
 
 

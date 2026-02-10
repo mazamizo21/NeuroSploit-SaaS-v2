@@ -1,0 +1,8 @@
+impacket-scripts:
+  description: Collection of Impacket example scripts
+  category: lateral_movement
+  install_cmd: sudo apt install impacket-scripts
+  verify_cmd: psexec.py -h
+  examples:
+    - psexec.py DOMAIN/user:pass@10.0.0.10
+    - secretsdump.py -just-dc DOMAIN/user:pass@10.0.0.1

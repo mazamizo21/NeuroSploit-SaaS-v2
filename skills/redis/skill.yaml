@@ -1,0 +1,24 @@
+id: service_redis
+name: Redis Service
+category: service
+phase: ''
+priority: 55
+target_types:
+- lab
+- external
+description: Service-specific enumeration for Redis.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- redis_info.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Redis service identified and authenticated safely
+- Auth configuration documented
+safety_notes:
+- Avoid destructive commands
+tags:
+- redis

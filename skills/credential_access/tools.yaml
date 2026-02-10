@@ -88,3 +88,11 @@ laZagne:
     - "laZagne.exe all"
     - "laZagne.exe browsers"
     - "laZagne.exe windows"
+
+parse_hashcat_show:
+  description: "Parse hashcat --show output into JSON evidence"
+  category: "cracking"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/credential_access/scripts/parse_hashcat_show.py --help"
+  examples:
+    - "python3 skills/credential_access/scripts/parse_hashcat_show.py --input hashcat_show.txt --out creds.json"

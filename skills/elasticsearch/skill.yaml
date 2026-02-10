@@ -1,0 +1,27 @@
+id: service_elasticsearch
+name: ELASTICSEARCH Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for ELASTICSEARCH.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- es_cluster.json
+- es_indices.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Elasticsearch version and cluster metadata captured
+- Index visibility and access controls documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External data extraction or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- elasticsearch
+- es

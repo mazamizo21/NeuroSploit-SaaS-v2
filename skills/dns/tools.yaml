@@ -1,0 +1,49 @@
+dig:
+  description: "DNS query utility for record collection"
+  category: "network"
+  install_cmd: "apt-get install -y dnsutils"
+  verify_cmd: "dig -v"
+  examples:
+    - "dig A example.com"
+    - "dig MX example.com"
+    - "dig AXFR example.com @ns1.example.com"
+
+dnsrecon:
+  description: "DNS reconnaissance with record enumeration and brute-force modes"
+  category: "recon"
+  install_cmd: "apt-get install -y dnsrecon"
+  verify_cmd: "dnsrecon --version"
+  examples:
+    - "dnsrecon -d example.com -t std"
+
+dnsenum:
+  description: "DNS enumeration including zone transfer checks"
+  category: "recon"
+  install_cmd: "apt-get install -y dnsenum"
+  verify_cmd: "dnsenum --version"
+  examples:
+    - "dnsenum --enum example.com"
+
+amass:
+  description: "Attack surface mapping and subdomain discovery"
+  category: "recon"
+  install_cmd: "apt-get install -y amass"
+  verify_cmd: "amass version"
+  examples:
+    - "amass enum -d example.com -o amass.txt"
+
+subfinder:
+  description: "Passive subdomain discovery"
+  category: "recon"
+  install_cmd: "apt-get install -y subfinder"
+  verify_cmd: "subfinder -version"
+  examples:
+    - "subfinder -d example.com -all -o subfinder.txt"
+
+parse_dig:
+  description: "Parse dig output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/dns/scripts/parse_dig.py --help"
+  examples:
+    - "python3 skills/dns/scripts/parse_dig.py --input dns_records.txt --out dns_records.json"

@@ -58,3 +58,11 @@ pspy:
   examples:
     - "./pspy64"
     - "./pspy64 -pf -i 1000"
+
+summarize_peas:
+  description: "Summarize LinPEAS/WinPEAS output into JSON highlights"
+  category: "enumeration"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/privilege_escalation/scripts/summarize_peas.py --help"
+  examples:
+    - "python3 skills/privilege_escalation/scripts/summarize_peas.py --input linpeas.out --out privesc_summary.json"

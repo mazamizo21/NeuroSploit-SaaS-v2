@@ -1,0 +1,165 @@
+{
+  "test_id": "test-1770317340",
+  "target": "http://localhost:8080",
+  "test_type": "web",
+  "started_at": "2026-02-05T18:49:00.262597+00:00",
+  "phases": [
+    {
+      "phase": "Skills Manager",
+      "status": "STARTED",
+      "timestamp": "2026-02-05T18:49:00.262774+00:00",
+      "details": "Loading all available skills from marketplace"
+    },
+    {
+      "phase": "Skills Manager",
+      "status": "COMPLETED",
+      "timestamp": "2026-02-05T18:49:00.262821+00:00",
+      "details": "Successfully loaded 122 skills from marketplace"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "STARTED",
+      "timestamp": "2026-02-05T18:49:00.262824+00:00",
+      "details": "Testing job creation and management"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "COMPLETED",
+      "timestamp": "2026-02-05T18:49:00.263000+00:00",
+      "details": "Successfully created test job"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "STARTED",
+      "timestamp": "2026-02-05T18:49:00.263004+00:00",
+      "details": "Checking reconnaissance capabilities"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "COMPLETED",
+      "timestamp": "2026-02-05T18:49:00.263083+00:00",
+      "details": "Found 15 reconnaissance skills"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "STARTED",
+      "timestamp": "2026-02-05T18:49:00.263086+00:00",
+      "details": "Initializing multi-agent session"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "COMPLETED",
+      "timestamp": "2026-02-05T18:49:00.263095+00:00",
+      "details": "Session created successfully"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "STARTED",
+      "timestamp": "2026-02-05T18:49:00.263097+00:00",
+      "details": "Checking vulnerability scanning capabilities"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "COMPLETED",
+      "timestamp": "2026-02-05T18:49:00.263156+00:00",
+      "details": "Found 20 scanning skills"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "STARTED",
+      "timestamp": "2026-02-05T18:49:00.263157+00:00",
+      "details": "Checking report generation capabilities"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "COMPLETED",
+      "timestamp": "2026-02-05T18:49:00.263205+00:00",
+      "details": "Found 1 reporting skills"
+    }
+  ],
+  "findings": [],
+  "errors": [],
+  "metrics": {
+    "total_time": 0.0004329681396484375,
+    "phases_completed": 6,
+    "tools_used": [
+      "nmap",
+      "rustscan",
+      "masscan",
+      "gobuster",
+      "dirsearch",
+      "nikto",
+      "whatweb",
+      "wafw00f",
+      "httpx",
+      "subfinder",
+      "amass",
+      "dnsenum",
+      "dnsrecon",
+      "eyewitness",
+      "parse_nmap_grepable",
+      "amass",
+      "assetfinder",
+      "cewl",
+      "crunch",
+      "dmitry",
+      "dnsenum",
+      "dnsrecon",
+      "fierce",
+      "recon-ng",
+      "smtp-user-enum",
+      "subfinder",
+      "sublist3r",
+      "theharvester",
+      "whatweb",
+      "nuclei",
+      "nikto",
+      "nmap",
+      "parse_nuclei_json",
+      "aircrack-ng",
+      "arp-scan",
+      "arping",
+      "dirb",
+      "dirsearch",
+      "feroxbuster",
+      "ffuf",
+      "gobuster",
+      "masscan",
+      "netdiscover",
+      "nikto",
+      "nmap",
+      "nmap",
+      "onesixtyone",
+      "reaver",
+      "snmp-check",
+      "snmpwalk",
+      "wfuzz",
+      "wifite",
+      "jq",
+      "assemble_report",
+      "merge_bundles",
+      "normalize_findings",
+      "summarize_findings",
+      "validate_bundle",
+      "check_report_readiness",
+      "check_schema",
+      "check_evidence_manifest",
+      "gate_report",
+      "summary_rollup",
+      "emit_schema",
+      "emit_bundle_schema",
+      "collect_artifacts",
+      "hash_artifacts",
+      "package_export",
+      "verify_checksums",
+      "write_manifest",
+      "validate_manifest",
+      "audit_log",
+      "write_export_metadata"
+    ],
+    "findings_count": 0,
+    "skills_loaded": 122,
+    "agents_available": 1
+  },
+  "completed_at": "2026-02-05T18:49:00.263208+00:00"
+}

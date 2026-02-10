@@ -263,6 +263,19 @@ Memory is automatically persisted to disk:
 - **Target knowledge**: `memory/TARGET_KNOWLEDGE/target.json`
 - **Session history**: `memory/SESSION_HISTORY/session.json`
 
+## Daily Reflection (Self-Improvement Loop)
+
+TazoSploit can distill short-term memory into long-term memory using a daily reflection pass.
+
+Artifacts:
+- **Daily logs**: `memory/DAILY/<tenant>_YYYY-MM-DD.md`
+- **Long-term memory**: `memory/<tenant>_MEMORY.md`
+- **Tool stats**: `memory/<tenant>_tool_stats.json`
+- **Reflections**: `memory/REFLECTIONS/<tenant>_YYYY-MM-DD.md`
+- **Learning gate**: `memory/BENCHMARKS/learning_gate.json`
+
+Promotion is controlled by the learning gate. If `promote=false`, reflection will skip long-term promotion.
+
 ## API Reference
 
 ### EnhancedMemoryStore

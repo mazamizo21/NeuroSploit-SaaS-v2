@@ -1,0 +1,7 @@
+fern-wifi-cracker:
+  description: GUI wireless auditing tool
+  category: exploitation
+  install_cmd: sudo apt install fern-wifi-cracker
+  verify_cmd: fern-wifi-cracker --help
+  examples:
+    - fern-wifi-cracker

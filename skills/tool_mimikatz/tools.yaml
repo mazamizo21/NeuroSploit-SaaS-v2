@@ -1,0 +1,9 @@
+mimikatz:
+  description: Credential extraction toolkit (Windows binary)
+  category: credential_access
+  install_cmd: sudo apt install mimikatz
+  verify_cmd: mimikatz --help
+  examples:
+    - privilege::debug
+    - sekurlsa::logonpasswords
+    - kerberos::ptt ticket.kirbi

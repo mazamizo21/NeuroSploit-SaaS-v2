@@ -1,0 +1,8 @@
+onesixtyone:
+  description: SNMP community scanner
+  category: scanning
+  install_cmd: sudo apt install onesixtyone
+  verify_cmd: onesixtyone -h
+  examples:
+    - onesixtyone 192.168.1.0/24 public
+    - onesixtyone -c communities.txt -i hosts.txt -o out.log

@@ -1,0 +1,7 @@
+wireshark:
+  description: Network protocol analyzer
+  category: forensics
+  install_cmd: sudo apt install wireshark
+  verify_cmd: wireshark --version
+  examples:
+    - wireshark --help

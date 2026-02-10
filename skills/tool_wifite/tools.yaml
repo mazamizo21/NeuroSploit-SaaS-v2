@@ -1,0 +1,9 @@
+wifite:
+  description: Automated wireless auditor
+  category: scanning
+  install_cmd: sudo apt install wifite
+  verify_cmd: wifite --help
+  examples:
+    - wifite
+    - wifite --pmkid
+    - wifite --crack

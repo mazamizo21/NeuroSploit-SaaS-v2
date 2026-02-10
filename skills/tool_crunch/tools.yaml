@@ -1,0 +1,8 @@
+crunch:
+  description: Wordlist generator
+  category: reconnaissance
+  install_cmd: sudo apt install crunch
+  verify_cmd: crunch -h
+  examples:
+    - crunch 6 8 abc123 -o words.txt
+    - crunch 8 8 -t @@@@2024

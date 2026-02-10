@@ -1,0 +1,31 @@
+ssh:
+  description: "OpenSSH client for banner checks and credential validation"
+  category: "network"
+  install_cmd: "apt-get install -y openssh-client"
+  verify_cmd: "ssh -V"
+  examples:
+    - "ssh -o PreferredAuthentications=none -o PubkeyAuthentication=no user@target"
+
+ssh-keyscan:
+  description: "Collect SSH host keys without interactive login"
+  category: "network"
+  install_cmd: "apt-get install -y openssh-client"
+  verify_cmd: "ssh-keyscan -h"
+  examples:
+    - "ssh-keyscan -t rsa,ecdsa,ed25519 target"
+
+nmap:
+  description: "Nmap SSH scripts for algorithm and auth enumeration"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p22 --script ssh2-enum-algos,ssh-auth-methods target"
+
+parse_ssh_nmap:
+  description: "Parse Nmap SSH script output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/ssh/scripts/parse_ssh_nmap.py --help"
+  examples:
+    - "python3 skills/ssh/scripts/parse_ssh_nmap.py --input ssh_nmap.txt --out ssh_fingerprint.json"

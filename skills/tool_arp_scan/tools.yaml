@@ -1,0 +1,8 @@
+arp-scan:
+  description: ARP scanning tool
+  category: scanning
+  install_cmd: sudo apt install arp-scan
+  verify_cmd: arp-scan -h
+  examples:
+    - arp-scan --localnet
+    - arp-scan -I eth0 10.0.0.0/24

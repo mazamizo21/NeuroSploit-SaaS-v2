@@ -1,0 +1,9 @@
+nikto:
+  description: Web server scanner
+  category: scanning
+  install_cmd: sudo apt install nikto
+  verify_cmd: nikto -h
+  examples:
+    - nikto -h http://example.com
+    - nikto -h http://example.com -Tuning 1,2
+    - nikto -h http://example.com -Format html -output report.html

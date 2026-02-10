@@ -11,6 +11,7 @@ Skills are self-contained modules that define:
 """
 
 import os
+import re
 import yaml
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
@@ -40,26 +41,54 @@ class Skill:
     prerequisites: List[str] = field(default_factory=list)
     evidence_collection: List[str] = field(default_factory=list)
     success_criteria: List[str] = field(default_factory=list)
+    category: str = "custom"
+    phase: str = ""
+    target_types: List[str] = field(default_factory=list)
+    inputs: List[str] = field(default_factory=list)
+    outputs: List[str] = field(default_factory=list)
+    priority: int = 50
+    safety_notes: List[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
     
     @classmethod
     def from_directory(cls, skill_dir: str) -> 'Skill':
         """Load skill from directory containing SKILL.md and tools.yaml"""
         skill_path = Path(skill_dir)
         skill_id = skill_path.name
-        
-        # Read SKILL.md
+
+        # Read SKILL.md (required)
         skill_md = skill_path / "SKILL.md"
         with open(skill_md, 'r') as f:
             md_content = f.read()
-        
-        # Parse metadata from markdown frontmatter or first section
-        name = skill_id.replace('_', ' ').title()
-        description = ""
-        methodology = md_content
-        mitre_techniques = []
-        prerequisites = []
-        evidence_collection = []
-        success_criteria = []
+
+        # Read skill.yaml if present
+        meta = {}
+        meta_file = skill_path / "skill.yaml"
+        if meta_file.exists():
+            with open(meta_file, 'r') as f:
+                meta = yaml.safe_load(f) or {}
+
+        def _extract_overview(text: str) -> str:
+            match = re.search(r"##\\s+Overview\\s*\\n(.+?)(\\n##|$)", text, re.S | re.I)
+            if match:
+                return match.group(1).strip()
+            return ""
+
+        name = meta.get("name") or skill_id.replace('_', ' ').title()
+        description = meta.get("description") or _extract_overview(md_content)
+        methodology = meta.get("methodology") or md_content
+        mitre_techniques = meta.get("mitre_techniques") or []
+        prerequisites = meta.get("prerequisites") or []
+        evidence_collection = meta.get("evidence_collection") or []
+        success_criteria = meta.get("success_criteria") or []
+        category = meta.get("category", "custom")
+        phase = meta.get("phase", "")
+        target_types = meta.get("target_types") or []
+        inputs = meta.get("inputs") or []
+        outputs = meta.get("outputs") or []
+        priority = int(meta.get("priority", 50))
+        safety_notes = meta.get("safety_notes") or []
+        tags = meta.get("tags") or []
         
         # Parse YAML tools.yaml if exists
         tools_file = skill_path / "tools.yaml"
@@ -78,7 +107,7 @@ class Skill:
                     ))
         
         return cls(
-            id=skill_id,
+            id=meta.get("id", skill_id),
             name=name,
             description=description,
             methodology=methodology,
@@ -86,7 +115,15 @@ class Skill:
             tools=tools,
             prerequisites=prerequisites,
             evidence_collection=evidence_collection,
-            success_criteria=success_criteria
+            success_criteria=success_criteria,
+            category=category,
+            phase=phase,
+            target_types=target_types,
+            inputs=inputs,
+            outputs=outputs,
+            priority=priority,
+            safety_notes=safety_notes,
+            tags=tags
         )
     
     def get_tools_by_category(self, category: str) -> List[Tool]:
@@ -95,16 +132,36 @@ class Skill:
     
     def format_for_prompt(self) -> str:
         """Format skill for inclusion in AI prompt"""
+        def _truncate(text: str, max_len: int = 900) -> str:
+            if len(text) <= max_len:
+                return text
+            return text[:max_len].rstrip() + "..."
+
         lines = [
-            f"## Skill: {self.name}",
-            f"**Description**: {self.description}",
+            f"## Skill: {self.name} ({self.id})",
+            f"**Phase**: {self.phase or 'N/A'}",
+            f"**Category**: {self.category}",
+            f"**Targets**: {', '.join(self.target_types) if self.target_types else 'any'}",
+            f"**Description**: {self.description or 'N/A'}",
             f"**MITRE ATT&CK**: {', '.join(self.mitre_techniques) if self.mitre_techniques else 'N/A'}",
+        ]
+
+        if self.inputs:
+            lines.append(f"**Inputs**: {', '.join(self.inputs)}")
+        if self.outputs:
+            lines.append(f"**Outputs**: {', '.join(self.outputs)}")
+        if self.prerequisites:
+            lines.append(f"**Prereqs**: {', '.join(self.prerequisites)}")
+        if self.safety_notes:
+            lines.append(f"**Safety**: {', '.join(self.safety_notes)}")
+
+        lines.extend([
             "",
             "### Methodology",
-            self.methodology,
+            _truncate(self.methodology),
             "",
             "### Available Tools"
-        ]
+        ])
         
         for tool in self.tools:
             lines.append(f"- **{tool.name}**: {tool.description}")
@@ -140,6 +197,10 @@ class SkillLoader:
         
         for skill_dir in skills_path.iterdir():
             if skill_dir.is_dir():
+                # Skip folders that aren't skills (no SKILL.md)
+                skill_md = skill_dir / "SKILL.md"
+                if not skill_md.exists():
+                    continue
                 try:
                     skill = Skill.from_directory(str(skill_dir))
                     self.skills[skill.id] = skill

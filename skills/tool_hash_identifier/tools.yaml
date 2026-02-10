@@ -1,0 +1,7 @@
+hash-identifier:
+  description: Hash type identification tool
+  category: analysis
+  install_cmd: sudo apt install hash-identifier
+  verify_cmd: hash-identifier --help
+  examples:
+    - hash-identifier

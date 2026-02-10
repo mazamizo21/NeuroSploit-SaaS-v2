@@ -1,0 +1,24 @@
+id: privilege_escalation
+name: Privilege Escalation
+category: privilege_escalation
+phase: POST_EXPLOIT
+priority: 80
+target_types:
+  - lab
+  - external
+description: Assess and validate privilege escalation paths after access is gained.
+mitre_techniques:
+  - T1068
+inputs:
+  - access.json
+outputs:
+  - priv_esc.json
+  - privesc_summary.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - access
+success_criteria:
+  - Elevated access achieved or confirmed unavailable
+safety_notes:
+  - No persistence without explicit authorization

@@ -1,0 +1,28 @@
+id: service_cicd
+name: CI/CD Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for CI/CD platforms.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- cicd_inventory.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- CI/CD platform identified and scoped
+- Risky configurations documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- cicd
+- ci
+- cd
+- pipeline

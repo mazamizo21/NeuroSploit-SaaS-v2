@@ -96,3 +96,11 @@ sshpass:
   examples:
     - "sshpass -p 'password' ssh user@host 'whoami'"
     - "sshpass -p 'password' ssh -N -L 8080:localhost:80 user@host"
+
+summarize_movement_log:
+  description: "Summarize lateral movement logs into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/lateral_movement/scripts/summarize_movement_log.py --help"
+  examples:
+    - "python3 skills/lateral_movement/scripts/summarize_movement_log.py --input movement.log --out lateral.json"

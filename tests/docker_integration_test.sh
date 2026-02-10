@@ -44,9 +44,9 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "Step 1: Starting infrastructure services..."
+echo "Step 1: Starting core infrastructure services..."
 echo "--------------------------------------------------------------------------------"
-docker-compose -f docker-compose.infra.yml up -d
+docker compose -f docker-compose.yml up -d postgres redis minio
 
 echo "Waiting for services to be healthy..."
 sleep 10
@@ -73,14 +73,14 @@ echo "--------------------------------------------------------------------------
 
 # Build control plane
 test_start "Control Plane Build"
-if docker-compose build control-plane-api > /dev/null 2>&1; then
+if docker compose -f docker-compose.yml build api > /dev/null 2>&1; then
     test_pass "Control plane built successfully"
 else
     test_fail "Control plane build failed"
 fi
 
 # Start control plane
-docker-compose up -d control-plane-api
+docker compose -f docker-compose.yml up -d api
 echo "Waiting for control plane to start..."
 sleep 15
 
@@ -231,18 +231,16 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo "Services running:"
     echo "  - Control Plane API: http://localhost:8000"
     echo "  - API Documentation: http://localhost:8000/api/docs"
-    echo "  - Grafana: http://localhost:3001"
-    echo "  - Prometheus: http://localhost:9090"
     echo ""
-    echo "To stop services: docker-compose down"
+    echo "To stop services: docker compose -f docker-compose.yml down"
     exit 0
 else
     echo -e "${RED}❌ Some tests failed. Check logs above.${NC}"
     echo ""
     echo "View logs:"
-    echo "  docker-compose logs control-plane-api"
-    echo "  docker-compose logs postgres"
-    echo "  docker-compose logs redis"
+    echo "  docker compose -f docker-compose.yml logs api"
+    echo "  docker compose -f docker-compose.yml logs postgres"
+    echo "  docker compose -f docker-compose.yml logs redis"
     echo ""
     exit 1
 fi

@@ -1,0 +1,25 @@
+id: tool_dnschef
+name: "Tool: DNSChef"
+category: defense_evasion
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Configurable DNS proxy for spoofing and traffic analysis.
+mitre_techniques:
+  - T1565
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with dnschef
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - dnschef
+  - dns
+  - spoofing

@@ -1,0 +1,23 @@
+id: tool_cewl
+name: "Tool: CeWL"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: Custom wordlist generator by crawling target websites.
+mitre_techniques: []
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with cewl
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - cewl
+  - wordlist

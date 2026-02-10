@@ -1,0 +1,8 @@
+arping:
+  description: ARP ping utility
+  category: scanning
+  install_cmd: sudo apt install arping
+  verify_cmd: arping -h
+  examples:
+    - arping -c 3 10.0.0.10
+    - arping -I eth0 -c 5 10.0.0.10

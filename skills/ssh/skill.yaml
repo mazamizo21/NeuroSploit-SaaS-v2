@@ -1,0 +1,24 @@
+id: service_ssh
+name: SSH Service
+category: service
+phase: ''
+priority: 60
+target_types:
+- lab
+- external
+description: Service-specific enumeration for SSH.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- ssh_fingerprint.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- SSH version and key algorithms identified
+- Authentication methods documented
+safety_notes:
+- Do not brute force without explicit authorization
+tags:
+- ssh

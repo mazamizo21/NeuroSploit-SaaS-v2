@@ -1,0 +1,28 @@
+id: service_windows_host
+name: Windows Host
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific validation for Windows host security posture.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- windows_host_inventory.json
+- windows_security_posture.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Host profile and patch level captured
+- Security controls documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+- Credential access requires explicit authorization
+tags:
+- windows
+- host

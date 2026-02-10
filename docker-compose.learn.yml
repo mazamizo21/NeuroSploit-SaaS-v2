@@ -1,0 +1,6 @@
+services:
+  kali:
+    volumes:
+      - kali-output:/pentest/output
+      - ./memory:/pentest/memory
+      - ./skills:/opt/tazosploit/skills:ro

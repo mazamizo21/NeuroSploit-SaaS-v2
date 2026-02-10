@@ -1,0 +1,31 @@
+kinit:
+  description: "Obtain Kerberos tickets for authorized users"
+  category: "auth"
+  install_cmd: "apt-get install -y krb5-user"
+  verify_cmd: "kinit --version"
+  examples:
+    - "kinit user@REALM"
+
+klist:
+  description: "Inspect Kerberos ticket cache and lifetimes"
+  category: "auth"
+  install_cmd: "apt-get install -y krb5-user"
+  verify_cmd: "klist -V"
+  examples:
+    - "klist -A"
+
+nmap:
+  description: "Nmap Kerberos scripts for service validation"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p88 target"
+
+parse_klist:
+  description: "Parse klist output into JSON evidence"
+  category: "auth"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/kerberos/scripts/parse_klist.py --help"
+  examples:
+    - "python3 skills/kerberos/scripts/parse_klist.py --input klist.txt --out kerberos_tickets.json"

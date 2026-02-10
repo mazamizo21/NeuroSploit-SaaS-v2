@@ -1,0 +1,9 @@
+dirb:
+  description: Web content discovery
+  category: scanning
+  install_cmd: sudo apt install dirb
+  verify_cmd: dirb --help
+  examples:
+    - dirb http://example.com
+    - dirb http://example.com wordlist.txt
+    - dirb http://example.com -X .php

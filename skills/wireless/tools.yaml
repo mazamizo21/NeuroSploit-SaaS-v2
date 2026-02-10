@@ -1,0 +1,95 @@
+aircrack-ng:
+  description: "Wireless auditing suite for passive discovery and capture"
+  category: "wireless"
+  install_cmd: "apt-get install -y aircrack-ng"
+  verify_cmd: "aircrack-ng --help"
+  examples:
+    - "airodump-ng wlan0mon"
+
+wifite:
+  description: "Automated wireless assessment workflow"
+  category: "wireless"
+  install_cmd: "apt-get install -y wifite"
+  verify_cmd: "wifite --help"
+  examples:
+    - "wifite --showb"
+
+wifiphisher:
+  description: "Wireless phishing framework (explicit authorization only)"
+  category: "wireless"
+  install_cmd: "apt-get install -y wifiphisher"
+  verify_cmd: "wifiphisher --help"
+  examples:
+    - "wifiphisher --help"
+
+reaver:
+  description: "WPS PIN testing (explicit authorization only)"
+  category: "wireless"
+  install_cmd: "apt-get install -y reaver"
+  verify_cmd: "reaver -h"
+  examples:
+    - "reaver -i wlan0mon -b <BSSID> -vv"
+
+bully:
+  description: "WPS PIN testing (explicit authorization only)"
+  category: "wireless"
+  install_cmd: "apt-get install -y bully"
+  verify_cmd: "bully -h"
+  examples:
+    - "bully -b <BSSID> -c <channel> -i wlan0mon"
+
+hcxtools:
+  description: "Capture and convert WPA handshakes and PMKIDs"
+  category: "wireless"
+  install_cmd: "apt-get install -y hcxtools"
+  verify_cmd: "hcxcaptool -h"
+  examples:
+    - "hcxpcapngtool -o capture.hccapx capture.pcapng"
+
+airgeddon:
+  description: "Automated wireless assessment framework (authorized only)"
+  category: "wireless"
+  install_cmd: "apt-get install -y airgeddon"
+  verify_cmd: "airgeddon --help"
+  examples:
+    - "airgeddon"
+
+bettercap:
+  description: "Network traffic manipulation and Wi-Fi assessment (authorized only)"
+  category: "wireless"
+  install_cmd: "apt-get install -y bettercap"
+  verify_cmd: "bettercap --help"
+  examples:
+    - "bettercap -iface wlan0"
+
+macchanger:
+  description: "Change wireless interface MAC address (authorized only)"
+  category: "wireless"
+  install_cmd: "apt-get install -y macchanger"
+  verify_cmd: "macchanger --version"
+  examples:
+    - "macchanger -r wlan0"
+
+tcpdump:
+  description: "Capture wireless traffic for evidence"
+  category: "wireless"
+  install_cmd: "apt-get install -y tcpdump"
+  verify_cmd: "tcpdump --version"
+  examples:
+    - "tcpdump -i wlan0mon -w capture.pcapng"
+
+tshark:
+  description: "CLI packet analysis for capture validation"
+  category: "wireless"
+  install_cmd: "apt-get install -y tshark"
+  verify_cmd: "tshark --version"
+  examples:
+    - "tshark -r capture.pcapng -q -z wlan,summary"
+
+airodump_csv_to_json:
+  description: "Parse airodump-ng CSV output into JSON inventory"
+  category: "wireless"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/wireless/scripts/airodump_csv_to_json.py --help"
+  examples:
+    - "python3 skills/wireless/scripts/airodump_csv_to_json.py --csv capture-01.csv --out wireless_inventory.json"

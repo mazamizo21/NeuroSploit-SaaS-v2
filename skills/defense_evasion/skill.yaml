@@ -1,0 +1,28 @@
+id: defense_evasion
+name: Defense Evasion
+category: defense_evasion
+phase: POST_EXPLOIT
+priority: 40
+target_types:
+  - lab
+  - external
+description: Assess evasion risks without disabling defenses.
+mitre_techniques:
+  - T1562
+  - T1070
+inputs:
+  - access.json
+outputs:
+  - defense_evasion.json
+  - defense_controls.json
+  - logging_coverage.json
+  - tamper_protection.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - access
+success_criteria:
+  - Control coverage documented with evidence
+  - Evasion risks documented without changes
+safety_notes:
+  - Do not disable logging or security tools

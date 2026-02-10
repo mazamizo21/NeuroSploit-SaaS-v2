@@ -1,0 +1,8 @@
+bettercap:
+  description: Modular network attack framework
+  category: defense_evasion
+  install_cmd: sudo apt install bettercap
+  verify_cmd: bettercap -h
+  examples:
+    - bettercap -iface eth0
+    - bettercap -eval 'net.probe on; net.show'

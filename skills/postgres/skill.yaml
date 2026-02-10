@@ -1,0 +1,25 @@
+id: service_postgres
+name: PostgreSQL Service
+category: service
+phase: ''
+priority: 55
+target_types:
+- lab
+- external
+description: Service-specific enumeration for PostgreSQL.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- db_access.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- PostgreSQL service identified and authenticated safely
+- Database visibility and role privileges documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+tags:
+- postgres
+- postgresql

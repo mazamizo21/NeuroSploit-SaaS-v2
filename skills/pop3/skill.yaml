@@ -1,0 +1,26 @@
+id: service_pop3
+name: POP3 Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for POP3.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- pop3_info.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- POP3 service identified
+- Access controls validated safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or data access workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- pop3
+- pop

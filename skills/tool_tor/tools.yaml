@@ -1,0 +1,8 @@
+tor:
+  description: Tor anonymity network daemon
+  category: network_evasion
+  install_cmd: sudo apt install tor
+  verify_cmd: tor --version
+  examples:
+    - tor --version
+    - tor --help

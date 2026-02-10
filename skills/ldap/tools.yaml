@@ -1,0 +1,32 @@
+ldapsearch:
+  description: "OpenLDAP client for LDAP queries and RootDSE discovery"
+  category: "directory"
+  install_cmd: "apt-get install -y ldap-utils"
+  verify_cmd: "ldapsearch -VV"
+  examples:
+    - "ldapsearch -H ldap://target -x -s base -b \"\" \"(objectClass=*)\""
+    - "ldapsearch -H ldap://target -x -b \"dc=example,dc=com\" \"(objectClass=user)\" sAMAccountName"
+
+ldapdomaindump:
+  description: "Dump LDAP directory information to structured files"
+  category: "directory"
+  install_cmd: "python3 -m pip install ldapdomaindump"
+  verify_cmd: "ldapdomaindump --help"
+  examples:
+    - "ldapdomaindump -u 'DOMAIN\\user' -p 'pass' -o dump ldap://target"
+
+nmap:
+  description: "Nmap LDAP scripts for RootDSE and capability checks"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p389 --script ldap-rootdse target"
+
+parse_ldapsearch:
+  description: "Parse ldapsearch LDIF output into JSON evidence"
+  category: "directory"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/ldap/scripts/parse_ldapsearch.py --help"
+  examples:
+    - "python3 skills/ldap/scripts/parse_ldapsearch.py --ldif rootdse.ldif --out ldap_rootdse.json"

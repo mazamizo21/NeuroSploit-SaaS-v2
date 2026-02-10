@@ -1,0 +1,33 @@
+id: service_gcp
+name: GCP Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for GCP.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- cloud_inventory.json
+- cloud_identity.json
+- cloud_iam.json
+- cloud_service_accounts.json
+- cloud_storage.json
+- cloud_network.json
+- cloud_logging.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Project scope and org context confirmed
+- IAM, storage, network, and logging posture documented
+- High-risk configurations documented with evidence
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- gcp
+- google-cloud

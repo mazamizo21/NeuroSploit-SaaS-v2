@@ -97,6 +97,7 @@ class SkillsManager:
         "impact",
         "reporting",
         "monitoring",
+        "service",
         "custom"
     ]
     

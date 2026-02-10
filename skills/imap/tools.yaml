@@ -1,0 +1,39 @@
+nmap:
+  description: "Nmap IMAP scripts for banner and capability checks"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p143,993 --script imap-capabilities,imap-ntlm-info target"
+
+netcat:
+  description: "TCP client for banner checks"
+  category: "network"
+  install_cmd: "apt-get install -y netcat-openbsd"
+  verify_cmd: "nc -h"
+  examples:
+    - "nc -nv target 143"
+
+socat:
+  description: "Multipurpose relay for banner capture"
+  category: "network"
+  install_cmd: "apt-get install -y socat"
+  verify_cmd: "socat -V"
+  examples:
+    - "socat - TCP:target:143"
+
+hydra:
+  description: "Online credential testing (explicit authorization only)"
+  category: "auth"
+  install_cmd: "apt-get install -y hydra"
+  verify_cmd: "hydra -h"
+  examples:
+    - "hydra -L users.txt -P passwords.txt imap://target"
+
+parse_imap_nmap:
+  description: "Parse Nmap IMAP script output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/imap/scripts/parse_imap_nmap.py --help"
+  examples:
+    - "python3 skills/imap/scripts/parse_imap_nmap.py --input imap_nmap.txt --out imap_info.json"

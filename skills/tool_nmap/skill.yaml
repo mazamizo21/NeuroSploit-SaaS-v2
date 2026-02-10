@@ -1,0 +1,24 @@
+id: tool_nmap
+name: "Tool: Nmap"
+category: scanning
+phase: VULN_SCAN
+priority: 20
+target_types:
+  - lab
+  - external
+description: Network discovery and service enumeration with NSE scripting.
+mitre_techniques:
+  - T1046
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with nmap
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - nmap
+  - scan

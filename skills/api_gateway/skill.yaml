@@ -1,0 +1,26 @@
+id: service_api_gateway
+name: API Gateway Service
+category: service
+phase: ""
+priority: 50
+target_types:
+  - lab
+  - external
+description: Service-specific enumeration for API gateways.
+mitre_techniques: []
+inputs:
+  - services.json
+outputs:
+  - api_gateway_inventory.json
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Gateway type identified
+  - Route inventory captured safely
+safety_notes:
+  - Avoid brute force unless explicitly authorized
+  - External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+  - api_gateway
+  - api

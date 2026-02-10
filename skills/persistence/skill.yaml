@@ -1,0 +1,27 @@
+id: persistence
+name: Persistence
+category: persistence
+phase: POST_EXPLOIT
+priority: 60
+target_types:
+  - lab
+  - external
+description: Assess persistence risk without leaving lasting changes.
+mitre_techniques:
+  - T1053
+  - T1547
+inputs:
+  - access.json
+outputs:
+  - persistence.json
+  - persistence_inventory.json
+  - persistence_risks.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - access
+success_criteria:
+  - Persistence locations inventoried safely
+  - Risks documented with evidence
+safety_notes:
+  - Do not create persistent backdoors unless explicitly authorized

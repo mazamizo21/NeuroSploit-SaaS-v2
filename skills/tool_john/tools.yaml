@@ -1,0 +1,8 @@
+john:
+  description: Password cracker
+  category: credential_access
+  install_cmd: sudo apt install john
+  verify_cmd: john --help
+  examples:
+    - john --format=raw-md5 hashes.txt
+    - john --wordlist=words.txt --rules hashes.txt

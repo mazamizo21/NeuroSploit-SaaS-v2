@@ -1,0 +1,9 @@
+dnsenum:
+  description: DNS enumeration tool
+  category: reconnaissance
+  install_cmd: sudo apt install dnsenum
+  verify_cmd: dnsenum -h
+  examples:
+    - dnsenum example.com
+    - dnsenum --noreverse example.com
+    - dnsenum -f wordlist.txt example.com

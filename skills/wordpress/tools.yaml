@@ -1,0 +1,39 @@
+wpscan:
+  description: "WordPress vulnerability scanner for core/themes/plugins"
+  category: "web"
+  install_cmd: "apt-get install -y wpscan"
+  verify_cmd: "wpscan --version"
+  examples:
+    - "wpscan --url https://target --enumerate vp,vt,tt --plugins-detection passive"
+
+nuclei:
+  description: "Template-based web vulnerability scanner"
+  category: "web"
+  install_cmd: "apt-get install -y nuclei"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u https://target -tags wordpress"
+
+nikto:
+  description: "Web server scanner for common issues"
+  category: "web"
+  install_cmd: "apt-get install -y nikto"
+  verify_cmd: "nikto -Version"
+  examples:
+    - "nikto -h https://target"
+
+nmap:
+  description: "Nmap web scripts for CMS detection"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p80,443 --script http-wordpress-enum target"
+
+parse_wpscan_json:
+  description: "Parse WPScan JSON output into inventory evidence"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/wordpress/scripts/parse_wpscan_json.py --help"
+  examples:
+    - "python3 skills/wordpress/scripts/parse_wpscan_json.py --input wpscan.json --out wordpress_inventory.json"

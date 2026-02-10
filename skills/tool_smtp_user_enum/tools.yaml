@@ -1,0 +1,8 @@
+smtp-user-enum:
+  description: SMTP user enumeration tool
+  category: reconnaissance
+  install_cmd: sudo apt install smtp-user-enum
+  verify_cmd: smtp-user-enum -h
+  examples:
+    - smtp-user-enum -M VRFY -u root -t 10.0.0.1
+    - smtp-user-enum -M RCPT -U users.txt -t 10.0.0.1

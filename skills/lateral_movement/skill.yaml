@@ -1,0 +1,23 @@
+id: lateral_movement
+name: Lateral Movement
+category: lateral_movement
+phase: POST_EXPLOIT
+priority: 75
+target_types:
+  - lab
+  - external
+description: Validate controlled lateral movement within approved scope.
+mitre_techniques:
+  - T1021
+inputs:
+  - creds.json
+outputs:
+  - lateral.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - creds
+success_criteria:
+  - Lateral movement path validated
+safety_notes:
+  - Only move to explicitly scoped hosts

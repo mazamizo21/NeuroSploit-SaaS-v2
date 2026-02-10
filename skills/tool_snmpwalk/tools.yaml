@@ -1,0 +1,8 @@
+snmpwalk:
+  description: SNMP MIB tree enumeration
+  category: scanning
+  install_cmd: sudo apt install snmp
+  verify_cmd: snmpwalk -h
+  examples:
+    - snmpwalk -v 2c -c public 10.0.0.1
+    - snmpwalk -v 1 -c public 10.0.0.1 sysORTable

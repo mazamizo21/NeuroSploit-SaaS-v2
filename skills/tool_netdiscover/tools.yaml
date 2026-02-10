@@ -1,0 +1,8 @@
+netdiscover:
+  description: ARP discovery tool
+  category: scanning
+  install_cmd: sudo apt install netdiscover
+  verify_cmd: netdiscover -h
+  examples:
+    - netdiscover -i eth0
+    - netdiscover -r 10.0.0.0/24

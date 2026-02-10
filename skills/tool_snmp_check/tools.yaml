@@ -1,0 +1,8 @@
+snmp-check:
+  description: SNMP device enumerator
+  category: scanning
+  install_cmd: sudo apt install snmpcheck
+  verify_cmd: snmp-check -h
+  examples:
+    - snmp-check 10.0.0.1 -c public
+    - snmp-check 10.0.0.1 -c public -v 2c

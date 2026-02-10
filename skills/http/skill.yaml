@@ -1,0 +1,27 @@
+id: service_http
+name: HTTP Service
+category: service
+phase: ''
+priority: 70
+target_types:
+- lab
+- external
+description: Service-specific enumeration for HTTP/HTTPS targets.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- tech_fingerprint.json
+- endpoints.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Live web services verified
+- Tech stack and security controls identified
+safety_notes:
+- Use conservative rate limits on external targets
+- External exploit or data extraction workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- http
+- https

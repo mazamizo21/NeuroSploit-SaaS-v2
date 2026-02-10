@@ -1,0 +1,25 @@
+id: tool_theharvester
+name: "Tool: theHarvester"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: OSINT collection of emails, subdomains, hosts, and URLs from public sources.
+mitre_techniques:
+  - T1593
+  - T1596
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with theharvester
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - theharvester
+  - osint

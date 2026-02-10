@@ -11,6 +11,9 @@ import logging
 from datetime import datetime, timedelta
 from typing import List
 
+# Redis for dispatching scheduled jobs
+import redis.asyncio as redis
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../control-plane'))
 
@@ -49,6 +52,10 @@ class CronWorker:
         self.async_session = sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False
         )
+
+        # Redis for job dispatch
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.redis = redis.from_url(redis_url, decode_responses=True)
     
     async def start(self):
         """Start the worker"""
@@ -145,9 +152,15 @@ class CronWorker:
                     "next_run": scheduled_job.next_run.isoformat()
                 }
             )
-            
-            # TODO: Trigger job execution via execution plane
-            # For now, the job is created and will be picked up by workers
+            # Dispatch job to execution plane queue
+            try:
+                await self.redis.lpush(
+                    f"tenant:{scheduled_job.tenant_id}:job_queue",
+                    str(job.id)
+                )
+                logger.info("scheduled_job_dispatched", job_id=str(job.id))
+            except Exception as dispatch_err:
+                logger.error("scheduled_job_dispatch_failed", job_id=str(job.id), error=str(dispatch_err))
             
         except Exception as e:
             scheduled_job.failed_runs += 1
@@ -157,6 +170,10 @@ class CronWorker:
     async def stop(self):
         """Stop the worker"""
         self.running = False
+        try:
+            await self.redis.close()
+        except Exception:
+            pass
         await self.engine.dispose()
         logger.info("Cron worker stopped")
 

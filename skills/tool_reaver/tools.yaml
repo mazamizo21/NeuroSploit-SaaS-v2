@@ -1,0 +1,8 @@
+reaver:
+  description: WPS PIN attack tool
+  category: exploitation
+  install_cmd: sudo apt install reaver
+  verify_cmd: reaver -h
+  examples:
+    - wash -i wlan0mon -s
+    - reaver -i wlan0mon -b <BSSID> -c <channel>

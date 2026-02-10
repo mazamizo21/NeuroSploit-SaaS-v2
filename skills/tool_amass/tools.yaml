@@ -1,0 +1,9 @@
+amass:
+  description: OSINT and DNS enumeration tool
+  category: reconnaissance
+  install_cmd: sudo apt install amass
+  verify_cmd: amass -version
+  examples:
+    - amass enum -d example.com
+    - amass intel -d example.com
+    - amass viz -d3 -d example.com

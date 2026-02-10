@@ -1,0 +1,29 @@
+id: service_wireless
+name: Wireless Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for wireless networks.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- wireless_inventory.json
+- wireless_auth_surface.json
+- wireless_handshake.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Wireless inventory captured safely
+- Auth posture documented with evidence
+- Weak configurations documented
+safety_notes:
+- Passive discovery only unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- wireless
+- wifi

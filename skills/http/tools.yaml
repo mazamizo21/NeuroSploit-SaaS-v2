@@ -1,0 +1,71 @@
+httpx:
+  description: "Fast HTTP probe for status, title, redirects, and tech detection"
+  category: "web"
+  install_cmd: "apt-get install -y httpx-toolkit"
+  verify_cmd: "httpx -version"
+  examples:
+    - "httpx -l targets.txt -status-code -title -tech-detect -follow-redirects -json -o httpx.json"
+
+whatweb:
+  description: "Web technology identification via plugin fingerprints"
+  category: "web"
+  install_cmd: "apt-get install -y whatweb"
+  verify_cmd: "whatweb --version"
+  examples:
+    - "whatweb -a 3 https://target"
+
+wafw00f:
+  description: "WAF detection via HTTP fingerprinting"
+  category: "web"
+  install_cmd: "apt-get install -y wafw00f"
+  verify_cmd: "wafw00f --version"
+  examples:
+    - "wafw00f https://target"
+
+ffuf:
+  description: "Fast web fuzzer with matchers and filters"
+  category: "web"
+  install_cmd: "apt-get install -y ffuf"
+  verify_cmd: "ffuf -version"
+  examples:
+    - "ffuf -u https://target/FUZZ -w /usr/share/wordlists/dirb/common.txt -mc all -fc 404 -rate 50 -t 10"
+
+gobuster:
+  description: "Directory and file enumeration"
+  category: "web"
+  install_cmd: "apt-get install -y gobuster"
+  verify_cmd: "gobuster version"
+  examples:
+    - "gobuster dir -u https://target -w /usr/share/wordlists/dirb/common.txt -x php,txt,html -t 10 -o gobuster.txt"
+
+nikto:
+  description: "Web server scanner for risky files and misconfigurations"
+  category: "web"
+  install_cmd: "apt-get install -y nikto"
+  verify_cmd: "nikto -Version"
+  examples:
+    - "nikto -h https://target -Tuning 1,2,3 -output nikto.txt"
+
+nuclei:
+  description: "Template-based vulnerability scanner"
+  category: "web"
+  install_cmd: "apt-get install -y nuclei"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u https://target -severity info,low,medium -json -o nuclei.json"
+
+curl:
+  description: "HTTP client for manual validation and header capture"
+  category: "web"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -i https://target"
+
+summarize_httpx:
+  description: "Summarize httpx JSONL output into endpoint evidence"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/http/scripts/summarize_httpx.py --help"
+  examples:
+    - "python3 skills/http/scripts/summarize_httpx.py --input httpx.json --out endpoints.json"

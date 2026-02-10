@@ -1,0 +1,9 @@
+subfinder:
+  description: Passive subdomain enumeration
+  category: reconnaissance
+  install_cmd: sudo apt install subfinder
+  verify_cmd: subfinder -h
+  examples:
+    - subfinder -d example.com
+    - subfinder -dL domains.txt
+    - subfinder -ls

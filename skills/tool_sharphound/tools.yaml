@@ -1,0 +1,8 @@
+sharphound:
+  description: BloodHound data collector (SharpHound)
+  category: reconnaissance
+  install_cmd: sudo apt install sharphound
+  verify_cmd: sharphound --help
+  examples:
+    - sharphound --collectionmethods Default --domain LAB.LOCAL --zipfilename bh.zip
+    - sharphound --collectionmethods Session,LocalAdmin --loop --interval 60

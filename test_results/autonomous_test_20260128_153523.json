@@ -1,0 +1,106 @@
+{
+  "test_id": "test-1769632523",
+  "target": "http://localhost:8080",
+  "test_type": "web",
+  "started_at": "2026-01-28T20:35:23.050187+00:00",
+  "phases": [
+    {
+      "phase": "Skills Manager",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:35:23.050402+00:00",
+      "details": "Loading all available skills from marketplace"
+    },
+    {
+      "phase": "Skills Manager",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:35:23.050420+00:00",
+      "details": "Successfully loaded 14 skills from marketplace"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:35:23.050433+00:00",
+      "details": "Testing job creation and management"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:35:23.050651+00:00",
+      "details": "Successfully created test job"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:35:23.050656+00:00",
+      "details": "Checking reconnaissance capabilities"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:35:23.050673+00:00",
+      "details": "Found 2 reconnaissance skills"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:35:23.050675+00:00",
+      "details": "Initializing multi-agent session"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:35:23.050683+00:00",
+      "details": "Session created successfully"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:35:23.050685+00:00",
+      "details": "Checking vulnerability scanning capabilities"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:35:23.050697+00:00",
+      "details": "Found 4 scanning skills"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:35:23.050699+00:00",
+      "details": "Checking report generation capabilities"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:35:23.050708+00:00",
+      "details": "Found 1 reporting skills"
+    }
+  ],
+  "findings": [],
+  "errors": [],
+  "metrics": {
+    "total_time": 0.00030803680419921875,
+    "phases_completed": 6,
+    "tools_used": [
+      "subfinder",
+      "amass",
+      "dnsx",
+      "theHarvester",
+      "whois",
+      "dnsrecon",
+      "nmap",
+      "nuclei",
+      "nikto",
+      "wpscan",
+      "dirsearch",
+      "burpsuite",
+      "pandoc",
+      "wkhtmltopdf"
+    ],
+    "findings_count": 0,
+    "skills_loaded": 14,
+    "agents_available": 1
+  },
+  "completed_at": "2026-01-28T20:35:23.050711+00:00"
+}

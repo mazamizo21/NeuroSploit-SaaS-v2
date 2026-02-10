@@ -1,0 +1,31 @@
+id: service_secrets_manager
+name: Secrets Manager Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for secrets managers.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- secrets_inventory.json
+- policy_diff.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Provider and account scope confirmed
+- Secret metadata inventoried safely
+- Policy changes compared when applicable
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+- Secret value retrieval requires explicit authorization
+tags:
+- secrets
+- vault
+- keyvault
+- secretmanager

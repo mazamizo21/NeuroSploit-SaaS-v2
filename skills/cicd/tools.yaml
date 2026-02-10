@@ -1,0 +1,47 @@
+httpx:
+  description: "Web probing for platform fingerprinting"
+  category: "web"
+  install_cmd: "apt-get install -y httpx"
+  verify_cmd: "httpx -version"
+  examples:
+    - "httpx -u https://target -title -server -status-code"
+
+nuclei:
+  description: "Template-based vulnerability checks for CI/CD UIs"
+  category: "web"
+  install_cmd: "apt-get install -y nuclei"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u https://target -tags jenkins,gitlab"
+
+trivy:
+  description: "Container and filesystem vulnerability scanning"
+  category: "vuln"
+  install_cmd: "apt-get install -y trivy"
+  verify_cmd: "trivy --version"
+  examples:
+    - "trivy repo --scanners vuln,secret https://repo.example.com"
+
+gitleaks:
+  description: "Secrets scanning for authorized repositories"
+  category: "vuln"
+  install_cmd: "apt-get install -y gitleaks"
+  verify_cmd: "gitleaks version"
+  examples:
+    - "gitleaks detect --source /path/to/repo --redact"
+
+nmap:
+  description: "Nmap service discovery for CI/CD endpoints"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p80,443,8080,50000 target"
+
+summarize_cicd_inventory:
+  description: "Summarize CI/CD discovery outputs into a single inventory report"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/cicd/scripts/summarize_cicd_inventory.py --help"
+  examples:
+    - "python3 skills/cicd/scripts/summarize_cicd_inventory.py --httpx httpx.jsonl --nuclei nuclei.jsonl --gitleaks gitleaks.json --out cicd_inventory.json"

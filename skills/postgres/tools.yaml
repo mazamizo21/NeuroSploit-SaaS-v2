@@ -1,0 +1,23 @@
+psql:
+  description: "PostgreSQL client for authentication and metadata queries"
+  category: "database"
+  install_cmd: "apt-get install -y postgresql-client"
+  verify_cmd: "psql --version"
+  examples:
+    - "psql -h target -U user -d postgres"
+
+nmap:
+  description: "Nmap PostgreSQL scripts for version and configuration"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p5432 --script pgsql-info target"
+
+parse_psql_table:
+  description: "Parse psql table output into JSON evidence"
+  category: "database"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/postgres/scripts/parse_psql_table.py --help"
+  examples:
+    - "python3 skills/postgres/scripts/parse_psql_table.py --input psql_roles.txt --out db_access.json"

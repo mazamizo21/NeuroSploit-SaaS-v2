@@ -1,0 +1,27 @@
+id: service_vpn
+name: VPN Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for VPN endpoints.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- vpn_inventory.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- VPN protocols identified
+- Weak configurations documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- vpn
+- ipsec
+- sslvpn

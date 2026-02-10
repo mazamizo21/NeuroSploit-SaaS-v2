@@ -1,0 +1,95 @@
+{
+  "test_id": "test-1769632325",
+  "target": "http://localhost:8080",
+  "test_type": "web",
+  "started_at": "2026-01-28T20:32:05.507735",
+  "phases": [
+    {
+      "phase": "Skill Loader",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:32:05.507982",
+      "details": "Loading all available skills"
+    },
+    {
+      "phase": "Skill Loader",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:32:05.507987",
+      "details": "Successfully loaded 0 skills"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:32:05.507990",
+      "details": "Testing job creation and management"
+    },
+    {
+      "phase": "Job Scheduler",
+      "status": "COMPLETED",
+      "timestamp": "2026-01-28T20:32:05.508179",
+      "details": "Successfully created test job"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:32:05.508182",
+      "details": "Running reconnaissance on http://localhost:8080"
+    },
+    {
+      "phase": "Reconnaissance",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:32:05.508185",
+      "details": "Reconnaissance test failed: Reconnaissance skill not found"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:32:05.508187",
+      "details": "Initializing multi-agent session"
+    },
+    {
+      "phase": "Multi-Agent System",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:32:05.508201",
+      "details": "Multi-agent test failed: 'AgentOrchestrator' object has no attribute 'get_agents'"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:32:05.508203",
+      "details": "Testing vulnerability detection"
+    },
+    {
+      "phase": "Vulnerability Scanning",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:32:05.508206",
+      "details": "Vulnerability scanning test failed: Nuclei skill not found"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "STARTED",
+      "timestamp": "2026-01-28T20:32:05.508207",
+      "details": "Testing report generation capabilities"
+    },
+    {
+      "phase": "Report Generation",
+      "status": "FAILED",
+      "timestamp": "2026-01-28T20:32:05.508209",
+      "details": "Report generation test failed: Report skill not found"
+    }
+  ],
+  "findings": [],
+  "errors": [
+    "Reconnaissance test failed: Reconnaissance skill not found",
+    "Multi-agent test failed: 'AgentOrchestrator' object has no attribute 'get_agents'",
+    "Vulnerability scanning test failed: Nuclei skill not found",
+    "Report generation test failed: Report skill not found"
+  ],
+  "metrics": {
+    "total_time": 0.00023508071899414062,
+    "phases_completed": 2,
+    "tools_used": [],
+    "findings_count": 0,
+    "skills_loaded": 0
+  },
+  "completed_at": "2026-01-28T20:32:05.508217"
+}

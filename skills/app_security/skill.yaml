@@ -1,0 +1,30 @@
+id: service_app_security
+name: Application Security Patterns
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Application security validation patterns for auth, session, access control,
+  and input safety.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- app_inventory.json
+- app_security_findings.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- App surface mapped safely
+- Auth and access control posture documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+- Use non-destructive payloads by default
+tags:
+- appsec
+- owasp
+- api

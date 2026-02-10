@@ -1,0 +1,8 @@
+assetfinder:
+  description: Find related domains and subdomains
+  category: reconnaissance
+  install_cmd: sudo apt install assetfinder
+  verify_cmd: assetfinder -h
+  examples:
+    - assetfinder example.com
+    - assetfinder --subs-only example.com

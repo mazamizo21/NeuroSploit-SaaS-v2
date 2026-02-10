@@ -1,0 +1,24 @@
+redis-cli:
+  description: "Redis CLI for authentication and INFO queries"
+  category: "database"
+  install_cmd: "apt-get install -y redis-tools"
+  verify_cmd: "redis-cli --version"
+  examples:
+    - "redis-cli -h target PING"
+    - "redis-cli -h target INFO"
+
+nmap:
+  description: "Nmap Redis scripts for version information"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p6379 --script redis-info target"
+
+summarize_redis_info:
+  description: "Summarize redis INFO output into JSON evidence"
+  category: "database"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/redis/scripts/summarize_redis_info.py --help"
+  examples:
+    - "python3 skills/redis/scripts/summarize_redis_info.py --input redis_info.txt --out redis_info.json"

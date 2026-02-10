@@ -1,0 +1,24 @@
+smbclient:
+  description: "SMB client for share enumeration and access checks"
+  category: "network"
+  install_cmd: "apt-get install -y smbclient"
+  verify_cmd: "smbclient --version"
+  examples:
+    - "smbclient -L //target -N"
+    - "smbclient //target/share -U user"
+
+nmap:
+  description: "Nmap SMB scripts for dialects and security mode"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p445 --script smb-protocols,smb2-security-mode,smb-os-discovery target"
+
+parse_smbclient:
+  description: "Parse smbclient share listing output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/smb/scripts/parse_smbclient.py --help"
+  examples:
+    - "python3 skills/smb/scripts/parse_smbclient.py --input smbclient.txt --out smb_shares.json"

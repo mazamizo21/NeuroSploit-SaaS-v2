@@ -1,0 +1,26 @@
+id: tool_wifipumpkin3
+name: "Tool: WiFiPumpkin3"
+category: exploitation
+phase: EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Rogue AP and wireless testing framework with modular proxies.
+mitre_techniques:
+  - T1557
+  - T1566
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with wifipumpkin3
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - wifipumpkin3
+  - wireless
+  - rogue-ap

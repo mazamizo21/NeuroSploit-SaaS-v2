@@ -1,0 +1,57 @@
+# Optional hardened overrides for TazoSploit.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.secure.yml up -d
+#
+# Goals:
+# - Keep LLM provider keys OUT of the kali executor container
+# - Route LLM calls through the control-plane internal proxy
+# - Reduce accidental Redis exposure to the host
+
+services:
+  api:
+    environment:
+      # LLM config + keys live here (not in kali)
+      - LLM_PROVIDER=${LLM_PROVIDER:-zhipu}
+      - LLM_API_BASE=${LLM_API_BASE:-https://api.z.ai/api/coding/paas/v4}
+      - LLM_MODEL=${LLM_MODEL:-glm-4.7}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Internal proxy auth
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-120}
+      - LLM_PROXY_RETRY_MAX=${LLM_PROXY_RETRY_MAX:-5}
+
+  kali:
+    environment:
+      # Use internal proxy instead of direct provider access
+      - LLM_PROXY_URL=http://api:8000/api/internal/llm/chat
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+
+      # Explicitly blank provider secrets in the executor container
+      - ZHIPU_API_KEY=
+      - ANTHROPIC_TOKEN=
+      - ANTHROPIC_API_KEY=
+      - CLAUDE_API_KEY=
+
+  worker:
+    environment:
+      # Worker should not carry provider secrets either
+      - ZHIPU_API_KEY=
+      - ANTHROPIC_TOKEN=
+      - ANTHROPIC_API_KEY=
+      - CLAUDE_API_KEY=
+
+  postgres:
+    ports: []
+
+  minio:
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+
+  # Redis is only needed on the internal docker network (redis:6379).
+  redis:
+    # Prevent containers/tenants from reaching Redis via the host gateway IP.
+    # Do not publish Redis to the host in secure mode.
+    ports: []

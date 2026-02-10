@@ -1,0 +1,29 @@
+id: service_network_evasion
+name: Network Evasion & Traffic Shaping
+category: service
+phase: ""
+priority: 50
+target_types:
+  - lab
+  - external
+description: Safe traffic shaping and authorized evasion checks.
+mitre_techniques: []
+inputs:
+  - services.json
+outputs:
+  - network_profile.json
+  - findings.json
+  - evidence.json
+prerequisites: []
+success_criteria:
+  - Baseline network profile recorded
+  - Rate controls applied safely
+safety_notes:
+  - Avoid brute force unless explicitly authorized
+  - External exploit or evasion workflows require explicit authorization (external_exploit=explicit_only)
+  - Avoid spoofing or stealth tactics unless explicitly authorized
+
+tags:
+  - network
+  - evasion
+  - traffic_shaping

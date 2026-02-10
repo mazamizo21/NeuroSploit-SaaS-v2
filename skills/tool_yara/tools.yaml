@@ -1,0 +1,7 @@
+yara:
+  description: Pattern matching engine for files and memory
+  category: forensics
+  install_cmd: sudo apt install yara
+  verify_cmd: yara --version
+  examples:
+    - yara -r rules.yar /path/to/scan

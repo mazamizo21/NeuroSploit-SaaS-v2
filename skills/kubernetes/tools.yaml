@@ -1,0 +1,40 @@
+kubectl:
+  description: "Kubernetes CLI for read-only inventory and access validation"
+  category: "cloud"
+  install_cmd: "apt-get install -y kubectl"
+  verify_cmd: "kubectl version --client"
+  examples:
+    - "kubectl --kubeconfig kubeconfig get namespaces"
+    - "kubectl --kubeconfig kubeconfig auth can-i --list"
+
+kube-bench:
+  description: "CIS benchmark checks for Kubernetes"
+  category: "cloud"
+  install_cmd: "apt-get install -y kube-bench"
+  verify_cmd: "kube-bench --version"
+  examples:
+    - "kube-bench --config-dir /etc/kube-bench"
+
+kube-hunter:
+  description: "Kubernetes security scanner (explicit authorization only)"
+  category: "cloud"
+  install_cmd: "pip install kube-hunter"
+  verify_cmd: "kube-hunter --version"
+  examples:
+    - "kube-hunter --remote target --report json"
+
+nmap:
+  description: "Nmap discovery for Kubernetes API endpoints"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p6443,10250 target"
+
+summarize_k8s_inventory:
+  description: "Summarize kubectl JSON outputs into a single inventory report"
+  category: "cloud"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/kubernetes/scripts/summarize_k8s_inventory.py --help"
+  examples:
+    - "python3 skills/kubernetes/scripts/summarize_k8s_inventory.py --namespaces namespaces.json --nodes nodes.json --services services.json --ingresses ingresses.json --clusterrolebindings crb.json --networkpolicies netpol.json --out k8s_inventory.json"

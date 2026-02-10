@@ -1,0 +1,9 @@
+ffuf:
+  description: Fast web fuzzer
+  category: scanning
+  install_cmd: sudo apt install ffuf
+  verify_cmd: ffuf -h
+  examples:
+    - ffuf -u http://example.com/FUZZ -w wordlist.txt
+    - ffuf -u http://example.com/FUZZ -w wordlist.txt -mc 200
+    - ffuf -u http://example.com/FUZZ -w wordlist.txt -fc 404

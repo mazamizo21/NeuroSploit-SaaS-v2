@@ -155,7 +155,9 @@ RUN pip3 install --break-system-packages --ignore-installed --no-cache-dir \
     colorama tqdm rich \
     httpx aiohttp \
     # LLM Integration
-    litellm openai anthropic
+    litellm openai "anthropic>=0.45.0" \
+    # Skills metadata parsing
+    pyyaml
 
 # =============================================================================
 # ADDITIONAL TOOLS FROM GITHUB
@@ -183,19 +185,39 @@ RUN git clone --depth=1 https://github.com/swisskyrepo/PayloadsAllTheThings.git 
 # WORDLISTS SETUP
 # =============================================================================
 
-RUN gunzip -k /usr/share/wordlists/rockyou.txt.gz 2>/dev/null || true
+RUN apt-get update && apt-get install -y --no-install-recommends wordlists 2>/dev/null || true && \
+    gunzip -k /usr/share/wordlists/rockyou.txt.gz 2>/dev/null || true && \
+    apt-get clean
 
 # =============================================================================
-# NEUROSPLOIT AI AGENT
+# TAZOSPLOIT AI AGENT
 # =============================================================================
 
-COPY open-interpreter/config.py /opt/tazosploit/config.py
-COPY open-interpreter/agent_wrapper.py /opt/tazosploit/agent_wrapper.py
-COPY open-interpreter/dynamic_agent.py /opt/tazosploit/dynamic_agent.py
-COPY open-interpreter/llm_client.py /opt/tazosploit/llm_client.py
+# Copy ALL files from open-interpreter/ into the image
+COPY open-interpreter/ /opt/tazosploit/
+
+# Verify the copy got everything (build will fail if dynamic_agent.py is missing)
+RUN ls -la /opt/tazosploit/ && \
+    test -f /opt/tazosploit/dynamic_agent.py && \
+    test -f /opt/tazosploit/llm_providers.py && \
+    test -f /opt/tazosploit/config.py && \
+    echo "✓ All agent files present"
+
+# Symlink for backward compat (both paths work)
+RUN ln -sf /opt/tazosploit /opt/open-interpreter
 
 # Make agent executable
 RUN chmod +x /opt/tazosploit/dynamic_agent.py
+
+# Expose helper tools expected by the agent prompt
+RUN ln -sf /opt/tazosploit/tools/websearch.py /usr/local/bin/websearch && \
+    ln -sf /opt/tazosploit/tools/docslookup.py /usr/local/bin/docslookup && \
+    ln -sf /opt/tazosploit/tools/download.py /usr/local/bin/download
+
+# Install any agent-specific requirements
+RUN if [ -f /opt/tazosploit/requirements.txt ]; then \
+        pip3 install --break-system-packages --no-cache-dir -r /opt/tazosploit/requirements.txt; \
+    fi
 
 # =============================================================================
 # ENTRYPOINT AND WORKING DIRECTORY

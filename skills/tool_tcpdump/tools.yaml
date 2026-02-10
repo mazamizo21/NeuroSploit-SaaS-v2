@@ -1,0 +1,8 @@
+tcpdump:
+  description: Packet capture tool using libpcap
+  category: forensics
+  install_cmd: sudo apt install tcpdump
+  verify_cmd: tcpdump --version
+  examples:
+    - tcpdump -i eth0 -nn -w capture.pcap
+    - tcpdump -r capture.pcap

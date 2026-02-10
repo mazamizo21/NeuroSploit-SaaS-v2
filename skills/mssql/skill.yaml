@@ -1,0 +1,27 @@
+id: service_mssql
+name: MSSQL Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for MSSQL.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- db_access.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- SQL Server version identified
+- Access validation completed safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- mssql
+- sqlserver
+- ms-sql

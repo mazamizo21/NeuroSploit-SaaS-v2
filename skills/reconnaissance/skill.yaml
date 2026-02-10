@@ -1,0 +1,36 @@
+id: reconnaissance
+name: Reconnaissance
+category: reconnaissance
+phase: RECON
+priority: 90
+target_types:
+  - lab
+  - external
+description: Systematic discovery of hosts, ports, services, and web surface area.
+mitre_techniques:
+  - T1595
+  - T1590
+  - T1592
+  - T1593
+  - T1596
+inputs: []
+outputs:
+  - ports.json
+  - services.json
+  - tech_fingerprint.json
+  - endpoints.json
+  - recon_hosts.json
+  - evidence.json
+  - findings.json
+prerequisites: []
+evidence_collection:
+  - Network scan outputs
+  - Service banners and versions
+  - Web tech fingerprints
+success_criteria:
+  - Open ports and services mapped
+  - Web technologies identified
+  - Initial attack surface documented
+safety_notes:
+  - Respect target scope and explicit allowlist
+  - Avoid broad subnet scans unless authorized

@@ -1,13 +1,17 @@
-# TazoSploit SaaS v2 Development Docker Compose
-# Implements Control Plane / Execution Plane separation
-
-# TazoSploit SaaS v2 Full Stack
-# Use docker-compose.infra.yml for infrastructure only
+# =============================================================================
+# TazoSploit SaaS v2 — ONE-CLICK DOCKER COMPOSE
+# =============================================================================
+# Usage:
+#   docker compose up -d                    → Core platform only
+#   docker compose --profile lab up -d      → Core + Vulnerable lab targets
+#   docker compose down -v                  → Tear everything down
+# =============================================================================
 
 services:
-  # =============================================================================
-  # INFRASTRUCTURE SERVICES
-  # =============================================================================
+
+  # ===========================================================================
+  # INFRASTRUCTURE
+  # ===========================================================================
 
   postgres:
     image: postgres:15-alpine
@@ -19,15 +23,14 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./control-plane/db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
     networks:
-      - control-plane-network
+      - control-net
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U tazosploit" ]
+      test: ["CMD-SHELL", "pg_isready -U tazosploit"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -35,33 +38,61 @@ services:
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data
-    ports:
-      - "6379:6379"
     networks:
-      - control-plane-network
-      - execution-plane-network
+      - control-net
+      - exec-net
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
-  # =============================================================================
-  # CONTROL PLANE SERVICES
-  # =============================================================================
+  minio:
+    image: minio/minio
+    container_name: tazosploit-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: tazosploit
+      MINIO_ROOT_PASSWORD: ${DB_PASSWORD:-tazosploit_dev}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - control-net
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
-  control-plane-api:
+  # ===========================================================================
+  # CONTROL PLANE
+  # ===========================================================================
+
+  api:
     build:
       context: ./control-plane
       dockerfile: Dockerfile
-    container_name: tazosploit-control-api
+    container_name: tazosploit-api
     environment:
       - DATABASE_URL=postgresql://tazosploit:${DB_PASSWORD:-tazosploit_dev}@postgres:5432/tazosploit
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
       - ENVIRONMENT=${ENVIRONMENT:-development}
-      - LOG_LEVEL=DEBUG
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - ENABLE_FULL_LOGGING=true
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-120}
+      - LLM_PROXY_RETRY_MAX=${LLM_PROXY_RETRY_MAX:-5}
+      - LLM_PROXY_RETRY_BASE_SECONDS=${LLM_PROXY_RETRY_BASE_SECONDS:-2}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
     ports:
       - "8000:8000"
     depends_on:
@@ -70,36 +101,72 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - control-plane-network
+      - control-net
+      - kali-net
     volumes:
       - ./control-plane:/app
-      - ./observability/logs:/app/logs
       - ./data:/data
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "1"  # Docker socket GID on macOS
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
 
-  # =============================================================================
-  # EXECUTION PLANE SERVICES
-  # =============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tazosploit-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - control-net
+    restart: unless-stopped
 
-  job-scheduler:
+  # ===========================================================================
+  # EXECUTION PLANE
+  # ===========================================================================
+
+  scheduler:
     build:
       context: ./execution-plane
       dockerfile: Dockerfile.scheduler
     container_name: tazosploit-scheduler
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CONTROL_PLANE_URL=http://control-plane-api:8000
-      - LOG_LEVEL=DEBUG
+      - CONTROL_PLANE_URL=http://api:8000
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-10}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
     depends_on:
-      - redis
-      - control-plane-api
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
     networks:
-      - execution-plane-network
-      - control-plane-network
+      - exec-net
+      - control-net
     volumes:
       - ./execution-plane:/app
-      - ./observability/logs:/app/logs
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   worker:
@@ -108,134 +175,391 @@ services:
       dockerfile: Dockerfile.worker
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CONTROL_PLANE_URL=http://control-plane-api:8000
-      - LLM_PROVIDER=${LLM_PROVIDER:-lm-studio}
-      - LLM_API_BASE=${LLM_API_BASE:-http://host.docker.internal:1234/v1}
-      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-120b}
+      - CONTROL_PLANE_URL=http://api:8000
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - LLM_API_BASE=${LLM_API_BASE:-https://api.anthropic.com}
+      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-5-20250514}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
       - CLAUDE_API_KEY=${ANTHROPIC_API_KEY:-}
-      - LOG_LEVEL=DEBUG
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - ALLOW_SELF_REGISTRATION=${ALLOW_SELF_REGISTRATION:-false}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - ENABLE_FULL_LOGGING=true
+      - MINIO_URL=minio:9000
+      - MINIO_ACCESS_KEY=tazosploit
+      - MINIO_SECRET_KEY=${DB_PASSWORD:-tazosploit_dev}
+      - MINIO_BUCKET=evidence
     depends_on:
-      - redis
-      - job-scheduler
+      redis:
+        condition: service_healthy
+      scheduler:
+        condition: service_started
     networks:
-      - execution-plane-network
-      - kali-network
+      - exec-net
+      - kali-net
+      - control-net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./execution-plane:/app
-      - ./observability/logs:/app/logs
+      - ./logs:/app/logs
     deploy:
       replicas: 2
     restart: unless-stopped
 
-  # =============================================================================
-  # KALI EXECUTION CONTAINERS (Pool)
-  # =============================================================================
+  supervisor:
+    build:
+      context: ./execution-plane
+      dockerfile: Dockerfile.supervisor
+    container_name: tazosploit-supervisor
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SUPERVISOR_EVENT_LIST_MAX=${SUPERVISOR_EVENT_LIST_MAX:-1000}
+      - SUPERVISOR_EVENT_TTL_SECONDS=${SUPERVISOR_EVENT_TTL_SECONDS:-86400}
+      - SUPERVISOR_ALERT_STALL_SECONDS=${SUPERVISOR_ALERT_STALL_SECONDS:-300}
+      - SUPERVISOR_ALERT_NOOP_THRESHOLD=${SUPERVISOR_ALERT_NOOP_THRESHOLD:-3}
+      - SUPERVISOR_ALERT_REPEAT_THRESHOLD=${SUPERVISOR_ALERT_REPEAT_THRESHOLD:-2}
+      - SUPERVISOR_ALERT_COOLDOWN_SECONDS=${SUPERVISOR_ALERT_COOLDOWN_SECONDS:-120}
+      - SUPERVISOR_FINDINGS_STALL_SECONDS=${SUPERVISOR_FINDINGS_STALL_SECONDS:-900}
+      - SUPERVISOR_STATS_POLL_SECONDS=${SUPERVISOR_STATS_POLL_SECONDS:-20}
+      - SUPERVISOR_ACTIVE_WINDOW_SECONDS=${SUPERVISOR_ACTIVE_WINDOW_SECONDS:-3600}
+      - SUPERVISOR_HEALTH_PORT=${SUPERVISOR_HEALTH_PORT:-9012}
+      - SUPERVISOR_LLM_MODE=${SUPERVISOR_LLM_MODE:-live}
+      - SUPERVISOR_LLM_PROVIDER=${SUPERVISOR_LLM_PROVIDER:-internal_proxy}
+      - SUPERVISOR_LLM_API_BASE=${SUPERVISOR_LLM_API_BASE:-http://api:8000/api/internal/llm/chat}
+      - SUPERVISOR_LLM_API_KEY=${SUPERVISOR_LLM_API_KEY:-}
+      - SUPERVISOR_ANTHROPIC_VERSION=${SUPERVISOR_ANTHROPIC_VERSION:-2023-06-01}
+      - SUPERVISOR_TRIAGE_MODEL=${SUPERVISOR_TRIAGE_MODEL:-}
+      - SUPERVISOR_ESCALATION_MODEL=${SUPERVISOR_ESCALATION_MODEL:-}
+      - SUPERVISOR_LLM_TIMEOUT_SECONDS=${SUPERVISOR_LLM_TIMEOUT_SECONDS:-90}
+      - SUPERVISOR_LLM_MAX_TOKENS=${SUPERVISOR_LLM_MAX_TOKENS:-800}
+      - SUPERVISOR_LLM_PROXY_TOKEN=${SUPERVISOR_LLM_PROXY_TOKEN:-}
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - SUPERVISOR_LLM_PROVIDER_OVERRIDE=${SUPERVISOR_LLM_PROVIDER_OVERRIDE:-}
+      - SUPERVISOR_AUDIT_ALERT_TYPES=${SUPERVISOR_AUDIT_ALERT_TYPES:-stalled,noop_loop,repeated_command,no_new_findings,stalling,scan_loop}
+      - SUPERVISOR_AUDIT_MAX_PER_JOB=${SUPERVISOR_AUDIT_MAX_PER_JOB:-5}
+      - SUPERVISOR_AUDIT_COOLDOWN_SECONDS=${SUPERVISOR_AUDIT_COOLDOWN_SECONDS:-120}
+      - SUPERVISOR_ACTIONS_ENABLED=${SUPERVISOR_ACTIONS_ENABLED:-true}
+      - SUPERVISOR_ACTIONS_DRY_RUN=${SUPERVISOR_ACTIONS_DRY_RUN:-false}
+      - SUPERVISOR_ACTION_COOLDOWN_SECONDS=${SUPERVISOR_ACTION_COOLDOWN_SECONDS:-120}
+      - SUPERVISOR_ACTION_MAX_PER_JOB=${SUPERVISOR_ACTION_MAX_PER_JOB:-5}
+      - SUPERVISOR_HINT_PATH_TEMPLATE=${SUPERVISOR_HINT_PATH_TEMPLATE:-/pentest/output/{job_id}/supervisor_hints.jsonl}
+      - SUPERVISOR_SCAN_LOOP_WINDOW=${SUPERVISOR_SCAN_LOOP_WINDOW:-20}
+      - SUPERVISOR_SCAN_LOOP_ENUM_RATIO=${SUPERVISOR_SCAN_LOOP_ENUM_RATIO:-0.7}
+      - SUPERVISOR_SCAN_LOOP_MIN_COMMANDS=${SUPERVISOR_SCAN_LOOP_MIN_COMMANDS:-12}
+      - SUPERVISOR_SCAN_LOOP_EXPLOIT_GRACE_SECONDS=${SUPERVISOR_SCAN_LOOP_EXPLOIT_GRACE_SECONDS:-180}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - exec-net
+      - control-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9012/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
-  kali-executor:
+  kali:
     build:
       context: ./kali-executor
       dockerfile: Dockerfile
     environment:
-      - LLM_API_BASE=${LLM_API_BASE:-http://host.docker.internal:1234/v1}
-      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-120b}
+      # Route LLM calls through the control-plane proxy (retries/backoff, centralized provider auth).
+      - LLM_PROXY_URL=${LLM_PROXY_URL:-http://api:8000/api/internal/llm/chat}
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - LLM_API_BASE=${LLM_API_BASE:-https://api.anthropic.com}
+      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-5-20250514}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
+      - CLAUDE_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - ALLOW_SELF_REGISTRATION=${ALLOW_SELF_REGISTRATION:-false}
+      - DOM_RENDERER_URL=http://dom-renderer:8080/render
+    volumes:
+      - kali-output:/pentest/output  # Persist session files across container restarts for resume
+      - kali-memory:/pentest/memory  # Persist AI memory across container restarts
+      - ./skills:/opt/tazosploit/skills:ro
     networks:
-      - kali-network
-    # SECURITY: No default internet access
-    # Egress controlled per-job via network policies
+      - kali-net
+      - lab-net
     cap_drop:
       - ALL
     cap_add:
-      - NET_RAW # Required for nmap, etc.
+      - NET_RAW
     security_opt:
       - no-new-privileges:true
-    read_only: false # Tools need to write temp files
     tmpfs:
       - /tmp:size=1G
       - /run:size=100M
     deploy:
-      replicas: 3
+      replicas: 2
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 4G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 1G
     restart: unless-stopped
 
-  # =============================================================================
-  # LOCAL LLM (Development Only)
-  # =============================================================================
+  dom-renderer:
+    build:
+      context: ./dom-renderer
+      dockerfile: Dockerfile
+    container_name: tazosploit-dom-renderer
+    networks:
+      - kali-net
+      - lab-net
+    restart: unless-stopped
 
-  # LM Studio runs on host connect via host.docker.internal:1234
-  # In production, replace with Claude API
+  # ===========================================================================
+  # TUNNEL GATEWAY (WireGuard VPN for internal network access)
+  # ===========================================================================
 
-  # =============================================================================
-  # OBSERVABILITY SERVICES
-  # =============================================================================
-
-  # Grafana for dashboards
-  grafana:
-    image: grafana/grafana:latest
-    container_name: tazosploit-grafana
+  tunnel-gateway:
+    build: ./tunnel-gateway
+    container_name: tazosploit-tunnel
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
+      - WG_LISTEN_PORT=51820
+      - API_LISTEN_ADDR=:8080
+      - WG_SUBNET=10.100.0.0/16
+      - WG_ENDPOINT=${WG_ENDPOINT:-}
+      - DATA_DIR=/etc/wireguard
+    cap_add:
+      - NET_ADMIN
     ports:
-      - "3001:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - "51820:51820/udp"
+      - "8085:8080"
     networks:
-      - control-plane-network
+      - control-net
+      - kali-net
+    sysctls:
+      - net.ipv4.ip_forward=1
+    volumes:
+      - tunnel-data:/etc/wireguard
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
-  # Prometheus for metrics
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: tazosploit-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    networks:
-      - control-plane-network
-    restart: unless-stopped
-
-  # =============================================================================
-  # DEVELOPMENT TARGET (DVWA)
-  # =============================================================================
+  # ===========================================================================
+  # VULNERABLE LAB  (only with: --profile lab)
+  # ===========================================================================
 
   dvwa:
-    image: vulnerables/web-dvwa
-    container_name: tazosploit-dvwa
+    image: vulnerables/web-dvwa:latest
+    platform: linux/amd64
+    container_name: lab-dvwa
+    ports:
+      - "8081:80"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  dvna:
+    image: appsecco/dvna:sqlite
+    platform: linux/amd64
+    container_name: lab-dvna
+    ports:
+      - "9091:9090"
+    environment:
+      - DVNA_DB_TYPE=sqlite
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  juiceshop:
+    image: bkimminich/juice-shop:latest
+    container_name: lab-juiceshop
+    ports:
+      - "3080:3000"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  webgoat:
+    image: webgoat/webgoat:latest
+    platform: linux/amd64
+    container_name: lab-webgoat
+    ports:
+      - "8082:8080"
+    environment:
+      - WEBGOAT_HOST=0.0.0.0
+      - WEBGOAT_PORT=8080
+    networks:
+      - lab-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/WebGoat/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    profiles: [lab]
+    restart: unless-stopped
+
+  vuln-api:
+    image: python:3.11-slim
+    container_name: lab-vuln-api
+    working_dir: /app
+    volumes:
+      - ./vulnerable-lab/vulnerable-api:/app
+    command: >
+      sh -c "pip install --quiet flask flask-cors pymysql pymongo requests && python app.py"
+    ports:
+      - "5001:5000"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  admin-panel:
+    image: php:8.2-apache
+    container_name: lab-admin-panel
+    volumes:
+      - ./vulnerable-lab/admin-panel:/var/www/html
     ports:
       - "8888:80"
     networks:
-      - kali-network
-    profiles:
-      - dev
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  lab-mysql:
+    image: mysql:8.0
+    container_name: lab-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=dvwa_password
+    volumes:
+      - lab-mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  lab-postgres:
+    image: postgres:15
+    container_name: lab-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=enterprise
+    volumes:
+      - lab-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  lab-mongodb:
+    image: mongo:6
+    container_name: lab-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - lab-mongodb-data:/data/db
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  lab-redis:
+    image: redis:7
+    container_name: lab-redis
+    command: redis-server --protected-mode no
+    ports:
+      - "6380:6379"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  samba:
+    image: dperson/samba:latest
+    container_name: lab-samba
+    command: -s "shared;/shared;yes;no;yes;admin;admin123"
+    ports:
+      - "445:445"
+      - "139:139"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  jumphost:
+    image: linuxserver/openssh-server:latest
+    container_name: lab-jumphost
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - PASSWORD_ACCESS=true
+      - USER_PASSWORD=admin123
+      - USER_NAME=admin
+      - SUDO_ACCESS=true
+    ports:
+      - "2222:2222"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
+
+  lab-elasticsearch:
+    image: elasticsearch:7.17.10
+    container_name: lab-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - lab-net
+    profiles: [lab]
+    restart: unless-stopped
 
 # =============================================================================
-# NETWORKS Isolation between planes
+# NETWORKS
 # =============================================================================
 
 networks:
-  control-plane-network:
+  control-net:
     driver: bridge
     name: tazosploit-control
 
-  execution-plane-network:
+  exec-net:
     driver: bridge
     name: tazosploit-execution
 
-  kali-network:
+  kali-net:
     driver: bridge
     name: tazosploit-kali
-    internal: true # No external internet by default
+    # NOT internal — Kali needs internet for Anthropic API calls
+
+  lab-net:
+    driver: bridge
+    name: tazosploit-lab
 
 # =============================================================================
 # VOLUMES
@@ -244,5 +568,10 @@ networks:
 volumes:
   postgres-data:
   redis-data:
-  grafana-data:
-  prometheus-data:
+  minio-data:
+  tunnel-data:
+  kali-output:
+  kali-memory:
+  lab-mysql-data:
+  lab-postgres-data:
+  lab-mongodb-data:

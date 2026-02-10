@@ -1,0 +1,119 @@
+ldapsearch:
+  description: "LDAP client for RootDSE discovery and scoped queries"
+  category: "directory"
+  install_cmd: "apt-get install -y ldap-utils"
+  verify_cmd: "ldapsearch -VV"
+  examples:
+    - "ldapsearch -H ldap://target -x -s base -b \"\" \"(objectClass=*)\""
+
+ldapdomaindump:
+  description: "Dump LDAP directory information to structured files"
+  category: "directory"
+  install_cmd: "python3 -m pip install ldapdomaindump"
+  verify_cmd: "ldapdomaindump --help"
+  examples:
+    - "ldapdomaindump -u 'DOMAIN\\user' -p 'pass' -o dump ldap://target"
+
+kerbrute:
+  description: "Kerberos user enumeration and auth checks (authorized only)"
+  category: "directory"
+  install_cmd: "apt-get install -y kerbrute"
+  verify_cmd: "kerbrute --help"
+  examples:
+    - "kerbrute userenum --dc dc01.domain.local -d domain.local users.txt"
+
+bloodhound:
+  description: "Analyze AD attack paths from collected data"
+  category: "directory"
+  install_cmd: "apt-get install -y bloodhound"
+  verify_cmd: "bloodhound --help"
+  examples:
+    - "bloodhound --no-sandbox"
+
+sharphound:
+  description: "Collect AD graph data for BloodHound"
+  category: "directory"
+  install_cmd: "apt-get install -y sharphound"
+  verify_cmd: "sharphound --help"
+  examples:
+    - "sharphound --collectionmethods All --zipfilename data.zip"
+
+certipy:
+  description: "Enumerate ADCS and certificate template risk"
+  category: "directory"
+  install_cmd: "python3 -m pip install certipy-ad"
+  verify_cmd: "certipy --help"
+  examples:
+    - "certipy find -u 'DOMAIN\\user' -p 'pass' -dc-ip 10.0.0.10"
+
+certify:
+  description: "Windows ADCS enumeration tool (run on Windows host)"
+  category: "directory"
+  install_cmd: "echo 'Run on Windows host'"
+  verify_cmd: "echo 'See toolcard for usage'"
+  examples:
+    - "certify.exe find /domain:domain.local"
+
+powerview:
+  description: "PowerShell AD enumeration framework (run on Windows host)"
+  category: "directory"
+  install_cmd: "echo 'Import PowerView on Windows host'"
+  verify_cmd: "echo 'See toolcard for usage'"
+  examples:
+    - "Import-Module .\\PowerView.ps1"
+
+rubeus:
+  description: "Kerberos interaction and ticket inspection (authorized only)"
+  category: "directory"
+  install_cmd: "echo 'Run on Windows host'"
+  verify_cmd: "echo 'See toolcard for usage'"
+  examples:
+    - "Rubeus.exe triage"
+
+netexec:
+  description: "SMB/LDAP enumeration and auth validation"
+  category: "network"
+  install_cmd: "apt-get install -y netexec"
+  verify_cmd: "netexec --help"
+  examples:
+    - "netexec smb 10.0.0.0/24 -u user -p pass"
+
+crackmapexec:
+  description: "SMB/LDAP enumeration and auth validation"
+  category: "network"
+  install_cmd: "apt-get install -y crackmapexec"
+  verify_cmd: "crackmapexec --help"
+  examples:
+    - "crackmapexec smb 10.0.0.0/24 -u user -p pass"
+
+secretsdump:
+  description: "Dump AD secrets via Impacket (authorized only)"
+  category: "credential"
+  install_cmd: "python3 -m pip install impacket"
+  verify_cmd: "secretsdump.py -h"
+  examples:
+    - "secretsdump.py domain/user:pass@dc01"
+
+rpcclient:
+  description: "RPC enumeration against SMB endpoints"
+  category: "network"
+  install_cmd: "apt-get install -y samba-common-bin"
+  verify_cmd: "rpcclient --help"
+  examples:
+    - "rpcclient -U 'DOMAIN\\user%pass' 10.0.0.10"
+
+smbmap:
+  description: "Enumerate SMB shares and permissions"
+  category: "network"
+  install_cmd: "python3 -m pip install smbmap"
+  verify_cmd: "smbmap -h"
+  examples:
+    - "smbmap -H 10.0.0.10 -u user -p pass"
+
+gpp-decrypt:
+  description: "Decrypt Group Policy Preferences cpassword fields"
+  category: "directory"
+  install_cmd: "apt-get install -y gpp-decrypt"
+  verify_cmd: "gpp-decrypt -h"
+  examples:
+    - "gpp-decrypt <cpassword>"

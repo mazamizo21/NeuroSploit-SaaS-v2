@@ -1,0 +1,32 @@
+gcloud:
+  description: "Google Cloud CLI for project and resource inventory"
+  category: "cloud"
+  install_cmd: "apt-get install -y google-cloud-cli"
+  verify_cmd: "gcloud --version"
+  examples:
+    - "gcloud auth list"
+    - "gcloud projects list"
+
+scoutsuite:
+  description: "Multi-cloud security auditing tool (read-only)"
+  category: "cloud"
+  install_cmd: "python3 -m pip install scoutsuite"
+  verify_cmd: "scout --help"
+  examples:
+    - "scout gcp --report-dir /tmp/scout-report"
+
+trivy:
+  description: "Vulnerability scanner for container images and artifacts"
+  category: "cloud"
+  install_cmd: "apt-get install -y trivy"
+  verify_cmd: "trivy --version"
+  examples:
+    - "trivy image --severity HIGH,CRITICAL my-image:tag"
+
+summarize_gcp_inventory:
+  description: "Summarize GCP CLI JSON outputs into a single inventory report"
+  category: "cloud"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/gcp/scripts/summarize_gcp_inventory.py --help"
+  examples:
+    - "python3 skills/gcp/scripts/summarize_gcp_inventory.py --projects projects.json --service-accounts service_accounts.json --instances instances.json --buckets buckets.json --out cloud_inventory.json"

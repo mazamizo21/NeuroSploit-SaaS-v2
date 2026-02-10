@@ -1,0 +1,39 @@
+openssl:
+  description: "OpenSSL client for certificate and handshake capture"
+  category: "network"
+  install_cmd: "apt-get install -y openssl"
+  verify_cmd: "openssl version"
+  examples:
+    - "openssl s_client -connect target:443 -servername target -showcerts"
+
+sslscan:
+  description: "Enumerate TLS protocols and ciphers"
+  category: "network"
+  install_cmd: "apt-get install -y sslscan"
+  verify_cmd: "sslscan --version"
+  examples:
+    - "sslscan --no-colour target:443"
+
+sslyze:
+  description: "TLS configuration analysis with certificate details"
+  category: "network"
+  install_cmd: "apt-get install -y sslyze"
+  verify_cmd: "sslyze --version"
+  examples:
+    - "sslyze --regular target:443"
+
+nmap:
+  description: "Nmap TLS scripts for cipher enumeration"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p443 --script ssl-enum-ciphers target"
+
+parse_sslscan:
+  description: "Parse sslscan output into JSON evidence"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/tls/scripts/parse_sslscan.py --help"
+  examples:
+    - "python3 skills/tls/scripts/parse_sslscan.py --input sslscan.txt --out tls_report.json"

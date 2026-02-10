@@ -1,0 +1,112 @@
+winpeas:
+  description: "Windows privilege escalation checks (read-only posture enumeration)"
+  category: "host"
+  install_cmd: "curl -L -o winpeas.exe https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASx64.exe"
+  verify_cmd: "winpeas.exe /?"
+  examples:
+    - "winpeas.exe quiet cmd"
+
+seatbelt:
+  description: "Windows posture and configuration inventory"
+  category: "host"
+  install_cmd: "git clone https://github.com/GhostPack/Seatbelt"
+  verify_cmd: "Seatbelt.exe -h"
+  examples:
+    - "Seatbelt.exe -group=system"
+
+powershell:
+  description: "PowerShell for system inventory and policy checks"
+  category: "host"
+  install_cmd: "powershell -Command '$PSVersionTable.PSVersion'"
+  verify_cmd: "powershell -Command '$PSVersionTable.PSVersion'"
+  examples:
+    - "powershell -Command 'Get-ComputerInfo | Select-Object OsName,OsVersion'"
+
+wesng:
+  description: "Patch-to-advisory mapping using Windows Exploit Suggester NG"
+  category: "host"
+  install_cmd: "python3 -m pip install wesng"
+  verify_cmd: "wesng --help"
+  examples:
+    - "wesng --update"
+    - "wesng --missing --systeminfo systeminfo.txt"
+
+windows_inventory:
+  description: "Parse systeminfo and whoami outputs into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/windows_inventory.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/windows_inventory.py --systeminfo systeminfo.txt --whoami whoami.txt --out windows_host_inventory.json"
+
+auditpol_parser:
+  description: "Parse auditpol output into JSON summary"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/parse_auditpol.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/parse_auditpol.py --input auditpol.txt --out windows_audit_policy.json"
+
+defender_status_parser:
+  description: "Parse Defender status JSON into summary"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/parse_defender_status.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/parse_defender_status.py --input defender.json --out defender_status.json"
+
+firewall_profile_parser:
+  description: "Parse Get-NetFirewallProfile output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/parse_firewall_profiles.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/parse_firewall_profiles.py --input firewall.txt --out firewall_profiles.json"
+
+scheduled_tasks_parser:
+  description: "Parse schtasks output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/parse_schtasks.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/parse_schtasks.py --input schtasks.txt --out scheduled_tasks.json"
+
+autoruns_parser:
+  description: "Parse autoruns CSV output into JSON"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/parse_autoruns.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/parse_autoruns.py --input autoruns.csv --out autoruns.json"
+
+merge_posture:
+  description: "Merge Windows host evidence into a posture summary"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/merge_posture.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/merge_posture.py --inventory windows_host_inventory.json --defender defender_status.json --firewall firewall_profiles.json --audit windows_audit_policy.json --tasks scheduled_tasks.json --autoruns autoruns.json --out windows_security_posture.json"
+
+normalize_findings:
+  description: "Normalize Windows findings into a common schema"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/normalize_findings.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/normalize_findings.py --input findings_raw.json --out findings.json"
+
+package_evidence:
+  description: "Package Windows host evidence JSON files into a single bundle"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/package_evidence.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/package_evidence.py --inputs windows_host_inventory.json windows_security_posture.json findings.json --out windows_evidence_bundle.json"
+
+summarize_findings:
+  description: "Summarize normalized findings by severity"
+  category: "host"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/windows_host/scripts/summarize_findings.py --help"
+  examples:
+    - "python3 skills/windows_host/scripts/summarize_findings.py --input findings.json --out findings_summary.json"

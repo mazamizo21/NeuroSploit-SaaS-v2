@@ -1,0 +1,33 @@
+curl:
+  description: "HTTP client for Elasticsearch API queries"
+  category: "web"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s http://target:9200/"
+    - "curl -s http://target:9200/_cluster/health?pretty"
+    - "curl -s http://target:9200/_cat/indices?v"
+
+httpx:
+  description: "HTTP probe for reachability and headers"
+  category: "web"
+  install_cmd: "apt-get install -y httpx-toolkit"
+  verify_cmd: "httpx -version"
+  examples:
+    - "httpx -u http://target:9200 -status-code -title -tech-detect"
+
+nmap:
+  description: "Nmap HTTP scripts for service metadata"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -p9200 --script http-title,http-headers target"
+
+summarize_es:
+  description: "Summarize cluster and index JSON into evidence"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/elasticsearch/scripts/summarize_es.py --help"
+  examples:
+    - "python3 skills/elasticsearch/scripts/summarize_es.py --cluster es_cluster.json --indices es_indices.json --out es_summary.json"

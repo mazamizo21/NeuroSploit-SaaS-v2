@@ -1,0 +1,9 @@
+dirsearch:
+  description: Web path discovery tool
+  category: scanning
+  install_cmd: sudo apt install dirsearch
+  verify_cmd: dirsearch -h
+  examples:
+    - dirsearch -u http://example.com
+    - dirsearch -u http://example.com -e php,js
+    - dirsearch -u http://example.com --recursive

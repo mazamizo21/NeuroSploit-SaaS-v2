@@ -1,0 +1,8 @@
+dmitry:
+  description: Deepmagic Information Gathering Tool
+  category: reconnaissance
+  install_cmd: sudo apt install dmitry
+  verify_cmd: dmitry -h
+  examples:
+    - dmitry -winsepfb -t 2 example.com
+    - dmitry -w -n example.com

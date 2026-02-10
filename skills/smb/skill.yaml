@@ -1,0 +1,26 @@
+id: service_smb
+name: SMB Service
+category: service
+phase: ''
+priority: 60
+target_types:
+- lab
+- external
+description: Service-specific enumeration for SMB.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- smb_shares.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- SMB dialects and signing settings documented
+- Shares enumerated with access levels
+safety_notes:
+- Avoid brute force without authorization
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- smb
+- cifs

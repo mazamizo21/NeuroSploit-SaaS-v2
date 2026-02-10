@@ -1,0 +1,24 @@
+id: credential_access
+name: Credential Access
+category: credential_access
+phase: POST_EXPLOIT
+priority: 85
+target_types:
+  - lab
+  - external
+description: Identify, validate, and document credentials discovered during testing.
+mitre_techniques:
+  - T1110
+  - T1555
+inputs:
+  - evidence.json
+outputs:
+  - creds.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - access
+success_criteria:
+  - Credentials identified and validated
+safety_notes:
+  - Avoid brute-force unless explicitly allowed

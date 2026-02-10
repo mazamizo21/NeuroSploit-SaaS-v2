@@ -1,0 +1,8 @@
+bully:
+  description: WPS brute-force tool
+  category: exploitation
+  install_cmd: sudo apt install bully
+  verify_cmd: bully -h
+  examples:
+    - bully -b <BSSID> -c <channel> wlan0mon
+    - bully -b <BSSID> -c <channel> -d wlan0mon

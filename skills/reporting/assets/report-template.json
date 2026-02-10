@@ -1,0 +1,9 @@
+{
+  "report_title": "{{REPORT_TITLE}}",
+  "target": "{{TARGET}}",
+  "objective": "{{OBJECTIVE}}",
+  "generated_at": "{{TIMESTAMP}}",
+  "executive_summary": "{{EXEC_SUMMARY}}",
+  "findings": {{FINDINGS_JSON}},
+  "evidence_index": {{EVIDENCE_JSON}}
+}

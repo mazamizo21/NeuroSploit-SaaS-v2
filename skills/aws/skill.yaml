@@ -1,0 +1,32 @@
+id: service_aws
+name: AWS Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for AWS.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- cloud_inventory.json
+- cloud_identity.json
+- cloud_iam.json
+- cloud_storage.json
+- cloud_network.json
+- cloud_logging.json
+- cloud_secrets.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Account scope and org context confirmed
+- IAM, storage, network, and logging posture documented
+- High-risk configurations documented with evidence
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- aws

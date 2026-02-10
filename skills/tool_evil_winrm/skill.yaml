@@ -1,0 +1,27 @@
+id: tool_evil_winrm
+name: "Tool: Evil-WinRM"
+category: lateral_movement
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: WinRM shell for post-exploitation on Windows hosts.
+mitre_techniques:
+  - T1021.006
+
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with evil-winrm
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - evil-winrm
+  - winrm
+  - powershell
+

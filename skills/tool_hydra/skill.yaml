@@ -1,0 +1,24 @@
+id: tool_hydra
+name: "Tool: Hydra"
+category: credential_access
+phase: EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Network login cracker supporting many services and protocols.
+mitre_techniques:
+  - T1110
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with hydra
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - hydra
+  - bruteforce

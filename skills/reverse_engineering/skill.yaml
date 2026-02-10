@@ -1,0 +1,29 @@
+id: reverse_engineering
+name: Reverse Engineering
+category: analysis
+phase: POST_EXPLOIT
+priority: 40
+target_types:
+- lab
+- external
+description: Static analysis of binaries and extraction of indicators.
+mitre_techniques: []
+inputs:
+- evidence.json
+outputs:
+- binary_metadata.json
+- strings.json
+- iocs.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Indicators extracted and documented
+- Suspicious behavior summarized
+safety_notes:
+- Use isolated environments for dynamic analysis
+- Avoid executing untrusted binaries on production hosts
+tags:
+- reverse_engineering
+- binaries
+- ioc

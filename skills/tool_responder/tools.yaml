@@ -1,0 +1,8 @@
+responder:
+  description: LLMNR/NBNS poisoning and credential capture
+  category: credential_access
+  install_cmd: sudo apt install responder
+  verify_cmd: responder -h
+  examples:
+    - responder -I eth0 -A
+    - responder -I eth0 -dwF

@@ -1,0 +1,8 @@
+crackmapexec:
+  description: Network execution framework for SMB/WinRM/LDAP
+  category: lateral_movement
+  install_cmd: sudo apt install crackmapexec
+  verify_cmd: crackmapexec --help
+  examples:
+    - crackmapexec smb 10.0.0.0/24 -u user -p pass --shares
+    - crackmapexec winrm 10.0.0.10 -u user -H <hash>

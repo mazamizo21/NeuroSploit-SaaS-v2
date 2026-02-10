@@ -1,0 +1,9 @@
+macchanger:
+  description: MAC address changer
+  category: defense_evasion
+  install_cmd: sudo apt install macchanger
+  verify_cmd: macchanger --help
+  examples:
+    - macchanger -s eth0
+    - macchanger -r eth0
+    - macchanger -p eth0

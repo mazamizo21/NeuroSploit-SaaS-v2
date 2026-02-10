@@ -1,0 +1,25 @@
+id: tool_dmitry
+name: "Tool: DMitry"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: Information gathering (WHOIS, subdomains, email, ports) for targets.
+mitre_techniques:
+  - T1593
+  - T1590
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with dmitry
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - dmitry
+  - osint

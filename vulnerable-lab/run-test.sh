@@ -8,9 +8,11 @@ echo "TazoSploit Enterprise Pentest"
 echo "=========================================="
 
 # Default values
-MAX_ITERATIONS="${1:-50}"
+MAX_ITERATIONS="${1:-2000}"
 LLM_API_BASE="${LLM_API_BASE:-http://host.docker.internal:1234/v1}"
 LLM_MODEL="${LLM_MODEL:-openai/gpt-oss-120b}"
+TARGET="${TARGET:-10.0.1.1}"
+EXPLOIT_MODE="${EXPLOIT_MODE:-autonomous}"
 
 # Create logs directory
 mkdir -p logs
@@ -18,9 +20,10 @@ mkdir -p logs
 # Clear old logs
 rm -f logs/*.jsonl logs/*.log logs/*.json 2>/dev/null
 
-echo "Target: Enterprise Lab (10.0.1.0/24 -> 10.0.4.0/24)"
+echo "Target: $TARGET (Enterprise Lab 10.0.1.0/24 -> 10.0.4.0/24)"
 echo "LLM: $LLM_MODEL"
 echo "Max Iterations: $MAX_ITERATIONS"
+echo "Exploit Mode: $EXPLOIT_MODE"
 echo ""
 
 # Build the Kali image if needed
@@ -36,11 +39,14 @@ docker run --rm -it \
   --network vulnerable-lab_external \
   -e LLM_API_BASE="$LLM_API_BASE" \
   -e LLM_MODEL="$LLM_MODEL" \
+  -e ZHIPU_API_KEY="${ZHIPU_API_KEY:-}" \
+  -e EXPLOIT_MODE="$EXPLOIT_MODE" \
+  -e TARGET_TYPE="lab" \
   -v "$(pwd)/logs:/pentest/logs" \
   -v "$(pwd)/../kali-executor/open-interpreter:/opt/tazosploit" \
   tazosploit-kali:minimal \
   python3 /opt/tazosploit/dynamic_agent.py \
-  --target "10.0.2.10" \
+  --target "$TARGET" \
   --objective "Perform a comprehensive enterprise penetration test against this multi-tier network.
 
 NETWORK TOPOLOGY:

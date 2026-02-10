@@ -1,0 +1,26 @@
+id: exfiltration
+name: Data Access Validation
+category: exfiltration
+phase: POST_EXPLOIT
+priority: 45
+target_types:
+  - lab
+  - external
+description: Validate data exposure with minimal collection to prove impact.
+mitre_techniques:
+  - T1005
+inputs:
+  - access.json
+outputs:
+  - data_access.json
+  - data_sources.json
+  - redaction_log.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - access
+success_criteria:
+  - Sensitive data exposure validated minimally
+  - Sources and redaction steps documented with evidence
+safety_notes:
+  - Minimize data collected to the smallest evidence sample

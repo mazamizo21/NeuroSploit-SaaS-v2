@@ -1,0 +1,25 @@
+id: service_tls
+name: TLS Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for TLS.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- tls_report.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Certificate chain and hostname coverage verified
+- Protocol and cipher support documented
+safety_notes:
+- Avoid brute force unless explicitly authorized
+tags:
+- tls
+- ssl

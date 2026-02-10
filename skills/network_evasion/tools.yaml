@@ -1,0 +1,55 @@
+nmap:
+  description: "Network discovery with timing profiles"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -sS -T2 -p1-1024 target"
+
+proxychains:
+  description: "Route traffic through explicit proxy chains"
+  category: "network"
+  install_cmd: "apt-get install -y proxychains4"
+  verify_cmd: "proxychains4 -h"
+  examples:
+    - "proxychains4 curl -I https://target"
+
+tor:
+  description: "Anonymizing network overlay (explicit authorization only)"
+  category: "network"
+  install_cmd: "apt-get install -y tor"
+  verify_cmd: "tor --version"
+  examples:
+    - "tor --verify-config"
+
+tcpdump:
+  description: "Packet capture for evidence of throttling and resets"
+  category: "network"
+  install_cmd: "apt-get install -y tcpdump"
+  verify_cmd: "tcpdump --version"
+  examples:
+    - "tcpdump -nn -i any host target"
+
+tshark:
+  description: "Packet analysis for timing and rate evidence"
+  category: "network"
+  install_cmd: "apt-get install -y tshark"
+  verify_cmd: "tshark --version"
+  examples:
+    - "tshark -i any -f 'host target'"
+
+hping3:
+  description: "Custom packet generator (explicit authorization only)"
+  category: "network"
+  install_cmd: "apt-get install -y hping3"
+  verify_cmd: "hping3 --version"
+  examples:
+    - "hping3 -S -p 443 -c 3 target"
+
+summarize_network_profile:
+  description: "Summarize network profiling output into a JSON profile"
+  category: "network"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/network_evasion/scripts/summarize_network_profile.py --help"
+  examples:
+    - "python3 skills/network_evasion/scripts/summarize_network_profile.py --input profile.txt --out network_profile.json"

@@ -24,7 +24,57 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from memory.memory_store import EnhancedMemoryStore, ThreatPattern
+try:
+    # Try the kali-executor memory module path
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "kali-executor", "open-interpreter"))
+    from memory import MemoryStore
+    
+    # Create a compatibility wrapper since HeartbeatSystem expects EnhancedMemoryStore
+    class EnhancedMemoryStore(MemoryStore):
+        """Compatibility wrapper for MemoryStore"""
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.credential_patterns = []
+        
+        def get_target_knowledge(self, key):
+            """Retrieve a stored value by key"""
+            memories = self.get_relevant_memories(key, limit=1)
+            if memories:
+                return memories[0].content
+            return None
+        
+        def update_target_knowledge(self, key, value):
+            """Store a key-value pair as a memory"""
+            self.add_memory(
+                category="system_state",
+                content=f"{key}={value}",
+                context={"key": key},
+                importance="low"
+            )
+    
+    class ThreatPattern:
+        """Placeholder for threat pattern tracking"""
+        def __init__(self, pattern="", category="", count=0, targets=None):
+            self.pattern = pattern
+            self.category = category
+            self.count = count
+            self.targets = targets or []
+            
+except ImportError:
+    # Fallback: create minimal stubs
+    class EnhancedMemoryStore:
+        def __init__(self, *args, **kwargs):
+            self.credential_patterns = []
+        def get_target_knowledge(self, key): return None
+        def update_target_knowledge(self, key, value): pass
+    
+    class ThreatPattern:
+        def __init__(self, pattern="", category="", count=0, targets=None):
+            self.pattern = pattern
+            self.category = category
+            self.count = count
+            self.targets = targets or []
 
 
 class AlertLevel(Enum):
@@ -249,7 +299,7 @@ class HeartbeatSystem:
         }
         
         for service in services:
-            identifier = f"{service.host}:{service.port}:{s.service_name}"
+            identifier = f"{service.host}:{service.port}:{service.service_name}"
             if identifier not in known_identifiers:
                 new_services.append(service)
         

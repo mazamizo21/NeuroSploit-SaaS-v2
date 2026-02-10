@@ -1,0 +1,3055 @@
+{
+  "credential_access": {
+    "id": "credential_access",
+    "name": "Credential Access",
+    "description": "Identify, validate, and document credentials discovered during testing.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "mimikatz",
+      "hashcat",
+      "john",
+      "hashid",
+      "cewl",
+      "crunch",
+      "fcrackzip",
+      "pdfcrack",
+      "secretsdump",
+      "laZagne",
+      "parse_hashcat_show"
+    ],
+    "mitre_techniques": [
+      "T1110",
+      "T1555"
+    ]
+  },
+  "defense_evasion": {
+    "id": "defense_evasion",
+    "name": "Defense Evasion",
+    "description": "Assess evasion risks without disabling defenses.",
+    "category": "defense_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "system_tools",
+      "lnav",
+      "logwatch",
+      "tcpdump",
+      "tshark",
+      "lynis",
+      "tiger",
+      "summarize_defense_controls"
+    ],
+    "mitre_techniques": [
+      "T1562",
+      "T1070"
+    ]
+  },
+  "example_skill": {
+    "id": "example_skill",
+    "name": "Example Skill",
+    "description": "Example skill skeleton for new skills.",
+    "category": "custom",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "example",
+      "template"
+    ],
+    "requirements": [],
+    "tools": [
+      "example_parser"
+    ],
+    "mitre_techniques": []
+  },
+  "exfiltration": {
+    "id": "exfiltration",
+    "name": "Data Access Validation",
+    "description": "Validate data exposure with minimal collection to prove impact.",
+    "category": "exfiltration",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "system_tools",
+      "redact_samples",
+      "smbclient",
+      "psql",
+      "mysql",
+      "mongosh",
+      "redis-cli",
+      "scp",
+      "rsync",
+      "socat"
+    ],
+    "mitre_techniques": [
+      "T1005"
+    ]
+  },
+  "exploitation": {
+    "id": "exploitation",
+    "name": "Exploitation",
+    "description": "Validate exploitability with minimal, controlled proof of impact.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "metasploit",
+      "sqlmap",
+      "commix"
+    ],
+    "mitre_techniques": [
+      "T1190",
+      "T1203"
+    ]
+  },
+  "forensics": {
+    "id": "forensics",
+    "name": "Forensics",
+    "description": "Post-exploitation evidence triage for disk and memory artifacts.",
+    "category": "analysis",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "forensics",
+      "triage",
+      "artifacts"
+    ],
+    "requirements": [],
+    "tools": [
+      "autopsy",
+      "sleuthkit",
+      "volatility",
+      "binwalk",
+      "foremost",
+      "scalpel",
+      "photorec",
+      "testdisk",
+      "exiftool"
+    ],
+    "mitre_techniques": []
+  },
+  "lateral_movement": {
+    "id": "lateral_movement",
+    "name": "Lateral Movement",
+    "description": "Validate controlled lateral movement within approved scope.",
+    "category": "lateral_movement",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "crackmapexec",
+      "impacket-psexec",
+      "impacket-wmiexec",
+      "impacket-smbexec",
+      "impacket-secretsdump",
+      "impacket-getST",
+      "impacket-ticketConverter",
+      "responder",
+      "evil-winrm",
+      "freerdp",
+      "sshpass",
+      "summarize_movement_log"
+    ],
+    "mitre_techniques": [
+      "T1021"
+    ]
+  },
+  "persistence": {
+    "id": "persistence",
+    "name": "Persistence",
+    "description": "Assess persistence risk without leaving lasting changes.",
+    "category": "persistence",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "system_tools",
+      "winpeas",
+      "seatbelt",
+      "linpeas",
+      "normalize_persistence"
+    ],
+    "mitre_techniques": [
+      "T1053",
+      "T1547"
+    ]
+  },
+  "privilege_escalation": {
+    "id": "privilege_escalation",
+    "name": "Privilege Escalation",
+    "description": "Assess and validate privilege escalation paths after access is gained.",
+    "category": "privilege_escalation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "linpeas",
+      "winpeas",
+      "linux-exploit-suggester",
+      "sherlock",
+      "gtfobins",
+      "lse",
+      "pspy",
+      "summarize_peas"
+    ],
+    "mitre_techniques": [
+      "T1068"
+    ]
+  },
+  "reconnaissance": {
+    "id": "reconnaissance",
+    "name": "Reconnaissance",
+    "description": "Systematic discovery of hosts, ports, services, and web surface area.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "nmap",
+      "rustscan",
+      "masscan",
+      "gobuster",
+      "dirsearch",
+      "nikto",
+      "whatweb",
+      "wafw00f",
+      "httpx",
+      "subfinder",
+      "amass",
+      "dnsenum",
+      "dnsrecon",
+      "eyewitness",
+      "parse_nmap_grepable"
+    ],
+    "mitre_techniques": [
+      "T1595",
+      "T1590",
+      "T1592",
+      "T1593",
+      "T1596"
+    ]
+  },
+  "reporting": {
+    "id": "reporting",
+    "name": "Reporting",
+    "description": "Produce final report with evidence and remediation.",
+    "category": "reporting",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "jq",
+      "assemble_report",
+      "merge_bundles",
+      "normalize_findings",
+      "summarize_findings",
+      "validate_bundle",
+      "check_report_readiness",
+      "check_schema",
+      "check_evidence_manifest",
+      "gate_report",
+      "summary_rollup",
+      "emit_schema",
+      "emit_bundle_schema",
+      "collect_artifacts",
+      "hash_artifacts",
+      "package_export",
+      "verify_checksums",
+      "write_manifest",
+      "validate_manifest",
+      "audit_log",
+      "write_export_metadata"
+    ],
+    "mitre_techniques": []
+  },
+  "reverse_engineering": {
+    "id": "reverse_engineering",
+    "name": "Reverse Engineering",
+    "description": "Static analysis of binaries and extraction of indicators.",
+    "category": "analysis",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "reverse_engineering",
+      "binaries",
+      "ioc"
+    ],
+    "requirements": [],
+    "tools": [
+      "ghidra",
+      "radare2",
+      "objdump",
+      "strings",
+      "python3"
+    ],
+    "mitre_techniques": []
+  },
+  "scanning": {
+    "id": "scanning",
+    "name": "Vulnerability Scanning",
+    "description": "Identify likely vulnerabilities and misconfigurations with safe, automated scans.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "nuclei",
+      "nikto",
+      "nmap",
+      "parse_nuclei_json"
+    ],
+    "mitre_techniques": [
+      "T1595",
+      "T1190"
+    ]
+  },
+  "service_active_directory": {
+    "id": "service_active_directory",
+    "name": "Active Directory",
+    "description": "Domain discovery and risk validation across LDAP, Kerberos, SMB, and ADCS.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "active_directory",
+      "ad",
+      "ldap",
+      "kerberos",
+      "smb"
+    ],
+    "requirements": [],
+    "tools": [
+      "ldapsearch",
+      "ldapdomaindump",
+      "kerbrute",
+      "bloodhound",
+      "sharphound",
+      "certipy",
+      "certify",
+      "powerview",
+      "rubeus",
+      "netexec",
+      "crackmapexec",
+      "secretsdump",
+      "rpcclient",
+      "smbmap",
+      "gpp-decrypt"
+    ],
+    "mitre_techniques": [
+      "T1069",
+      "T1087",
+      "T1018"
+    ]
+  },
+  "service_api_gateway": {
+    "id": "service_api_gateway",
+    "name": "API Gateway Service",
+    "description": "Service-specific enumeration for API gateways.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "api_gateway",
+      "api"
+    ],
+    "requirements": [],
+    "tools": [
+      "httpx",
+      "sslscan",
+      "nmap",
+      "katana",
+      "kiterunner",
+      "curl",
+      "nuclei",
+      "summarize_gateway_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_app_security": {
+    "id": "service_app_security",
+    "name": "Application Security Patterns",
+    "description": "Application security validation patterns for auth, session, access control, and input safety.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "appsec",
+      "owasp",
+      "api"
+    ],
+    "requirements": [],
+    "tools": [
+      "httpx",
+      "katana",
+      "nuclei",
+      "burpsuite",
+      "arjun",
+      "ffuf",
+      "sqlmap",
+      "dalfox",
+      "headers_to_json",
+      "rate_limit_report",
+      "merge_findings",
+      "idor_log_parser",
+      "nuclei_findings_parser",
+      "redact_findings",
+      "package_evidence",
+      "summarize_findings"
+    ],
+    "mitre_techniques": []
+  },
+  "service_aws": {
+    "id": "service_aws",
+    "name": "AWS Service",
+    "description": "Service-specific enumeration for AWS.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "aws"
+    ],
+    "requirements": [],
+    "tools": [
+      "awscli",
+      "prowler",
+      "scoutsuite",
+      "trivy",
+      "summarize_aws_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_azure": {
+    "id": "service_azure",
+    "name": "AZURE Service",
+    "description": "Service-specific enumeration for AZURE.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "azure"
+    ],
+    "requirements": [],
+    "tools": [
+      "azure-cli",
+      "scoutsuite",
+      "trivy",
+      "summarize_azure_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_cicd": {
+    "id": "service_cicd",
+    "name": "CI/CD Service",
+    "description": "Service-specific enumeration for CI/CD platforms.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "cicd",
+      "ci",
+      "cd",
+      "pipeline"
+    ],
+    "requirements": [],
+    "tools": [
+      "httpx",
+      "nuclei",
+      "trivy",
+      "gitleaks",
+      "nmap",
+      "summarize_cicd_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_dns": {
+    "id": "service_dns",
+    "name": "DNS Service",
+    "description": "Service-specific enumeration for DNS.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "dns"
+    ],
+    "requirements": [],
+    "tools": [
+      "dig",
+      "dnsrecon",
+      "dnsenum",
+      "amass",
+      "subfinder",
+      "parse_dig"
+    ],
+    "mitre_techniques": []
+  },
+  "service_docker": {
+    "id": "service_docker",
+    "name": "Docker Service",
+    "description": "Service-specific enumeration for Docker.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "docker"
+    ],
+    "requirements": [],
+    "tools": [
+      "docker",
+      "docker-bench-security",
+      "trivy",
+      "nmap",
+      "summarize_docker_info"
+    ],
+    "mitre_techniques": []
+  },
+  "service_drupal": {
+    "id": "service_drupal",
+    "name": "Drupal Service",
+    "description": "Service-specific enumeration for Drupal.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "drupal"
+    ],
+    "requirements": [],
+    "tools": [
+      "droopescan",
+      "nuclei",
+      "nikto",
+      "nmap",
+      "parse_droopescan"
+    ],
+    "mitre_techniques": []
+  },
+  "service_elasticsearch": {
+    "id": "service_elasticsearch",
+    "name": "ELASTICSEARCH Service",
+    "description": "Service-specific enumeration for ELASTICSEARCH.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "elasticsearch",
+      "es"
+    ],
+    "requirements": [],
+    "tools": [
+      "curl",
+      "httpx",
+      "nmap",
+      "summarize_es"
+    ],
+    "mitre_techniques": []
+  },
+  "service_ftp": {
+    "id": "service_ftp",
+    "name": "FTP Service",
+    "description": "Service-specific enumeration for FTP.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "ftp"
+    ],
+    "requirements": [],
+    "tools": [
+      "nmap",
+      "netcat",
+      "socat",
+      "hydra",
+      "parse_ftp_nmap"
+    ],
+    "mitre_techniques": []
+  },
+  "service_gcp": {
+    "id": "service_gcp",
+    "name": "GCP Service",
+    "description": "Service-specific enumeration for GCP.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "gcp",
+      "google-cloud"
+    ],
+    "requirements": [],
+    "tools": [
+      "gcloud",
+      "scoutsuite",
+      "trivy",
+      "summarize_gcp_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_http": {
+    "id": "service_http",
+    "name": "HTTP Service",
+    "description": "Service-specific enumeration for HTTP/HTTPS targets.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "http",
+      "https"
+    ],
+    "requirements": [],
+    "tools": [
+      "httpx",
+      "whatweb",
+      "wafw00f",
+      "ffuf",
+      "gobuster",
+      "nikto",
+      "nuclei",
+      "curl",
+      "summarize_httpx"
+    ],
+    "mitre_techniques": []
+  },
+  "service_imap": {
+    "id": "service_imap",
+    "name": "IMAP Service",
+    "description": "Service-specific enumeration for IMAP.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "imap"
+    ],
+    "requirements": [],
+    "tools": [
+      "nmap",
+      "netcat",
+      "socat",
+      "hydra",
+      "parse_imap_nmap"
+    ],
+    "mitre_techniques": []
+  },
+  "service_joomla": {
+    "id": "service_joomla",
+    "name": "Joomla Service",
+    "description": "Service-specific enumeration for Joomla.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "joomla"
+    ],
+    "requirements": [],
+    "tools": [
+      "joomscan",
+      "nuclei",
+      "nikto",
+      "nmap",
+      "parse_joomscan"
+    ],
+    "mitre_techniques": []
+  },
+  "service_kerberos": {
+    "id": "service_kerberos",
+    "name": "KERBEROS Service",
+    "description": "Service-specific enumeration for KERBEROS.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "kerberos",
+      "krb"
+    ],
+    "requirements": [],
+    "tools": [
+      "kinit",
+      "klist",
+      "nmap",
+      "parse_klist"
+    ],
+    "mitre_techniques": []
+  },
+  "service_kubernetes": {
+    "id": "service_kubernetes",
+    "name": "Kubernetes Service",
+    "description": "Service-specific enumeration for Kubernetes.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "kubernetes",
+      "k8s"
+    ],
+    "requirements": [],
+    "tools": [
+      "kubectl",
+      "kube-bench",
+      "kube-hunter",
+      "nmap",
+      "summarize_k8s_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_ldap": {
+    "id": "service_ldap",
+    "name": "LDAP Service",
+    "description": "Service-specific enumeration for LDAP.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "ldap"
+    ],
+    "requirements": [],
+    "tools": [
+      "ldapsearch",
+      "ldapdomaindump",
+      "nmap",
+      "parse_ldapsearch"
+    ],
+    "mitre_techniques": []
+  },
+  "service_linux_host": {
+    "id": "service_linux_host",
+    "name": "Linux Host",
+    "description": "Service-specific validation for Linux host security posture.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "linux",
+      "host"
+    ],
+    "requirements": [],
+    "tools": [
+      "linpeas",
+      "lynis",
+      "linux-exploit-suggester",
+      "linux_inventory",
+      "auditd_status_parser",
+      "sshd_config_parser",
+      "firewall_status_parser",
+      "sudoers_parser",
+      "cron_parser",
+      "merge_posture",
+      "normalize_findings",
+      "package_evidence",
+      "summarize_findings"
+    ],
+    "mitre_techniques": []
+  },
+  "service_mongodb": {
+    "id": "service_mongodb",
+    "name": "MongoDB Service",
+    "description": "Service-specific enumeration for MongoDB.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "mongodb"
+    ],
+    "requirements": [],
+    "tools": [
+      "mongosh",
+      "mongodump",
+      "nosqlmap",
+      "nmap",
+      "summarize_mongo_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_mssql": {
+    "id": "service_mssql",
+    "name": "MSSQL Service",
+    "description": "Service-specific enumeration for MSSQL.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "mssql",
+      "sqlserver",
+      "ms-sql"
+    ],
+    "requirements": [],
+    "tools": [
+      "tsql",
+      "sqlcmd",
+      "nmap",
+      "parse_sqlcmd_json"
+    ],
+    "mitre_techniques": []
+  },
+  "service_mysql": {
+    "id": "service_mysql",
+    "name": "MySQL Service",
+    "description": "Service-specific enumeration for MySQL.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "mysql",
+      "mariadb"
+    ],
+    "requirements": [],
+    "tools": [
+      "mysql",
+      "nmap",
+      "parse_mysql_show"
+    ],
+    "mitre_techniques": []
+  },
+  "service_network_evasion": {
+    "id": "service_network_evasion",
+    "name": "Network Evasion & Traffic Shaping",
+    "description": "Safe traffic shaping and authorized evasion checks.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "network",
+      "evasion",
+      "traffic_shaping"
+    ],
+    "requirements": [],
+    "tools": [
+      "nmap",
+      "proxychains",
+      "tor",
+      "tcpdump",
+      "tshark",
+      "hping3",
+      "summarize_network_profile"
+    ],
+    "mitre_techniques": []
+  },
+  "service_pop3": {
+    "id": "service_pop3",
+    "name": "POP3 Service",
+    "description": "Service-specific enumeration for POP3.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "pop3",
+      "pop"
+    ],
+    "requirements": [],
+    "tools": [
+      "nmap",
+      "netcat",
+      "socat",
+      "hydra",
+      "parse_pop3_nmap"
+    ],
+    "mitre_techniques": []
+  },
+  "service_postgres": {
+    "id": "service_postgres",
+    "name": "PostgreSQL Service",
+    "description": "Service-specific enumeration for PostgreSQL.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "postgres",
+      "postgresql"
+    ],
+    "requirements": [],
+    "tools": [
+      "psql",
+      "nmap",
+      "parse_psql_table"
+    ],
+    "mitre_techniques": []
+  },
+  "service_rdp": {
+    "id": "service_rdp",
+    "name": "RDP Service",
+    "description": "Service-specific enumeration for RDP.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "rdp"
+    ],
+    "requirements": [],
+    "tools": [
+      "xfreerdp",
+      "nmap",
+      "parse_rdp_nmap"
+    ],
+    "mitre_techniques": []
+  },
+  "service_redis": {
+    "id": "service_redis",
+    "name": "Redis Service",
+    "description": "Service-specific enumeration for Redis.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "redis"
+    ],
+    "requirements": [],
+    "tools": [
+      "redis-cli",
+      "nmap",
+      "summarize_redis_info"
+    ],
+    "mitre_techniques": []
+  },
+  "service_scm": {
+    "id": "service_scm",
+    "name": "SCM Service",
+    "description": "Service-specific enumeration for source control platforms.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "scm",
+      "git",
+      "github",
+      "gitlab"
+    ],
+    "requirements": [],
+    "tools": [
+      "git",
+      "gh",
+      "glab",
+      "azure-devops-cli",
+      "curl",
+      "gitleaks",
+      "trufflehog",
+      "summarize_scm_inventory"
+    ],
+    "mitre_techniques": []
+  },
+  "service_secrets_manager": {
+    "id": "service_secrets_manager",
+    "name": "Secrets Manager Service",
+    "description": "Service-specific enumeration for secrets managers.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "secrets",
+      "vault",
+      "keyvault",
+      "secretmanager"
+    ],
+    "requirements": [],
+    "tools": [
+      "vault",
+      "awscli",
+      "azure-cli",
+      "gcloud",
+      "policy_diff"
+    ],
+    "mitre_techniques": []
+  },
+  "service_smb": {
+    "id": "service_smb",
+    "name": "SMB Service",
+    "description": "Service-specific enumeration for SMB.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "smb",
+      "cifs"
+    ],
+    "requirements": [],
+    "tools": [
+      "smbclient",
+      "nmap",
+      "parse_smbclient"
+    ],
+    "mitre_techniques": []
+  },
+  "service_smtp": {
+    "id": "service_smtp",
+    "name": "SMTP Service",
+    "description": "Service-specific enumeration for SMTP.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "smtp"
+    ],
+    "requirements": [],
+    "tools": [
+      "nmap",
+      "netcat",
+      "socat",
+      "smtp-user-enum",
+      "hydra",
+      "parse_smtp_nmap"
+    ],
+    "mitre_techniques": []
+  },
+  "service_snmp": {
+    "id": "service_snmp",
+    "name": "SNMP Service",
+    "description": "Service-specific enumeration for SNMP.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "snmp"
+    ],
+    "requirements": [],
+    "tools": [
+      "snmpwalk",
+      "snmp-check",
+      "onesixtyone",
+      "nmap",
+      "parse_snmpwalk"
+    ],
+    "mitre_techniques": []
+  },
+  "service_ssh": {
+    "id": "service_ssh",
+    "name": "SSH Service",
+    "description": "Service-specific enumeration for SSH.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "ssh"
+    ],
+    "requirements": [],
+    "tools": [
+      "ssh",
+      "ssh-keyscan",
+      "nmap",
+      "parse_ssh_nmap"
+    ],
+    "mitre_techniques": []
+  },
+  "service_tls": {
+    "id": "service_tls",
+    "name": "TLS Service",
+    "description": "Service-specific enumeration for TLS.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "tls",
+      "ssl"
+    ],
+    "requirements": [],
+    "tools": [
+      "openssl",
+      "sslscan",
+      "sslyze",
+      "nmap",
+      "parse_sslscan"
+    ],
+    "mitre_techniques": []
+  },
+  "service_vpn": {
+    "id": "service_vpn",
+    "name": "VPN Service",
+    "description": "Service-specific enumeration for VPN endpoints.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "vpn",
+      "ipsec",
+      "sslvpn"
+    ],
+    "requirements": [],
+    "tools": [
+      "ike-scan",
+      "openvpn",
+      "sslscan",
+      "nmap",
+      "parse_ikescan"
+    ],
+    "mitre_techniques": []
+  },
+  "service_windows_host": {
+    "id": "service_windows_host",
+    "name": "Windows Host",
+    "description": "Service-specific validation for Windows host security posture.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "windows",
+      "host"
+    ],
+    "requirements": [],
+    "tools": [
+      "winpeas",
+      "seatbelt",
+      "powershell",
+      "wesng",
+      "windows_inventory",
+      "auditpol_parser",
+      "defender_status_parser",
+      "firewall_profile_parser",
+      "scheduled_tasks_parser",
+      "autoruns_parser",
+      "merge_posture",
+      "normalize_findings",
+      "package_evidence",
+      "summarize_findings"
+    ],
+    "mitre_techniques": []
+  },
+  "service_wireless": {
+    "id": "service_wireless",
+    "name": "Wireless Service",
+    "description": "Service-specific enumeration for wireless networks.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "wireless",
+      "wifi"
+    ],
+    "requirements": [],
+    "tools": [
+      "aircrack-ng",
+      "wifite",
+      "wifiphisher",
+      "reaver",
+      "bully",
+      "hcxtools",
+      "airgeddon",
+      "bettercap",
+      "macchanger",
+      "tcpdump",
+      "tshark",
+      "airodump_csv_to_json"
+    ],
+    "mitre_techniques": []
+  },
+  "service_wordpress": {
+    "id": "service_wordpress",
+    "name": "WordPress Service",
+    "description": "Service-specific enumeration for WordPress.",
+    "category": "service",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "wordpress",
+      "wp"
+    ],
+    "requirements": [],
+    "tools": [
+      "wpscan",
+      "nuclei",
+      "nikto",
+      "nmap",
+      "parse_wpscan_json"
+    ],
+    "mitre_techniques": []
+  },
+  "sql_injection": {
+    "id": "sql_injection",
+    "name": "SQL Injection",
+    "description": "Detect and exploit SQL injection vulnerabilities to extract data safely.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "sqlmap",
+      "bbqsql",
+      "sqlninja",
+      "havij",
+      "commix",
+      "parse_sqlmap_log"
+    ],
+    "mitre_techniques": [
+      "T1190"
+    ]
+  },
+  "tool_aircrack_ng": {
+    "id": "tool_aircrack_ng",
+    "name": "Tool: Aircrack-ng",
+    "description": "Wireless security suite for monitoring, injection, and WPA/WEP auditing.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "aircrack-ng",
+      "wireless"
+    ],
+    "requirements": [],
+    "tools": [
+      "aircrack-ng"
+    ],
+    "mitre_techniques": [
+      "T1040",
+      "T1595"
+    ]
+  },
+  "tool_amass": {
+    "id": "tool_amass",
+    "name": "Tool: Amass",
+    "description": "OSINT and DNS enumeration with graph-backed investigations.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "amass",
+      "osint",
+      "dns"
+    ],
+    "requirements": [],
+    "tools": [
+      "amass"
+    ],
+    "mitre_techniques": [
+      "T1590",
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_arp_scan": {
+    "id": "tool_arp_scan",
+    "name": "Tool: arp-scan",
+    "description": "Layer-2 ARP scanning to discover hosts on local networks.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "arp-scan",
+      "arp"
+    ],
+    "requirements": [],
+    "tools": [
+      "arp-scan"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_arping": {
+    "id": "tool_arping",
+    "name": "Tool: arping",
+    "description": "ARP ping utility for host reachability and MAC validation.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "arping",
+      "arp"
+    ],
+    "requirements": [],
+    "tools": [
+      "arping"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_assetfinder": {
+    "id": "tool_assetfinder",
+    "name": "Tool: assetfinder",
+    "description": "Find related domains and subdomains via passive sources.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "assetfinder",
+      "subdomain"
+    ],
+    "requirements": [],
+    "tools": [
+      "assetfinder"
+    ],
+    "mitre_techniques": [
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_autopsy": {
+    "id": "tool_autopsy",
+    "name": "Tool: Autopsy",
+    "description": "Digital forensics platform for analyzing disk images and data sources.",
+    "category": "forensics",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "autopsy",
+      "forensics",
+      "sleuthkit"
+    ],
+    "requirements": [],
+    "tools": [
+      "autopsy"
+    ],
+    "mitre_techniques": [
+      "T1005"
+    ]
+  },
+  "tool_bettercap": {
+    "id": "tool_bettercap",
+    "name": "Tool: Bettercap",
+    "description": "Modular network attack and monitoring framework with caplets.",
+    "category": "defense_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "bettercap",
+      "mitm"
+    ],
+    "requirements": [],
+    "tools": [
+      "bettercap"
+    ],
+    "mitre_techniques": [
+      "T1557"
+    ]
+  },
+  "tool_bloodhound": {
+    "id": "tool_bloodhound",
+    "name": "Tool: BloodHound",
+    "description": "Graph-based AD attack path analysis using BloodHound CE.",
+    "category": "analysis",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "bloodhound",
+      "active_directory",
+      "ad",
+      "graph"
+    ],
+    "requirements": [],
+    "tools": [
+      "bloodhound"
+    ],
+    "mitre_techniques": [
+      "T1069",
+      "T1087",
+      "T1482"
+    ]
+  },
+  "tool_bully": {
+    "id": "tool_bully",
+    "name": "Tool: Bully",
+    "description": "WPS attack tool with PixieWPS integration and robust options.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "bully",
+      "wps"
+    ],
+    "requirements": [],
+    "tools": [
+      "bully"
+    ],
+    "mitre_techniques": [
+      "T1110"
+    ]
+  },
+  "tool_cewl": {
+    "id": "tool_cewl",
+    "name": "Tool: CeWL",
+    "description": "Custom wordlist generator by crawling target websites.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "cewl",
+      "wordlist"
+    ],
+    "requirements": [],
+    "tools": [
+      "cewl"
+    ],
+    "mitre_techniques": []
+  },
+  "tool_cowpatty": {
+    "id": "tool_cowpatty",
+    "name": "Tool: cowpatty",
+    "description": "Offline WPA/WPA2-PSK dictionary attack tool.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "cowpatty",
+      "wireless"
+    ],
+    "requirements": [],
+    "tools": [
+      "cowpatty"
+    ],
+    "mitre_techniques": [
+      "T1110"
+    ]
+  },
+  "tool_crackmapexec": {
+    "id": "tool_crackmapexec",
+    "name": "Tool: CrackMapExec",
+    "description": "Credential validation and remote execution framework (CME).",
+    "category": "lateral_movement",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "crackmapexec",
+      "cme",
+      "smb",
+      "winrm",
+      "ldap"
+    ],
+    "requirements": [],
+    "tools": [
+      "crackmapexec"
+    ],
+    "mitre_techniques": [
+      "T1021",
+      "T1078"
+    ]
+  },
+  "tool_crunch": {
+    "id": "tool_crunch",
+    "name": "Tool: Crunch",
+    "description": "Wordlist generator with patterns and permutations.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "crunch",
+      "wordlist"
+    ],
+    "requirements": [],
+    "tools": [
+      "crunch"
+    ],
+    "mitre_techniques": []
+  },
+  "tool_dirb": {
+    "id": "tool_dirb",
+    "name": "Tool: DIRB",
+    "description": "Web content discovery using wordlists.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "dirb",
+      "content"
+    ],
+    "requirements": [],
+    "tools": [
+      "dirb"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_dirsearch": {
+    "id": "tool_dirsearch",
+    "name": "Tool: dirsearch",
+    "description": "Web path discovery with extensions and recursion support.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "dirsearch",
+      "content"
+    ],
+    "requirements": [],
+    "tools": [
+      "dirsearch"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_dmitry": {
+    "id": "tool_dmitry",
+    "name": "Tool: DMitry",
+    "description": "Information gathering (WHOIS, subdomains, email, ports) for targets.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "dmitry",
+      "osint"
+    ],
+    "requirements": [],
+    "tools": [
+      "dmitry"
+    ],
+    "mitre_techniques": [
+      "T1593",
+      "T1590"
+    ]
+  },
+  "tool_dnschef": {
+    "id": "tool_dnschef",
+    "name": "Tool: DNSChef",
+    "description": "Configurable DNS proxy for spoofing and traffic analysis.",
+    "category": "defense_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "dnschef",
+      "dns",
+      "spoofing"
+    ],
+    "requirements": [],
+    "tools": [
+      "dnschef"
+    ],
+    "mitre_techniques": [
+      "T1565"
+    ]
+  },
+  "tool_dnsenum": {
+    "id": "tool_dnsenum",
+    "name": "Tool: dnsenum",
+    "description": "Multi-threaded DNS enumeration with whois and reverse lookups.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "dnsenum",
+      "dns"
+    ],
+    "requirements": [],
+    "tools": [
+      "dnsenum"
+    ],
+    "mitre_techniques": [
+      "T1590",
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_dnsrecon": {
+    "id": "tool_dnsrecon",
+    "name": "Tool: dnsrecon",
+    "description": "DNS enumeration with record checks, brute force, and zone transfer tests.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "dnsrecon",
+      "dns"
+    ],
+    "requirements": [],
+    "tools": [
+      "dnsrecon"
+    ],
+    "mitre_techniques": [
+      "T1590",
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_ettercap": {
+    "id": "tool_ettercap",
+    "name": "Tool: Ettercap",
+    "description": "MITM framework for sniffing, interception, and filtering on LANs.",
+    "category": "defense_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "ettercap",
+      "mitm"
+    ],
+    "requirements": [],
+    "tools": [
+      "ettercap"
+    ],
+    "mitre_techniques": [
+      "T1557"
+    ]
+  },
+  "tool_evil_winrm": {
+    "id": "tool_evil_winrm",
+    "name": "Tool: Evil-WinRM",
+    "description": "WinRM shell for post-exploitation on Windows hosts.",
+    "category": "lateral_movement",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "evil-winrm",
+      "winrm",
+      "powershell"
+    ],
+    "requirements": [],
+    "tools": [
+      "evil-winrm"
+    ],
+    "mitre_techniques": [
+      "T1021.006"
+    ]
+  },
+  "tool_fern_wifi_cracker": {
+    "id": "tool_fern_wifi_cracker",
+    "name": "Tool: Fern WiFi Cracker",
+    "description": "GUI wireless auditing tool leveraging aircrack-ng and WPS tooling.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "fern",
+      "wireless"
+    ],
+    "requirements": [],
+    "tools": [
+      "fern-wifi-cracker"
+    ],
+    "mitre_techniques": [
+      "T1040",
+      "T1595"
+    ]
+  },
+  "tool_feroxbuster": {
+    "id": "tool_feroxbuster",
+    "name": "Tool: Feroxbuster",
+    "description": "Recursive content discovery for web servers.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "feroxbuster",
+      "content"
+    ],
+    "requirements": [],
+    "tools": [
+      "feroxbuster"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_ffuf": {
+    "id": "tool_ffuf",
+    "name": "Tool: ffuf",
+    "description": "Fast web fuzzer with flexible matchers and filters.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "ffuf",
+      "fuzz"
+    ],
+    "requirements": [],
+    "tools": [
+      "ffuf"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_fierce": {
+    "id": "tool_fierce",
+    "name": "Tool: Fierce",
+    "description": "DNS reconnaissance for finding non-contiguous IP space and hosts.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "fierce",
+      "dns"
+    ],
+    "requirements": [],
+    "tools": [
+      "fierce"
+    ],
+    "mitre_techniques": [
+      "T1590",
+      "T1593"
+    ]
+  },
+  "tool_gobuster": {
+    "id": "tool_gobuster",
+    "name": "Tool: Gobuster",
+    "description": "Directory, DNS, and vhost enumeration with wordlists.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "gobuster",
+      "enum"
+    ],
+    "requirements": [],
+    "tools": [
+      "gobuster"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_hash_identifier": {
+    "id": "tool_hash_identifier",
+    "name": "Tool: hash-identifier",
+    "description": "Identify possible hash types from hash strings.",
+    "category": "analysis",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "hash-identifier",
+      "hash"
+    ],
+    "requirements": [],
+    "tools": [
+      "hash-identifier"
+    ],
+    "mitre_techniques": []
+  },
+  "tool_hashcat": {
+    "id": "tool_hashcat",
+    "name": "Tool: Hashcat",
+    "description": "Advanced password recovery tool with modes, rules, and masks.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "hashcat",
+      "password"
+    ],
+    "requirements": [],
+    "tools": [
+      "hashcat"
+    ],
+    "mitre_techniques": [
+      "T1110"
+    ]
+  },
+  "tool_hping3": {
+    "id": "tool_hping3",
+    "name": "Tool: hping3",
+    "description": "Packet crafting and probing tool for network testing.",
+    "category": "defense_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "hping3",
+      "packet",
+      "network"
+    ],
+    "requirements": [],
+    "tools": [
+      "hping3"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_hydra": {
+    "id": "tool_hydra",
+    "name": "Tool: Hydra",
+    "description": "Network login cracker supporting many services and protocols.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "hydra",
+      "bruteforce"
+    ],
+    "requirements": [],
+    "tools": [
+      "hydra"
+    ],
+    "mitre_techniques": [
+      "T1110"
+    ]
+  },
+  "tool_impacket_scripts": {
+    "id": "tool_impacket_scripts",
+    "name": "Tool: Impacket Scripts",
+    "description": "Impacket example scripts for SMB/LDAP/Kerberos remote ops.",
+    "category": "lateral_movement",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "impacket",
+      "smb",
+      "kerberos"
+    ],
+    "requirements": [],
+    "tools": [
+      "impacket-scripts"
+    ],
+    "mitre_techniques": [
+      "T1021",
+      "T1078",
+      "T1047"
+    ]
+  },
+  "tool_john": {
+    "id": "tool_john",
+    "name": "Tool: John the Ripper",
+    "description": "Password cracking tool with rules, modes, and formats.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "john",
+      "password"
+    ],
+    "requirements": [],
+    "tools": [
+      "john"
+    ],
+    "mitre_techniques": [
+      "T1110"
+    ]
+  },
+  "tool_macchanger": {
+    "id": "tool_macchanger",
+    "name": "Tool: macchanger",
+    "description": "Change or spoof MAC addresses on network interfaces.",
+    "category": "defense_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "macchanger",
+      "spoofing"
+    ],
+    "requirements": [],
+    "tools": [
+      "macchanger"
+    ],
+    "mitre_techniques": [
+      "T1036"
+    ]
+  },
+  "tool_masscan": {
+    "id": "tool_masscan",
+    "name": "Tool: Masscan",
+    "description": "High-speed TCP port scanner with rate controls and config files.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "masscan",
+      "scan"
+    ],
+    "requirements": [],
+    "tools": [
+      "masscan"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_medusa": {
+    "id": "tool_medusa",
+    "name": "Tool: Medusa",
+    "description": "Parallel login brute-force tool with modular service support.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "medusa",
+      "bruteforce"
+    ],
+    "requirements": [],
+    "tools": [
+      "medusa"
+    ],
+    "mitre_techniques": [
+      "T1110"
+    ]
+  },
+  "tool_mimikatz": {
+    "id": "tool_mimikatz",
+    "name": "Tool: Mimikatz",
+    "description": "Windows credential extraction and ticket operations.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "mimikatz",
+      "credentials"
+    ],
+    "requirements": [],
+    "tools": [
+      "mimikatz"
+    ],
+    "mitre_techniques": [
+      "T1003",
+      "T1558"
+    ]
+  },
+  "tool_mitm6": {
+    "id": "tool_mitm6",
+    "name": "Tool: mitm6",
+    "description": "IPv6-based DNS spoofing to coerce NTLM authentication.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "mitm6",
+      "ipv6",
+      "ntlm"
+    ],
+    "requirements": [],
+    "tools": [
+      "mitm6"
+    ],
+    "mitre_techniques": [
+      "T1187",
+      "T1557"
+    ]
+  },
+  "tool_netcat": {
+    "id": "tool_netcat",
+    "name": "Tool: Netcat",
+    "description": "TCP/UDP utility for connection testing, file transfer, and simple relays.",
+    "category": "network_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "netcat",
+      "network"
+    ],
+    "requirements": [],
+    "tools": [
+      "netcat"
+    ],
+    "mitre_techniques": [
+      "T1046",
+      "T1105"
+    ]
+  },
+  "tool_netdiscover": {
+    "id": "tool_netdiscover",
+    "name": "Tool: netdiscover",
+    "description": "Active/passive ARP discovery for local network mapping.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "netdiscover",
+      "arp"
+    ],
+    "requirements": [],
+    "tools": [
+      "netdiscover"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_netexec": {
+    "id": "tool_netexec",
+    "name": "Tool: NetExec",
+    "description": "Credential validation and remote execution framework (CME successor).",
+    "category": "lateral_movement",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "netexec",
+      "cme",
+      "smb",
+      "winrm",
+      "ldap"
+    ],
+    "requirements": [],
+    "tools": [
+      "netexec"
+    ],
+    "mitre_techniques": [
+      "T1021",
+      "T1078"
+    ]
+  },
+  "tool_nikto": {
+    "id": "tool_nikto",
+    "name": "Tool: Nikto",
+    "description": "Web server scanner for known issues and misconfigurations.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "nikto",
+      "web"
+    ],
+    "requirements": [],
+    "tools": [
+      "nikto"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_nmap": {
+    "id": "tool_nmap",
+    "name": "Tool: Nmap",
+    "description": "Network discovery and service enumeration with NSE scripting.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "nmap",
+      "scan"
+    ],
+    "requirements": [],
+    "tools": [
+      "nmap"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_onesixtyone": {
+    "id": "tool_onesixtyone",
+    "name": "Tool: onesixtyone",
+    "description": "Fast SNMP community string scanner.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "onesixtyone",
+      "snmp"
+    ],
+    "requirements": [],
+    "tools": [
+      "onesixtyone"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_proxychains": {
+    "id": "tool_proxychains",
+    "name": "Tool: Proxychains",
+    "description": "Force network traffic through proxy chains for scoped routing.",
+    "category": "network_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "proxychains",
+      "proxy"
+    ],
+    "requirements": [],
+    "tools": [
+      "proxychains"
+    ],
+    "mitre_techniques": [
+      "T1090"
+    ]
+  },
+  "tool_reaver": {
+    "id": "tool_reaver",
+    "name": "Tool: Reaver",
+    "description": "WPS PIN attack tool with wash scanner integration.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "reaver",
+      "wps"
+    ],
+    "requirements": [],
+    "tools": [
+      "reaver"
+    ],
+    "mitre_techniques": [
+      "T1110"
+    ]
+  },
+  "tool_recon_ng": {
+    "id": "tool_recon_ng",
+    "name": "Tool: Recon-ng",
+    "description": "Modular OSINT framework with workspaces and marketplace modules.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "recon-ng",
+      "osint"
+    ],
+    "requirements": [],
+    "tools": [
+      "recon-ng"
+    ],
+    "mitre_techniques": [
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_responder": {
+    "id": "tool_responder",
+    "name": "Tool: Responder",
+    "description": "LLMNR/NBNS/mDNS poisoning and credential capture.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "responder",
+      "llmnr",
+      "nbns",
+      "mdns"
+    ],
+    "requirements": [],
+    "tools": [
+      "responder"
+    ],
+    "mitre_techniques": [
+      "T1187",
+      "T1557"
+    ]
+  },
+  "tool_rubeus": {
+    "id": "tool_rubeus",
+    "name": "Tool: Rubeus",
+    "description": "Kerberos abuse and ticket operations on Windows.",
+    "category": "credential_access",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "rubeus",
+      "kerberos"
+    ],
+    "requirements": [],
+    "tools": [
+      "rubeus"
+    ],
+    "mitre_techniques": [
+      "T1558",
+      "T1550"
+    ]
+  },
+  "tool_sharphound": {
+    "id": "tool_sharphound",
+    "name": "Tool: SharpHound",
+    "description": "Active Directory data collection for BloodHound analysis.",
+    "category": "analysis",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "sharphound",
+      "active_directory",
+      "ad"
+    ],
+    "requirements": [],
+    "tools": [
+      "sharphound"
+    ],
+    "mitre_techniques": [
+      "T1069",
+      "T1087",
+      "T1482"
+    ]
+  },
+  "tool_smtp_user_enum": {
+    "id": "tool_smtp_user_enum",
+    "name": "Tool: smtp-user-enum",
+    "description": "SMTP user enumeration via VRFY/EXPN/RCPT methods.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "smtp-user-enum",
+      "smtp"
+    ],
+    "requirements": [],
+    "tools": [
+      "smtp-user-enum"
+    ],
+    "mitre_techniques": [
+      "T1590",
+      "T1593"
+    ]
+  },
+  "tool_snmp_check": {
+    "id": "tool_snmp_check",
+    "name": "Tool: snmp-check",
+    "description": "SNMP device enumeration with human-readable output.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "snmp-check",
+      "snmp"
+    ],
+    "requirements": [],
+    "tools": [
+      "snmp-check"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_snmpwalk": {
+    "id": "tool_snmpwalk",
+    "name": "Tool: snmpwalk",
+    "description": "SNMP subtree enumeration using GETNEXT requests.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "snmpwalk",
+      "snmp"
+    ],
+    "requirements": [],
+    "tools": [
+      "snmpwalk"
+    ],
+    "mitre_techniques": [
+      "T1046"
+    ]
+  },
+  "tool_socat": {
+    "id": "tool_socat",
+    "name": "Tool: Socat",
+    "description": "Multipurpose relay tool for sockets, TTYs, and port forwarding.",
+    "category": "network_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "socat",
+      "network",
+      "proxy"
+    ],
+    "requirements": [],
+    "tools": [
+      "socat"
+    ],
+    "mitre_techniques": [
+      "T1090"
+    ]
+  },
+  "tool_sqlmap": {
+    "id": "tool_sqlmap",
+    "name": "Tool: sqlmap",
+    "description": "Automated SQL injection testing and database enumeration tool.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "sqlmap",
+      "sqli"
+    ],
+    "requirements": [],
+    "tools": [
+      "sqlmap"
+    ],
+    "mitre_techniques": [
+      "T1190"
+    ]
+  },
+  "tool_sqlninja": {
+    "id": "tool_sqlninja",
+    "name": "Tool: sqlninja",
+    "description": "SQL Server injection tool focused on Microsoft SQL Server exploitation.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "sqlninja",
+      "sqli"
+    ],
+    "requirements": [],
+    "tools": [
+      "sqlninja"
+    ],
+    "mitre_techniques": [
+      "T1190"
+    ]
+  },
+  "tool_sqlsus": {
+    "id": "tool_sqlsus",
+    "name": "Tool: sqlsus",
+    "description": "MySQL injection and exploitation tool with configuration-based workflows.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "sqlsus",
+      "sqli"
+    ],
+    "requirements": [],
+    "tools": [
+      "sqlsus"
+    ],
+    "mitre_techniques": [
+      "T1190"
+    ]
+  },
+  "tool_subfinder": {
+    "id": "tool_subfinder",
+    "name": "Tool: subfinder",
+    "description": "Passive subdomain discovery using curated sources.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "subfinder",
+      "subdomain"
+    ],
+    "requirements": [],
+    "tools": [
+      "subfinder"
+    ],
+    "mitre_techniques": [
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_sublist3r": {
+    "id": "tool_sublist3r",
+    "name": "Tool: Sublist3r",
+    "description": "OSINT subdomain enumeration using multiple search engines.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "sublist3r",
+      "subdomain"
+    ],
+    "requirements": [],
+    "tools": [
+      "sublist3r"
+    ],
+    "mitre_techniques": [
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_tcpdump": {
+    "id": "tool_tcpdump",
+    "name": "Tool: tcpdump",
+    "description": "Command-line packet capture using libpcap filters.",
+    "category": "forensics",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "tcpdump",
+      "pcap",
+      "network"
+    ],
+    "requirements": [],
+    "tools": [
+      "tcpdump"
+    ],
+    "mitre_techniques": [
+      "T1040"
+    ]
+  },
+  "tool_testdisk": {
+    "id": "tool_testdisk",
+    "name": "Tool: TestDisk",
+    "description": "Recover lost partitions and files from damaged media.",
+    "category": "forensics",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "testdisk",
+      "recovery",
+      "forensics"
+    ],
+    "requirements": [],
+    "tools": [
+      "testdisk"
+    ],
+    "mitre_techniques": []
+  },
+  "tool_theharvester": {
+    "id": "tool_theharvester",
+    "name": "Tool: theHarvester",
+    "description": "OSINT collection of emails, subdomains, hosts, and URLs from public sources.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "theharvester",
+      "osint"
+    ],
+    "requirements": [],
+    "tools": [
+      "theharvester"
+    ],
+    "mitre_techniques": [
+      "T1593",
+      "T1596"
+    ]
+  },
+  "tool_tor": {
+    "id": "tool_tor",
+    "name": "Tool: Tor",
+    "description": "Tor daemon and tools for anonymized routing through the Tor network.",
+    "category": "network_evasion",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "tor",
+      "proxy"
+    ],
+    "requirements": [],
+    "tools": [
+      "tor"
+    ],
+    "mitre_techniques": [
+      "T1090"
+    ]
+  },
+  "tool_wfuzz": {
+    "id": "tool_wfuzz",
+    "name": "Tool: Wfuzz",
+    "description": "Flexible web fuzzer with payloads, encoders, and filters.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "wfuzz",
+      "fuzz"
+    ],
+    "requirements": [],
+    "tools": [
+      "wfuzz"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_whatweb": {
+    "id": "tool_whatweb",
+    "name": "Tool: WhatWeb",
+    "description": "Web technology fingerprinting using plugin-based detection.",
+    "category": "reconnaissance",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "whatweb",
+      "fingerprint"
+    ],
+    "requirements": [],
+    "tools": [
+      "whatweb"
+    ],
+    "mitre_techniques": [
+      "T1595"
+    ]
+  },
+  "tool_wifiphisher": {
+    "id": "tool_wifiphisher",
+    "name": "Tool: Wifiphisher",
+    "description": "Rogue AP framework for wireless phishing and client capture.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "wifiphisher",
+      "wireless",
+      "rogue-ap"
+    ],
+    "requirements": [],
+    "tools": [
+      "wifiphisher"
+    ],
+    "mitre_techniques": [
+      "T1557",
+      "T1566"
+    ]
+  },
+  "tool_wifipumpkin3": {
+    "id": "tool_wifipumpkin3",
+    "name": "Tool: WiFiPumpkin3",
+    "description": "Rogue AP and wireless testing framework with modular proxies.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "wifipumpkin3",
+      "wireless",
+      "rogue-ap"
+    ],
+    "requirements": [],
+    "tools": [
+      "wifipumpkin3"
+    ],
+    "mitre_techniques": [
+      "T1557",
+      "T1566"
+    ]
+  },
+  "tool_wifite": {
+    "id": "tool_wifite",
+    "name": "Tool: Wifite",
+    "description": "Automated wireless audit workflow for WEP/WPA/WPS targets.",
+    "category": "scanning",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "wifite",
+      "wireless"
+    ],
+    "requirements": [],
+    "tools": [
+      "wifite"
+    ],
+    "mitre_techniques": [
+      "T1040",
+      "T1595"
+    ]
+  },
+  "tool_wireshark": {
+    "id": "tool_wireshark",
+    "name": "Tool: Wireshark",
+    "description": "GUI network protocol analyzer for inspecting pcaps.",
+    "category": "forensics",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "wireshark",
+      "pcap",
+      "network"
+    ],
+    "requirements": [],
+    "tools": [
+      "wireshark"
+    ],
+    "mitre_techniques": [
+      "T1040"
+    ]
+  },
+  "tool_yara": {
+    "id": "tool_yara",
+    "name": "Tool: YARA",
+    "description": "Pattern-matching rules for identifying files and artifacts.",
+    "category": "forensics",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [
+      "yara",
+      "forensics",
+      "malware"
+    ],
+    "requirements": [],
+    "tools": [
+      "yara"
+    ],
+    "mitre_techniques": [
+      "T1083"
+    ]
+  },
+  "xss": {
+    "id": "xss",
+    "name": "Cross-Site Scripting",
+    "description": "Identify and validate XSS vulnerabilities with safe payloads.",
+    "category": "exploitation",
+    "version": "1.0.0",
+    "author": "TazoSploit Core",
+    "installed": true,
+    "enabled": true,
+    "rating": 0.0,
+    "downloads": 0,
+    "tags": [],
+    "requirements": [],
+    "tools": [
+      "xsstrike",
+      "xsser",
+      "dalfox",
+      "beef",
+      "burpsuite",
+      "beef-xss",
+      "parse_dalfox_json"
+    ],
+    "mitre_techniques": [
+      "T1059"
+    ]
+  }
+}

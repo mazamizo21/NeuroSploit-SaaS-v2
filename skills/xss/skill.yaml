@@ -1,0 +1,22 @@
+id: xss
+name: Cross-Site Scripting
+category: exploitation
+phase: EXPLOIT
+priority: 70
+target_types:
+  - lab
+  - external
+description: Identify and validate XSS vulnerabilities with safe payloads.
+mitre_techniques:
+  - T1059
+inputs:
+  - vulns.json
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites:
+  - vulns
+success_criteria:
+  - XSS payload executed and evidenced
+safety_notes:
+  - Use non-destructive payloads only

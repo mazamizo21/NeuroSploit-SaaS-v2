@@ -1,0 +1,31 @@
+nuclei:
+  description: "Template-based vulnerability scanner"
+  category: "web"
+  install_cmd: "apt-get install -y nuclei"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u http://target -severity critical,high"
+
+nikto:
+  description: "Web server vulnerability scanner"
+  category: "web"
+  install_cmd: "apt-get install -y nikto"
+  verify_cmd: "nikto -Version"
+  examples:
+    - "nikto -h http://target"
+
+nmap:
+  description: "Network mapper with vuln scripts"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap --script vuln -sV target"
+
+parse_nuclei_json:
+  description: "Parse nuclei JSON output into evidence"
+  category: "web"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/scanning/scripts/parse_nuclei_json.py --help"
+  examples:
+    - "python3 skills/scanning/scripts/parse_nuclei_json.py --input nuclei.json --out scan_findings.json"

@@ -1,0 +1,7 @@
+wifiphisher:
+  description: Rogue AP phishing framework
+  category: exploitation
+  install_cmd: sudo apt install wifiphisher
+  verify_cmd: wifiphisher -h
+  examples:
+    - wifiphisher --help

@@ -1,0 +1,9 @@
+rubeus:
+  description: Kerberos abuse toolkit (Windows binary)
+  category: credential_access
+  install_cmd: sudo apt install rubeus
+  verify_cmd: rubeus --help
+  examples:
+    - Rubeus.exe kerberoast
+    - Rubeus.exe asreproast
+    - Rubeus.exe ptt /ticket:ticket.kirbi

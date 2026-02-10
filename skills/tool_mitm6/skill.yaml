@@ -1,0 +1,28 @@
+id: tool_mitm6
+name: "Tool: mitm6"
+category: credential_access
+phase: POST_EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: IPv6-based DNS spoofing to coerce NTLM authentication.
+mitre_techniques:
+  - T1187
+  - T1557
+
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with mitm6
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - mitm6
+  - ipv6
+  - ntlm
+

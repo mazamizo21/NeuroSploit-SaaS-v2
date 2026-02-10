@@ -1,0 +1,26 @@
+id: scanning
+name: Vulnerability Scanning
+category: scanning
+phase: VULN_SCAN
+priority: 85
+target_types:
+- lab
+- external
+description: Identify likely vulnerabilities and misconfigurations with safe, automated
+  scans.
+mitre_techniques:
+- T1595
+- T1190
+inputs:
+- services.json
+outputs:
+- vulns.json
+- findings.json
+- scan_findings.json
+- evidence.json
+prerequisites:
+- services
+success_criteria:
+- Vulnerabilities identified with evidence
+safety_notes:
+- Use conservative rate limits on external targets

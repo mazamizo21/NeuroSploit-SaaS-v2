@@ -1,0 +1,29 @@
+id: forensics
+name: Forensics
+category: analysis
+phase: POST_EXPLOIT
+priority: 40
+target_types:
+- lab
+- external
+description: Post-exploitation evidence triage for disk and memory artifacts.
+mitre_techniques: []
+inputs:
+- evidence.json
+outputs:
+- artifact_inventory.json
+- file_metadata.json
+- memory_findings.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Evidence sources hashed and tracked
+- High-value artifacts documented
+safety_notes:
+- Use read-only access to evidence
+- Avoid modifying timestamps or sources
+tags:
+- forensics
+- triage
+- artifacts

@@ -1,0 +1,26 @@
+id: service_ldap
+name: LDAP Service
+category: service
+phase: ''
+priority: 50
+target_types:
+- lab
+- external
+description: Service-specific enumeration for LDAP.
+mitre_techniques: []
+inputs:
+- services.json
+outputs:
+- ldap_rootdse.json
+- ldap_objects.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- RootDSE and naming contexts captured
+- Directory objects enumerated safely
+safety_notes:
+- Avoid brute force unless explicitly authorized
+- External exploit or write workflows require explicit authorization (external_exploit=explicit_only)
+tags:
+- ldap

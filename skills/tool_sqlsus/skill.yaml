@@ -1,0 +1,24 @@
+id: tool_sqlsus
+name: "Tool: sqlsus"
+category: exploitation
+phase: EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: MySQL injection and exploitation tool with configuration-based workflows.
+mitre_techniques:
+  - T1190
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with sqlsus
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - sqlsus
+  - sqli

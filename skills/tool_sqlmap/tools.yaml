@@ -1,0 +1,9 @@
+sqlmap:
+  description: Automated SQL injection tool
+  category: exploitation
+  install_cmd: sudo apt install sqlmap
+  verify_cmd: sqlmap -h
+  examples:
+    - sqlmap -u 'http://example.com/item?id=1' --batch
+    - sqlmap -r request.txt --level 3 --risk 2
+    - sqlmap -u 'http://example.com/item?id=1' --dbs

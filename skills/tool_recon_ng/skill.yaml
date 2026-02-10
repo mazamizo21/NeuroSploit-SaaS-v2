@@ -1,0 +1,25 @@
+id: tool_recon_ng
+name: "Tool: Recon-ng"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: Modular OSINT framework with workspaces and marketplace modules.
+mitre_techniques:
+  - T1593
+  - T1596
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with recon_ng
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - recon-ng
+  - osint

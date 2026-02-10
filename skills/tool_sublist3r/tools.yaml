@@ -1,0 +1,9 @@
+sublist3r:
+  description: OSINT subdomain enumeration tool
+  category: reconnaissance
+  install_cmd: sudo apt install sublist3r
+  verify_cmd: sublist3r -h
+  examples:
+    - sublist3r -d example.com
+    - sublist3r -d example.com -b
+    - sublist3r -d example.com -e google,bing

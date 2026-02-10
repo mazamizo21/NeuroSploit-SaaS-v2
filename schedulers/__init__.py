@@ -14,8 +14,8 @@ from .job_types import (
     CleanupJob
 )
 from .job_parser import JobParser
-from .skills_manager import SkillsManager, SkillMetadata, SkillInstallationResult
-from .skill_loader import Skill, SkillLoader
+from skills.skills_manager import SkillsManager, SkillMetadata, SkillInstallationResult
+from skills.skill_loader import Skill, SkillLoader
 
 __all__ = [
     # Scheduler

@@ -1,0 +1,26 @@
+id: tool_wifiphisher
+name: "Tool: Wifiphisher"
+category: exploitation
+phase: EXPLOIT
+priority: 20
+target_types:
+  - lab
+  - external
+description: Rogue AP framework for wireless phishing and client capture.
+mitre_techniques:
+  - T1557
+  - T1566
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with wifiphisher
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - wifiphisher
+  - wireless
+  - rogue-ap

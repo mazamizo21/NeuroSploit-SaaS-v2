@@ -1,0 +1,8 @@
+evil-winrm:
+  description: WinRM shell for Windows post-exploitation
+  category: lateral_movement
+  install_cmd: sudo apt install evil-winrm
+  verify_cmd: evil-winrm -h
+  examples:
+    - evil-winrm -i 10.0.0.10 -u user -p pass
+    - evil-winrm -i 10.0.0.10 -u user -H <hash>

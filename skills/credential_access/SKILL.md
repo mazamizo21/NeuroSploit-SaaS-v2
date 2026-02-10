@@ -1,92 +1,56 @@
 # Credential Access Skill
 
 ## Overview
-Identifying and extracting credentials from compromised systems, including passwords, hash dumps, API keys, tokens, and other authentication secrets.
+Validate credential exposure and document evidence with minimal collection and strong redaction.
+
+## Scope Rules
+1. Only operate on explicitly in-scope hosts, apps, and data sources.
+2. External targets: credential extraction requires explicit authorization (external_exploit=explicit_only).
+3. Prefer offline analysis and avoid online guessing unless explicitly authorized.
+4. Redact secrets in reports; store raw data only in approved evidence storage.
 
 ## Methodology
 
 ### 1. Credential Discovery
-- Locate credential storage locations
-- Identify credential types (passwords, hashes, keys, tokens)
-- Search configuration files, databases, memory, logs
+- Identify credential storage locations and types.
+- Capture metadata and minimal proof of exposure.
 
-### 2. Windows Credential Extraction
-- Dump LSASS memory with Mimikatz
-- Extract cached credentials
-- Dump SAM/SYSTEM/SECURITY registry hives
-- Extract LSA secrets
-- Extract DPAPI master keys
-- Extract RDP credentials
-- Extract browser saved passwords
+### 2. Windows Sources (Authorized)
+- Validate exposure of LSASS, registry hives, or DPAPI-protected secrets.
+- Capture evidence without persistence or disruption.
 
-### 3. Linux Credential Extraction
-- Dump /etc/passwd and /etc/shadow
-- Extract user history files (.bash_history, .zsh_history)
-- Extract SSH keys and authorized_keys
-- Extract sudoers configuration
-- Extract database credentials from config files
-- Extract passwords from memory (mimipenguin)
+### 3. Linux Sources (Authorized)
+- Identify sensitive files and history artifacts.
+- Record minimal proof and avoid broad data collection.
 
-### 4. Database Credential Extraction
-- Extract database credentials from connection strings
-- Extract database users and password hashes
-- Extract application config files with credentials
+### 4. Application and Browser Stores
+- Identify app config secrets or browser stores.
+- Redact tokens and cookies.
 
-### 5. Network Credential Extraction
-- Capture network authentication (NTLM, Kerberos)
-- Extract credentials from network traffic
-- Extract credentials from network shares
+### 5. Offline Cracking (Explicit-Only)
+- Use authorized hash sets only.
+- Prefer `--show` outputs to capture minimal evidence.
 
-### 6. Browser Credential Extraction
-- Extract saved passwords from browsers (Chrome, Firefox, Edge)
-- Extract cookies and sessions
-- Extract form data and autocomplete
-
-### 7. Application Credential Extraction
-- Extract credentials from application config files
-- Extract API keys and tokens
-- Extract secrets from environment variables
-
-### 8. Credential Cracking
-- Crack Windows hashes (NTLM)
-- Crack Linux hashes (Unix, SHA-512)
-- Crack password-protected files (zip, pdf, etc.)
-- Use dictionary, rainbow table, and brute-force attacks
-
-## MITRE ATT&CK Mappings
-- T1003 - OS Credential Dumping
-- T1555 - Credentials from Password Stores
-- T1056 - Input Capture (Keylogging)
-- T1552 - Unsecured Credentials
-- T1528 - Steal Application Access Token
-- T1059.001 - PowerShell (credential extraction scripts)
-
-## Tools Available
-- mimikatz: Windows credential extraction tool
-- hashcat: Password recovery and hash cracking tool
-- john: Fast password cracker (John the Ripper)
-- hashid: Identify hash types
-- cewl: Custom wordlist generator
-- crunch: Wordlist generator
-- fcrackzip: Zip file password cracker
-- pdfcrack: PDF password cracker
-- pdfcrack: PDF password recovery
-- secretsdump: Extract secrets from Windows registry
-- LaZagne: Password recovery for many applications
+## Deep Dives
+Load references when needed:
+1. Scope and authorization: `references/scope_authorization.md`
+2. Windows sources: `references/windows_sources.md`
+3. Linux sources: `references/linux_sources.md`
+4. Browser stores: `references/browser_stores.md`
+5. Offline cracking: `references/cracking_offline.md`
+6. Redaction guidance: `references/redaction.md`
 
 ## Evidence Collection
-1. Dumped hashes (NTLM, Unix, etc.)
-2. Extracted plaintext passwords
-3. Configuration files with credentials
-4. SSH keys and certificates
-5. Browser saved passwords
-6. Cracking results
-7. Screenshot of credential files
+1. `credentials.json` (in evidence/) with structured fields:
+   - `username`, `password` (redacted in report), `host`, `port`, `protocol`, `service`, `verified`
+2. `creds.json` with redacted evidence and counts.
+3. `evidence.json` with source metadata and proof points.
+4. `findings.json` with exposure impact notes.
+
+## Evidence Consolidation
+Use `parse_hashcat_show.py` to summarize offline cracking outputs into `creds.json`.
 
 ## Success Criteria
-- Credential storage locations identified
-- At least one credential type extracted
-- Hashes dumped if applicable
-- Passwords cracked if feasible
-- All extracted credentials documented
-- Sensitive files preserved
+- Credential exposure identified and scoped.
+- Evidence captured with redaction.
+- No unauthorized credential collection performed.

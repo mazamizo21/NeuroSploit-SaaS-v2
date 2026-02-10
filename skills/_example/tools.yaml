@@ -1,0 +1,7 @@
+example_parser:
+  description: "Parse example output into inventory JSON"
+  category: "custom"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/_example/scripts/parse_example.py --help"
+  examples:
+    - "python3 skills/_example/scripts/parse_example.py --input sample.txt --out example_inventory.json"

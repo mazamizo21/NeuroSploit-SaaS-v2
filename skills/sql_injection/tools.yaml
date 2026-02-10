@@ -42,3 +42,11 @@ commix:
   examples:
     - "commix -u 'http://target/page?cmd=test' --batch"
     - "commix -u 'http://target/page?cmd=test' --batch --os-shell"
+
+parse_sqlmap_log:
+  description: "Parse sqlmap log output into JSON evidence"
+  category: "exploitation"
+  install_cmd: "python3 --version"
+  verify_cmd: "python3 skills/sql_injection/scripts/parse_sqlmap_log.py --help"
+  examples:
+    - "python3 skills/sql_injection/scripts/parse_sqlmap_log.py --input sqlmap.log --out evidence.json"

@@ -9,6 +9,8 @@ from typing import Optional, Tuple, Dict, Any
 from dateutil import parser as dateutil_parser
 from parsedatetime import Calendar
 
+from .job_types import JobType
+
 
 class JobParser:
     """

@@ -1,0 +1,38 @@
+id: service_active_directory
+name: Active Directory
+category: service
+phase: ''
+priority: 60
+target_types:
+- lab
+- external
+description: Domain discovery and risk validation across LDAP, Kerberos, SMB, and ADCS.
+mitre_techniques:
+- T1069
+- T1087
+- T1018
+inputs:
+- services.json
+- ldap_rootdse.json
+outputs:
+- ad_summary.json
+- ad_users.json
+- ad_groups.json
+- ad_computers.json
+- ad_paths.json
+- findings.json
+- evidence.json
+prerequisites: []
+success_criteria:
+- Domain context and controllers identified
+- Privileged group exposure documented
+- Attack paths summarized with evidence
+safety_notes:
+- Read-only enumeration by default
+- External exploitation requires explicit authorization (external_exploit=explicit_only)
+tags:
+- active_directory
+- ad
+- ldap
+- kerberos
+- smb

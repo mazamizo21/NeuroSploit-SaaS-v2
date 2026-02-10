@@ -1,0 +1,9 @@
+nmap:
+  description: Network scanner and NSE engine
+  category: scanning
+  install_cmd: sudo apt install nmap
+  verify_cmd: nmap --version
+  examples:
+    - nmap -sV -sC -p- 10.0.0.10
+    - nmap --script vuln -p 80,443 10.0.0.10
+    - nmap --script-args user=foo,pass=bar -p 22 10.0.0.10

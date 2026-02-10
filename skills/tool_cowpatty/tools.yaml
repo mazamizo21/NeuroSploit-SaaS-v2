@@ -1,0 +1,8 @@
+cowpatty:
+  description: Offline WPA/WPA2-PSK dictionary attack tool
+  category: exploitation
+  install_cmd: sudo apt install cowpatty
+  verify_cmd: cowpatty -h
+  examples:
+    - cowpatty -r capture.cap -f wordlist.txt -s SSID
+    - cowpatty -d hashes -f wordlist.txt -s SSID

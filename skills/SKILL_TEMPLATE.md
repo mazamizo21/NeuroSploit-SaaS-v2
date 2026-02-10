@@ -17,12 +17,10 @@ tazos skills create "My Skill" \
 ```
 my_skill/
 ├── SKILL.md           # Skill documentation (REQUIRED)
+├── skill.yaml         # Skill metadata for routing (REQUIRED)
 ├── tools.yaml         # Tool configurations (OPTIONAL)
-├── main.py           # Skill implementation (REQUIRED)
-├── __init__.py       # Package initialization (AUTO-GENERATED)
-├── requirements.txt  # Python dependencies (OPTIONAL)
-└── examples/         # Usage examples (OPTIONAL)
-    └── basic_usage.py
+├── references/        # Deep-dive notes and playbooks (OPTIONAL)
+└── scripts/           # Deterministic helpers and parsers (OPTIONAL)
 ```
 
 ## File Templates
@@ -32,75 +30,25 @@ my_skill/
 ```markdown
 # Skill Name
 
-**Skill ID**: `skill_id`
-**Version**: 1.0.0
-**Author**: Author Name
-**Category**: category_name
+## Overview
+Short description of what the skill validates or produces.
 
-## Description
-
-Detailed description of what this skill does.
-
-## Use Cases
-
-- Use case 1
-- Use case 2
-- Use case 3
-
-## Tags
-
-tag1, tag2, tag3
-
-## MITRE ATT&CK Techniques
-
-T1234, T5678
-
-## Requirements
-
-List of external tools or dependencies required.
-
-## Installation
-
-```bash
-# Tool installation commands
-sudo apt install tool-name
-pip install python-package
-```
-
-## Usage
-
-### Basic Usage
-
-```python
-from skills.my_skill.main import MySkillSkill
-
-skill = MySkillSkill()
-result = skill.execute(target="example.com")
-print(result.findings)
-```
-
-### CLI Usage
-
-```bash
-tazos run skill my_skill --target example.com
-```
-
-## Tools
-
-| Tool | Purpose |
-|------|---------|
-| tool1 | Description |
-| tool2 | Description |
-
-## Examples
-
-See `examples/` directory for detailed examples.
+## Scope Rules
+1. Explicit scope and authorization rules.
+2. Rate limits or safety constraints.
 
 ## Methodology
+1. Step 1 (discovery or validation)
+2. Step 2 (safe checks)
+3. Step 3 (evidence collection)
 
-1. Step 1: First step in the methodology
-2. Step 2: Second step
-3. Step 3: Third step
+## Deep Dives
+Load references as needed:
+1. `references/example.md`
+
+## Evidence Collection
+1. `evidence.json` or service-specific outputs.
+2. `findings.json` with redacted proof.
 
 ## Success Criteria
 
@@ -108,15 +56,26 @@ See `examples/` directory for detailed examples.
 - [ ] Criterion 2
 - [ ] Criterion 3
 
-## Limitations
+```
 
-Known limitations of the skill.
+### skill.yaml Template
 
-## References
-
-- Link to documentation
-- Link to tools
-- MITRE ATT&CK reference
+```yaml
+id: my_skill
+name: My Skill
+category: custom
+phase: RECON
+priority: 50
+target_types: [lab, external]
+description: Short, actionable description.
+mitre_techniques: [T1234]
+inputs: []
+outputs: []
+prerequisites: []
+evidence_collection: []
+success_criteria: []
+safety_notes: []
+tags: []
 ```
 
 ### tools.yaml Template

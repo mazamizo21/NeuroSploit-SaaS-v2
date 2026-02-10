@@ -74,9 +74,9 @@ class OpenAIProvider(LLMProvider):
 class AnthropicProvider(LLMProvider):
     """Anthropic Claude API provider"""
     
-    def __init__(self, api_key: str = None, model: str = "claude-3-5-sonnet-20241022"):
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        self.model = model
+    def __init__(self, api_key: str = None, model: str = None):
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY")
+        self.model = model or os.getenv("LLM_MODEL", "claude-sonnet-4-5-20250929")
         
         if not self.api_key:
             raise ValueError("Anthropic API key required")

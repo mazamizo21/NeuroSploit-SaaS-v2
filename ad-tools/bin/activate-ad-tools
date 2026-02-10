@@ -1,0 +1,5 @@
+#!/bin/bash
+# Activate AD security tools virtual environment
+source ~/.venvs/ad-security-tools/bin/activate
+echo "AD Security Tools activated"
+echo "Available tools: impacket, bloodhound, ldapdomaindump, ldap3, certipy-adcs"

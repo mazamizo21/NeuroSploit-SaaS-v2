@@ -1,0 +1,18 @@
+# TazoSploit SaaS v2 - Supervisor
+# Watches job output and emits structured events + alerts
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev curl docker.io && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 9012
+
+CMD ["python", "supervisor/main.py"]

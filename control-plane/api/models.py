@@ -13,25 +13,25 @@ import enum
 from .database import Base
 
 class TenantTier(str, enum.Enum):
-    FREE = "free"
-    PRO = "pro"
-    ENTERPRISE = "enterprise"
+    free = "free"
+    pro = "pro"
+    enterprise = "enterprise"
 
 class JobStatus(str, enum.Enum):
-    PENDING = "pending"
-    QUEUED = "queued"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-    TIMEOUT = "timeout"
+    pending = "pending"
+    queued = "queued"
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+    timeout = "timeout"
 
 class Severity(str, enum.Enum):
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFO = "info"
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+    info = "info"
 
 # =============================================================================
 # TENANT MANAGEMENT
@@ -44,7 +44,7 @@ class Tenant(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
     slug = Column(String(100), unique=True, nullable=False)
-    tier = Column(Enum(TenantTier), default=TenantTier.FREE)
+    tier = Column(Enum(TenantTier, name='tenant_tier', create_type=False), default=TenantTier.free)
     
     # Limits based on tier
     max_concurrent_jobs = Column(Integer, default=1)
@@ -54,6 +54,8 @@ class Tenant(Base):
     # Security
     api_key_hash = Column(String(255))
     encryption_key_id = Column(String(255))  # Reference to Vault/KMS
+    api_key_encrypted = Column(Text)  # Encrypted Anthropic API key per tenant
+    subscription_token_encrypted = Column(Text)  # Encrypted Claude setup-token (subscription auth)
     
     # Verification
     domain_verified = Column(Boolean, default=False)
@@ -154,18 +156,33 @@ class Job(Base):
     # Job configuration
     name = Column(String(255), nullable=False)
     description = Column(Text)
-    phase = Column(String(50), nullable=False)  # RECON, VULN_SCAN, EXPLOIT, POST_EXPLOIT, REPORT
+    phase = Column(String(50), nullable=False)  # RECON, VULN_SCAN, EXPLOIT, POST_EXPLOIT, LATERAL, FULL, REPORT
     
     # Target
     targets = Column(JSONB, nullable=False)
+    target_type = Column(String(20), default="lab")  # lab, external
     
     # Execution settings
     intensity = Column(String(20), default="medium")
     timeout_seconds = Column(Integer, default=3600)
     auto_run = Column(Boolean, default=False)
+    max_iterations = Column(Integer, default=30)
+    authorization_confirmed = Column(Boolean, default=False)
+    exploit_mode = Column(String(20), default="explicit_only")
+    llm_provider = Column(String(100))  # Optional per-job LLM provider override
+    supervisor_enabled = Column(Boolean)        # None = use global default
+    supervisor_provider = Column(String(100))   # None = use global default
+    allow_persistence = Column(Boolean, default=False)
+    allow_defense_evasion = Column(Boolean, default=False)
+    allow_scope_expansion = Column(Boolean, default=False)
+    enable_session_handoff = Column(Boolean, default=False)
+    enable_target_rotation = Column(Boolean, default=True)
+    target_focus_window = Column(Integer, default=6)
+    target_focus_limit = Column(Integer, default=30)
+    target_min_commands = Column(Integer, default=8)
     
     # Status
-    status = Column(Enum(JobStatus), default=JobStatus.PENDING)
+    status = Column(Enum(JobStatus, name='job_status', create_type=False), default=JobStatus.pending)
     progress = Column(Integer, default=0)  # 0-100
     
     # Worker assignment
@@ -185,6 +202,9 @@ class Job(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
+    
+    # Result data (structured JSON from worker)
+    result = Column(JSONB, default={})
     
     # Error handling
     error_message = Column(Text)
@@ -207,7 +227,7 @@ class Finding(Base):
     # Finding details
     title = Column(String(500), nullable=False)
     description = Column(Text)
-    severity = Column(Enum(Severity), default=Severity.INFO)
+    severity = Column(Enum(Severity, name='severity', create_type=False), default=Severity.info)
     
     # Classification
     finding_type = Column(String(100))
@@ -638,6 +658,49 @@ class LLMLog(Base):
     
     # Performance
     latency_ms = Column(Integer)
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# =============================================================================
+# TUNNEL AGENTS (WireGuard VPN)
+# =============================================================================
+
+class MitreTechniqueHit(Base):
+    """Tracks MITRE technique usage across jobs"""
+    __tablename__ = "mitre_technique_hits"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
+    technique_id = Column(String(20), nullable=False)
+    tool = Column(String(100))
+    count = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class TunnelAgent(Base):
+    """WireGuard tunnel agents for internal network access"""
+    __tablename__ = "tunnel_agents"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    
+    name = Column(String(255))
+    token_hash = Column(String(255))  # hashed one-time token
+    token_used = Column(Boolean, default=False)
+    
+    # WireGuard details
+    wg_public_key = Column(Text)
+    wg_assigned_ip = Column(String(45))
+    
+    # Status
+    status = Column(String(20), default="pending")  # pending, connecting, connected, disconnected, error
+    last_heartbeat = Column(DateTime)
+    
+    # Client info
+    client_info = Column(JSONB)  # OS, hostname, network info
     
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)

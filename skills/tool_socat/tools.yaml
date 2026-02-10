@@ -1,0 +1,8 @@
+socat:
+  description: Socket relay and port forwarder
+  category: network_evasion
+  install_cmd: sudo apt install socat
+  verify_cmd: socat -h
+  examples:
+    - socat TCP-LISTEN:8080,fork TCP:10.0.0.10:80
+    - socat -d -d TCP:10.0.0.10:443 STDOUT

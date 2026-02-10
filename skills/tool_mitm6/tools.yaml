@@ -1,0 +1,8 @@
+mitm6:
+  description: IPv6 DNS spoofing for AD environments
+  category: credential_access
+  install_cmd: sudo apt install mitm6
+  verify_cmd: mitm6 -h
+  examples:
+    - mitm6 -i eth0 -d lab.local
+    - mitm6 -i eth0 --ignore-nofqdn

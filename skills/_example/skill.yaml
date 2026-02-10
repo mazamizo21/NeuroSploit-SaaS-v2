@@ -1,0 +1,22 @@
+id: example_skill
+name: Example Skill
+category: custom
+phase: ''
+priority: 10
+target_types:
+- lab
+description: Example skill skeleton for new skills.
+mitre_techniques: []
+inputs: []
+outputs:
+- example_inventory.json
+- evidence.json
+- findings.json
+prerequisites: []
+success_criteria:
+- Example inventory captured
+safety_notes:
+- Template skill only; do not run against real targets
+tags:
+- example
+- template

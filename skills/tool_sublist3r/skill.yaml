@@ -1,0 +1,25 @@
+id: tool_sublist3r
+name: "Tool: Sublist3r"
+category: reconnaissance
+phase: RECON
+priority: 20
+target_types:
+  - lab
+  - external
+description: OSINT subdomain enumeration using multiple search engines.
+mitre_techniques:
+  - T1593
+  - T1596
+inputs: []
+outputs:
+  - evidence.json
+  - findings.json
+prerequisites: []
+success_criteria:
+  - Access validated with sublist3r
+safety_notes:
+  - Respect scope and authorization gates
+  - Avoid persistence unless explicitly allowed
+tags:
+  - sublist3r
+  - subdomain
