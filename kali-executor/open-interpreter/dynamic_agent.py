@@ -91,6 +91,17 @@ except ImportError:
     MEMORY_AVAILABLE = False
     print("Warning: Memory system not available")
 
+# ── TOON compact serialization for LLM context ────────────────────────────────
+TOON_ENABLED = os.getenv("TOON_ENABLED", "true").lower() in ("true", "1", "yes")
+try:
+    from toon_format import encode as toon_encode
+    TOON_AVAILABLE = True
+except ImportError:
+    TOON_AVAILABLE = False
+    TOON_ENABLED = False
+    print("Warning: toon_format not available — using default serialization")
+# ──────────────────────────────────────────────────────────────────────────────
+
 
 # ── Spec 008: Context Summarization ──────────────────────────────────────────
 DIGEST_SUMMARIZATION_PROMPT = """Summarize the following pentest conversation into a structured intelligence digest.
@@ -795,6 +806,15 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         with open(f"{self.log_dir}/dynamic_agent.log", 'a') as f:
             f.write(log_line + '\n')
 
+    def _to_toon(self, data, label: str = "") -> str:
+        """Encode data with TOON compact format for LLM context, with fallback."""
+        if not TOON_ENABLED:
+            return str(data)
+        try:
+            return toon_encode(data)
+        except Exception:
+            return str(data)
+
     def _normalize_llm_response_text(self, response) -> str:
         """Normalize provider responses to a plain string.
 
@@ -1002,29 +1022,54 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                                 commands.append(entry)
 
         # Append vuln_tracker state
-        vuln_tracker_lines = []
+        vuln_tracker_dicts = []
         if hasattr(self, 'vulns_found') and self.vulns_found:
             for vid, v in self.vulns_found.items():
                 if not isinstance(v, dict):
                     continue
                 status = "proven" if v.get("proof") else ("attempted" if v.get("attempted") else "unproven")
-                vuln_tracker_lines.append(
-                    f"- {v.get('type', 'unknown')} at {v.get('target', '?')} — {status} (attempts: {v.get('attempt_count', 0)})"
-                )
+                vuln_tracker_dicts.append({
+                    "type": v.get("type", "unknown"),
+                    "target": v.get("target", "?"),
+                    "status": status,
+                    "attempts": v.get("attempt_count", 0),
+                })
 
         sections = []
-        if services:
-            sections.append("## SERVICES FOUND\n" + "\n".join(services[:15]))
-        if vulns or vuln_tracker_lines:
-            combined = vulns[:10] + vuln_tracker_lines
-            sections.append("## VULNERABILITIES\n" + "\n".join(combined[:20]))
-        if credentials:
-            sections.append("## CREDENTIALS & TOKENS\n" + "\n".join(credentials[:10]))
-        if commands:
-            sections.append("## COMMANDS TRIED & RESULTS\n" + "\n".join(commands[-20:]))
-        if failed:
-            sections.append("## FAILED APPROACHES (DO NOT RETRY)\n" + "\n".join(failed[:20]))
-        sections.append("## CURRENT PROGRESS\n- Rule-based extraction (LLM summarization unavailable)")
+        if TOON_ENABLED and (services or vulns or vuln_tracker_dicts or credentials or commands or failed):
+            # TOON compact format for vuln tracker rows
+            if services:
+                sections.append("## SERVICES FOUND\n" + "\n".join(services[:15]))
+            if vulns or vuln_tracker_dicts:
+                vuln_lines = vulns[:10]
+                if vuln_tracker_dicts:
+                    vuln_lines.append(self._to_toon(vuln_tracker_dicts))
+                sections.append("## VULNERABILITIES\n" + "\n".join(vuln_lines[:20]))
+            if credentials:
+                sections.append("## CREDENTIALS & TOKENS\n" + "\n".join(credentials[:10]))
+            if commands:
+                sections.append("## COMMANDS TRIED & RESULTS\n" + "\n".join(commands[-20:]))
+            if failed:
+                sections.append("## FAILED APPROACHES (DO NOT RETRY)\n" + "\n".join(failed[:20]))
+            sections.append("## CURRENT PROGRESS\n- Rule-based extraction (LLM summarization unavailable)")
+        else:
+            # Original markdown format
+            vuln_tracker_lines = [
+                f"- {d['type']} at {d['target']} — {d['status']} (attempts: {d['attempts']})"
+                for d in vuln_tracker_dicts
+            ]
+            if services:
+                sections.append("## SERVICES FOUND\n" + "\n".join(services[:15]))
+            if vulns or vuln_tracker_lines:
+                combined = vulns[:10] + vuln_tracker_lines
+                sections.append("## VULNERABILITIES\n" + "\n".join(combined[:20]))
+            if credentials:
+                sections.append("## CREDENTIALS & TOKENS\n" + "\n".join(credentials[:10]))
+            if commands:
+                sections.append("## COMMANDS TRIED & RESULTS\n" + "\n".join(commands[-20:]))
+            if failed:
+                sections.append("## FAILED APPROACHES (DO NOT RETRY)\n" + "\n".join(failed[:20]))
+            sections.append("## CURRENT PROGRESS\n- Rule-based extraction (LLM summarization unavailable)")
 
         result = "\n\n".join(sections)
         return result[:3000]
@@ -2917,7 +2962,24 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
 
         policy = self._build_policy_prompt(phase, target_type, exploit_mode)
         plan = router.format_plan(selection)
-        skills_prompt = loader.format_skills_for_prompt(selection.skills, max_chars=tc["max_chars"])
+        if TOON_ENABLED and selection.skills:
+            skill_rows = []
+            for s in selection.skills:
+                skill_rows.append({
+                    "id": s.id,
+                    "name": s.name,
+                    "phase": s.phase or "N/A",
+                    "category": s.category,
+                    "mitre": ",".join(s.mitre_techniques) if s.mitre_techniques else "N/A",
+                    "desc": (s.description or "N/A")[:100],
+                })
+            skills_prompt = "# Available Pentest Skills\n" + self._to_toon(skill_rows)
+            # Include methodology for selected skills (abbreviated)
+            for s in selection.skills:
+                if s.methodology:
+                    skills_prompt += f"\n### {s.id} methodology\n{s.methodology[:300]}"
+        else:
+            skills_prompt = loader.format_skills_for_prompt(selection.skills, max_chars=tc["max_chars"])
 
         # ── Load advanced references for capable models ─────────────
         advanced_refs_prompt = ""
@@ -7279,11 +7341,24 @@ Continue the assessment - provide the next commands."""
                         }
                     ]
 
-            for item in items[:5]:
-                lines.append(
-                    f"- [{item.get('id')}] {item.get('type')} @ {item.get('target')} "
-                    f"(attempts={item.get('exploit_attempts', 0)}, severity={item.get('severity', 'unknown')})"
-                )
+            if TOON_ENABLED and items:
+                toon_items = [
+                    {
+                        "id": item.get("id", "?"),
+                        "type": item.get("type", "?"),
+                        "target": item.get("target", "?"),
+                        "attempts": item.get("exploit_attempts", 0),
+                        "severity": item.get("severity", "unknown"),
+                    }
+                    for item in items[:5]
+                ]
+                lines.append(self._to_toon(toon_items))
+            else:
+                for item in items[:5]:
+                    lines.append(
+                        f"- [{item.get('id')}] {item.get('type')} @ {item.get('target')} "
+                        f"(attempts={item.get('exploit_attempts', 0)}, severity={item.get('severity', 'unknown')})"
+                    )
             lines.append("Next action MUST be exploitation. If a vuln fails 3 attempts, pivot to the next vuln.")
         lines.append("")
         lines.append(self._build_stuck_fallback_strategies())
@@ -7478,31 +7553,38 @@ Continue the assessment - provide the next commands."""
 
     def _build_structured_context_summary(self) -> str:
         """Create an explicit state snapshot for trim-safe context."""
-        ports = []
+        port_dicts = []
         try:
             port_re = re.compile(r"(\d{1,5})/tcp\s+open\s+([a-zA-Z0-9._-]+)")
+            seen_ports = set()
             for ex in self.executions[-200:]:
                 blob = f"{ex.stdout or ''}\n{ex.stderr or ''}"
                 for m in port_re.findall(blob):
-                    item = f"- {m[0]}/tcp {m[1]}"
-                    if item not in ports:
-                        ports.append(item)
+                    key = f"{m[0]}/{m[1]}"
+                    if key not in seen_ports:
+                        seen_ports.add(key)
+                        port_dicts.append({"port": int(m[0]), "service": m[1]})
         except Exception:
             pass
 
-        creds = []
+        cred_dicts = []
         for c in self.arsenal.get("credentials", [])[:10]:
-            creds.append(f"- {c.get('value', '?')}")
+            cred_dicts.append({"value": c.get("value", "?")})
         for t in self.arsenal.get("tokens", [])[:5]:
             val = str(t.get("value", ""))
-            creds.append(f"- token:{val[:30]}{'...' if len(val) > 30 else ''}")
+            cred_dicts.append({"value": f"token:{val[:30]}{'...' if len(val) > 30 else ''}"})
 
-        vulns = []
+        vuln_dicts = []
         for f in self.structured_findings[:20]:
             status = "exploited" if f.get("exploited") else "unexploited"
-            vulns.append(f"- {f.get('type')} @ {f.get('target')} ({status}, attempts={f.get('exploit_attempts', 0)})")
+            vuln_dicts.append({
+                "type": f.get("type", "?"),
+                "target": f.get("target", "?"),
+                "status": status,
+                "attempts": f.get("exploit_attempts", 0),
+            })
 
-        failed = []
+        fail_dicts = []
         for v in self.vulns_found.values():
             if not isinstance(v, dict):
                 continue
@@ -7513,16 +7595,34 @@ Continue the assessment - provide the next commands."""
                 is_failed = (status == "failed") or (success is False) or (isinstance(exit_code, int) and exit_code != 0)
                 if is_failed:
                     snippet = str(a.get("error") or a.get("output") or a.get("evidence") or "")[:120]
-                    failed.append(f"- {v.get('type', '?')}: {snippet}")
+                    fail_dicts.append({"type": v.get("type", "?"), "error": snippet})
+
+        if TOON_ENABLED:
+            sections = ["**STRUCTURED CONTEXT SUMMARY (pre-trim)**"]
+            sections.append("## OPEN PORTS")
+            sections.append(self._to_toon(port_dicts[:20]) if port_dicts else "- none recorded")
+            sections.append("## CREDENTIALS")
+            sections.append(self._to_toon(cred_dicts[:20]) if cred_dicts else "- none recorded")
+            sections.append("## VULNERABILITIES")
+            sections.append(self._to_toon(vuln_dicts[:20]) if vuln_dicts else "- none recorded")
+            sections.append("## FAILED APPROACHES")
+            sections.append(self._to_toon(fail_dicts[:20]) if fail_dicts else "- none recorded")
+            return "\n".join(sections)[:3000]
+
+        # Fallback: original markdown format
+        ports = [f"- {p['port']}/tcp {p['service']}" for p in port_dicts[:20]]
+        creds = [f"- {c['value']}" for c in cred_dicts[:20]]
+        vulns = [f"- {v['type']} @ {v['target']} ({v['status']}, attempts={v['attempts']})" for v in vuln_dicts[:20]]
+        failed = [f"- {f['type']}: {f['error']}" for f in fail_dicts[:20]]
 
         parts = ["**STRUCTURED CONTEXT SUMMARY (pre-trim)**", "## OPEN PORTS"]
-        parts.extend(ports[:20] or ["- none recorded"])
+        parts.extend(ports or ["- none recorded"])
         parts.append("## CREDENTIALS")
-        parts.extend(creds[:20] or ["- none recorded"])
+        parts.extend(creds or ["- none recorded"])
         parts.append("## VULNERABILITIES")
-        parts.extend(vulns[:20] or ["- none recorded"])
+        parts.extend(vulns or ["- none recorded"])
         parts.append("## FAILED APPROACHES")
-        parts.extend(failed[:20] or ["- none recorded"])
+        parts.extend(failed or ["- none recorded"])
         return "\n".join(parts)[:3000]
 
     def _infer_access_level_from_proof(self, vuln_type: str, proof: str) -> str:
