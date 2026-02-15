@@ -1,30 +1,147 @@
 nuclei:
-  description: "Template-based vulnerability scanner"
+  description: "Template-based vulnerability scanner — 8000+ templates for CVEs, misconfigs, exposures"
   category: "web"
-  install_cmd: "apt-get install -y nuclei"
+  install_cmd: "apt-get install -y nuclei && nuclei -update-templates"
   verify_cmd: "nuclei -version"
   examples:
-    - "nuclei -u http://target -severity critical,high"
+    - "nuclei -u http://target -severity critical,high -rate-limit 50 -jsonl -o nuclei_crit.json"
+    - "nuclei -u http://target -tags misconfig,exposure -o nuclei_misconfig.json -jsonl"
+    - "nuclei -u http://target -tags sqli,xss,ssrf,lfi,rce -o nuclei_inject.json -jsonl"
+    - "nuclei -u http://target -tags iis,apache,nginx -o nuclei_tech.json -jsonl"
 
 nikto:
-  description: "Web server vulnerability scanner"
+  description: "Web server vulnerability scanner — misconfigs, dangerous files, outdated versions"
   category: "web"
   install_cmd: "apt-get install -y nikto"
   verify_cmd: "nikto -Version"
   examples:
-    - "nikto -h http://target"
+    - "nikto -h http://target -Tuning x6"
+    - "nikto -h http://target -ssl -Tuning 123bde"
+    - "nikto -h http://target -output nikto.json -Format json"
 
 nmap:
-  description: "Network mapper with vuln scripts"
+  description: "Network mapper — NSE vuln scripts for service-specific vulnerability detection"
   category: "network"
   install_cmd: "apt-get install -y nmap"
   verify_cmd: "nmap --version"
   examples:
-    - "nmap --script vuln -sV target"
+    - "nmap --script vuln -sV -p 22,80,135,139,443,445,3389 target"
+    - "nmap --script smb-vuln* -p 445 target"
+    - "nmap --script rdp-vuln-ms12-020,rdp-ntlm-info -p 3389 target"
+    - "nmap --script http-vuln*,http-enum -p 80,443 target"
+    - "nmap --script ssh-auth-methods,ssh2-enum-algos -p 22 target"
+    - "nmap --script ms-sql-info,mysql-info -p 1433,3306 target"
+
+sqlmap:
+  description: "Automatic SQL injection detection and exploitation"
+  category: "web"
+  install_cmd: "apt-get install -y sqlmap"
+  verify_cmd: "sqlmap --version"
+  examples:
+    - "sqlmap -u 'http://target/page?id=1' --batch --level 3 --risk 2"
+    - "sqlmap -u 'http://target/login' --data 'user=admin&pass=test' --batch"
+    - "sqlmap -u '...' --dbs"
+    - "sqlmap -u '...' --os-shell"
+    - "sqlmap -u '...' --tamper=space2comment,between,randomcase"
+
+testssl:
+  description: "SSL/TLS vulnerability and configuration scanner"
+  category: "network"
+  install_cmd: "apt-get install -y testssl.sh || git clone https://github.com/drwetter/testssl.sh.git /opt/testssl"
+  verify_cmd: "testssl --version 2>/dev/null || /opt/testssl/testssl.sh --version"
+  examples:
+    - "testssl.sh target:443"
+    - "testssl.sh --severity HIGH target:443"
+
+sslyze:
+  description: "Fast SSL/TLS scanner — certificate validation, cipher suites, known vulns"
+  category: "network"
+  install_cmd: "pip install sslyze"
+  verify_cmd: "sslyze --version"
+  examples:
+    - "sslyze target:443"
+    - "sslyze --heartbleed --openssl_ccs target:443"
+
+wpscan:
+  description: "WordPress vulnerability scanner — plugins, themes, users, version"
+  category: "web"
+  install_cmd: "apt-get install -y wpscan"
+  verify_cmd: "wpscan --version"
+  examples:
+    - "wpscan --url http://target --enumerate vp,vt,u --no-banner"
+    - "wpscan --url http://target --passwords /usr/share/wordlists/rockyou.txt"
+
+ffuf:
+  description: "Fast web fuzzer — directory, parameter, and vhost discovery"
+  category: "web"
+  install_cmd: "apt-get install -y ffuf"
+  verify_cmd: "ffuf -V"
+  examples:
+    - "ffuf -u http://target/FUZZ -w /usr/share/wordlists/dirb/common.txt -mc all -fc 404"
+    - "ffuf -u 'http://target/page?FUZZ=test' -w params.txt -mc all -fc 404"
+    - "ffuf -u http://target -H 'Host: FUZZ.target.com' -w vhosts.txt -mc all -fc 301"
+
+crackmapexec:
+  description: "Swiss army knife for Windows/AD — SMB signing, shares, cred testing"
+  category: "network"
+  install_cmd: "apt-get install -y crackmapexec"
+  verify_cmd: "crackmapexec --version"
+  examples:
+    - "crackmapexec smb target --gen-relay-list relay.txt"
+    - "crackmapexec smb target --shares"
+    - "crackmapexec smb target -u user -p pass --sam"
+    - "crackmapexec winrm target -u user -p pass -x 'whoami'"
+
+enum4linux_ng:
+  description: "Next-gen Windows/SMB/Samba enumeration — users, shares, policies"
+  category: "network"
+  install_cmd: "pip install enum4linux-ng"
+  verify_cmd: "enum4linux-ng --version 2>/dev/null || which enum4linux-ng"
+  examples:
+    - "enum4linux-ng -A target"
+    - "enum4linux-ng -U -S -P target"
+
+smbmap:
+  description: "SMB share enumeration and access checker"
+  category: "network"
+  install_cmd: "apt-get install -y smbmap"
+  verify_cmd: "smbmap --version 2>/dev/null || which smbmap"
+  examples:
+    - "smbmap -H target"
+    - "smbmap -H target -u user -p pass -r C$"
+
+ssh_audit:
+  description: "SSH server and client security auditing — algorithms, vulnerabilities"
+  category: "network"
+  install_cmd: "pip install ssh-audit"
+  verify_cmd: "ssh-audit --version 2>/dev/null || which ssh-audit"
+  examples:
+    - "ssh-audit target"
+    - "ssh-audit -p 22 target"
+
+hydra:
+  description: "Fast network brute-force tool — SSH, FTP, HTTP, SMB, RDP, etc."
+  category: "brute-force"
+  install_cmd: "apt-get install -y hydra"
+  verify_cmd: "hydra -V 2>&1 | head -1"
+  examples:
+    - "hydra -l admin -P /usr/share/wordlists/rockyou.txt target ssh -t 4"
+    - "hydra -L users.txt -P passwords.txt target http-post-form '/login:user=^USER^&pass=^PASS^:Failed'"
+    - "hydra -l admin -P passwords.txt target smb"
+
+searchsploit:
+  description: "Exploit-DB offline search — find exploits for service versions"
+  category: "research"
+  install_cmd: "apt-get install -y exploitdb"
+  verify_cmd: "searchsploit --version 2>/dev/null || which searchsploit"
+  examples:
+    - "searchsploit iis 10.0"
+    - "searchsploit openssh 8"
+    - "searchsploit -j apache 2.4 | python3 -m json.tool"
 
 parse_nuclei_json:
-  description: "Parse nuclei JSON output into evidence"
-  category: "web"
+  description: "Parse nuclei JSON/JSONL output into structured scan_findings.json"
+  category: "utility"
   install_cmd: "python3 --version"
   verify_cmd: "python3 skills/scanning/scripts/parse_nuclei_json.py --help"
   examples:

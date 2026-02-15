@@ -25,13 +25,14 @@ masscan:
     - "masscan 192.168.0.0/24 -p80,443,22 --rate 1000"
 
 gobuster:
-  description: "Directory/file and DNS brute-forcing tool"
+  description: "Directory/file, DNS, and vhost brute-forcing tool"
   category: "web"
   install_cmd: "apt-get install -y gobuster"
   verify_cmd: "gobuster version"
   examples:
     - "gobuster dir -u http://target -w /usr/share/wordlists/dirb/common.txt"
     - "gobuster dns -d target.com -w subdomains.txt"
+    - "gobuster vhost -u http://target.com -w vhosts.txt"
 
 dirsearch:
   description: "Advanced directory and file brute-forcing tool"
@@ -60,34 +61,37 @@ whatweb:
 wafw00f:
   description: "Web Application Firewall detection and fingerprinting"
   category: "web"
-  install_cmd: "apt-get install -y wafw00f"
+  install_cmd: "pip install wafw00f"
   verify_cmd: "wafw00f --version"
   examples:
     - "wafw00f http://target"
+    - "wafw00f -l  # list known WAFs"
 
 httpx:
   description: "Fast and multi-purpose HTTP toolkit"
   category: "web"
-  install_cmd: "apt-get install -y httpx"
+  install_cmd: "go install github.com/projectdiscovery/httpx/cmd/httpx@latest"
   verify_cmd: "httpx --version"
   examples:
     - "cat urls.txt | httpx -status-code -title -tech-detect"
+    - "cat subs.txt | httpx -silent -o live_hosts.txt"
 
 subfinder:
-  description: "Fast subdomain enumeration tool"
+  description: "Fast passive subdomain enumeration tool"
   category: "dns"
-  install_cmd: "apt-get install -y subfinder"
+  install_cmd: "go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
   verify_cmd: "subfinder -version"
   examples:
-    - "subfinder -d target.com -o subdomains.txt"
+    - "subfinder -d target.com -all -o subdomains.txt"
 
 amass:
   description: "Comprehensive DNS enumeration and attack surface mapping"
   category: "dns"
-  install_cmd: "apt-get install -y amass"
+  install_cmd: "go install github.com/owasp-amass/amass/v4/...@master"
   verify_cmd: "amass version"
   examples:
     - "amass enum -passive -d target.com"
+    - "amass enum -active -d target.com -brute"
 
 dnsenum:
   description: "DNS enumeration tool"
@@ -104,6 +108,7 @@ dnsrecon:
   verify_cmd: "dnsrecon --version"
   examples:
     - "dnsrecon -d target.com -t std"
+    - "dnsrecon -d target.com -t axfr"
 
 eyewitness:
   description: "Screenshot tool for web applications"
@@ -111,7 +116,85 @@ eyewitness:
   install_cmd: "apt-get install -y eyewitness"
   verify_cmd: "eyewitness --help | head -n 1"
   examples:
-    - "cat urls.txt | eyewitness --web -d /tmp/screenshots"
+    - "eyewitness --web -f urls.txt -d /tmp/screenshots"
+
+aquatone:
+  description: "Visual recon tool for HTTP-based attack surface"
+  category: "web"
+  install_cmd: "go install github.com/michenriksen/aquatone@latest"
+  verify_cmd: "aquatone --version"
+  examples:
+    - "cat urls.txt | aquatone -out /tmp/aquatone_output"
+
+arjun:
+  description: "HTTP parameter discovery tool"
+  category: "web"
+  install_cmd: "pip install arjun"
+  verify_cmd: "arjun --help | head -n 1"
+  examples:
+    - "arjun -u http://target/endpoint -oJ params.json"
+    - "arjun -u http://target/endpoint -m POST"
+
+paramspider:
+  description: "Mine parameters from web archives for fuzzing"
+  category: "web"
+  install_cmd: "pip install paramspider"
+  verify_cmd: "paramspider --help | head -n 1"
+  examples:
+    - "paramspider -d target.com -o params.txt"
+
+linkfinder:
+  description: "Extract endpoints from JavaScript files"
+  category: "web"
+  install_cmd: "pip install linkfinder"
+  verify_cmd: "linkfinder --help | head -n 1"
+  examples:
+    - "linkfinder -i http://target -o cli"
+    - "linkfinder -i /path/to/file.js -o results.html"
+
+gau:
+  description: "Fetch known URLs from AlienVault OTX, Wayback Machine, and Common Crawl"
+  category: "web"
+  install_cmd: "go install github.com/lc/gau/v2/cmd/gau@latest"
+  verify_cmd: "gau --version"
+  examples:
+    - "gau target.com | sort -u > urls.txt"
+    - "gau --subs target.com | grep '=' | sort -u"
+
+waybackurls:
+  description: "Fetch known URLs from Wayback Machine"
+  category: "web"
+  install_cmd: "go install github.com/tomnomnom/waybackurls@latest"
+  verify_cmd: "which waybackurls"
+  examples:
+    - "echo target.com | waybackurls | sort -u"
+
+shodan-cli:
+  description: "Shodan CLI for internet-wide search and host lookup"
+  category: "osint"
+  install_cmd: "pip install shodan"
+  verify_cmd: "shodan version"
+  examples:
+    - "shodan host 1.2.3.4"
+    - "shodan search 'hostname:target.com'"
+    - "shodan search 'org:\"Target Inc\"'"
+
+censys-cli:
+  description: "Censys CLI for internet scan data and certificate search"
+  category: "osint"
+  install_cmd: "pip install censys"
+  verify_cmd: "censys --version"
+  examples:
+    - "censys search 'services.tls.certificates.leaf.names: target.com'"
+    - "censys view 1.2.3.4"
+
+theharvester:
+  description: "Email, subdomain, and name harvester from public sources"
+  category: "osint"
+  install_cmd: "apt-get install -y theharvester"
+  verify_cmd: "theHarvester --help | head -n 3"
+  examples:
+    - "theHarvester -d target.com -b all -l 500"
 
 parse_nmap_grepable:
   description: "Parse Nmap grepable output into JSON evidence"

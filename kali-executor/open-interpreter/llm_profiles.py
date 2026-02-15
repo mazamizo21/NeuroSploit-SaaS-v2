@@ -265,32 +265,57 @@ PROFILES: Dict[str, Dict[str, Any]] = {
 # ─── Auto-Profile by Model Name ──────────────────────────────────────────
 
 MODEL_PROFILE_MAP = {
-    # Reasoning-heavy models → relaxed
+    # Reasoning-heavy models → relaxed (trust their judgment)
+    "claude-opus-4-6": "relaxed",
+    "claude-opus-4-5": "relaxed",
     "claude-opus": "relaxed",
     "claude-3-opus": "relaxed",
+    "gpt-5.2": "relaxed",
+    "gpt-5.1": "relaxed",
     "gpt-5": "relaxed",
     "o1": "relaxed",
     "o3": "relaxed",
     "deepseek-r1": "relaxed",
+    "kimi-k2.5": "relaxed",          # K2.5 is strong enough for relaxed
+    "kimi-k2-thinking": "relaxed",
+    "qwen3-max-thinking": "relaxed",
+    "gemini-3-pro": "relaxed",
+    "glm-5": "balanced",             # GLM-5 is capable but not Opus-tier
     
-    # Capable models → balanced
+    # Capable models → balanced (guide but don't strangle)
+    "claude-sonnet-4": "balanced",
     "claude-sonnet": "balanced",
     "claude-4": "balanced",
+    "gpt-4.1": "balanced",
     "gpt-4o": "balanced",
     "gpt-4-turbo": "balanced",
+    "gemini-3-flash": "balanced",
     "gemini-2": "balanced",
     "deepseek-v3": "balanced",
+    "kimi-k2": "balanced",           # K2 base is mid-tier
+    "minimax-m2": "balanced",
+    "glm-4.7": "balanced",           # GLM-4.7 upgraded to balanced (good at agentic)
     
-    # Fast/cheap models → strict
+    # Fast/cheap models → strict (prescriptive, step-by-step)
     "claude-haiku": "strict",
+    "gpt-5-mini": "strict",
+    "gpt-5-nano": "strict",
     "gpt-4o-mini": "strict",
+    "gpt-4.1-mini": "strict",
+    "gpt-4.1-nano": "strict",
     "gpt-3.5": "strict",
-    "glm": "strict",
+    "glm-4.7-flash": "strict",
+    "glm-4.6": "strict",
+    "glm-4.5": "strict",
+    "glm-4-9b": "strict",
+    "qwen3-coder-next": "strict",    # MoE 3B active — needs tight leash
     "qwen": "strict",
+    "llama-3.3-70b": "strict",
     "llama": "strict",
     "mistral": "strict",
     "phi": "strict",
     "gemma": "strict",
+    "olmo": "strict",
 }
 
 

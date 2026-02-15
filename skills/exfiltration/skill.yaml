@@ -1,26 +1,61 @@
 id: exfiltration
-name: Data Access Validation
+name: Exfiltration
 category: exfiltration
 phase: POST_EXPLOIT
 priority: 45
 target_types:
   - lab
   - external
-description: Validate data exposure with minimal collection to prove impact.
+description: >
+  Extract data from target networks through multiple channels including HTTP/S,
+  DNS, ICMP, email, cloud services, and covert channels. Covers data packaging,
+  encryption, transfer execution, verification, and cleanup.
 mitre_techniques:
-  - T1005
+  - T1020    # Automated Exfiltration
+  - T1029    # Scheduled Transfer
+  - T1030    # Data Transfer Size Limits
+  - T1041    # Exfiltration Over C2 Channel
+  - T1048    # Exfiltration Over Alternative Protocol
+  - T1048.001  # Exfiltration Over Symmetric Encrypted Non-C2 Protocol
+  - T1048.002  # Exfiltration Over Asymmetric Encrypted Non-C2 Protocol
+  - T1048.003  # Exfiltration Over Unencrypted Non-C2 Protocol
+  - T1537    # Transfer Data to Cloud Account
+  - T1567    # Exfiltration Over Web Service
+  - T1567.001  # Exfiltration to Code Repository
+  - T1567.002  # Exfiltration to Cloud Storage
 inputs:
   - access.json
+  - data_inventory.json
 outputs:
-  - data_access.json
-  - data_sources.json
-  - redaction_log.json
-  - evidence.json
+  - exfil_channels.json
+  - data_inventory.json
+  - transfer_log.json
+  - verification.json
+  - cleanup_log.json
   - findings.json
 prerequisites:
   - access
+  - collection
+evidence_collection:
+  - Exfiltration channel validation results
+  - Transfer logs and receipt verification
+  - Staging artifact cleanup confirmation
+  - Data encryption documentation
 success_criteria:
-  - Sensitive data exposure validated minimally
-  - Sources and redaction steps documented with evidence
+  - Exfiltration channel identified and validated
+  - Data encrypted before transfer
+  - Transfer completed with receipt verification
+  - All staging artifacts removed
+  - No detection alerts triggered
 safety_notes:
-  - Minimize data collected to the smallest evidence sample
+  - All exfiltration requires explicit authorization with defined scope
+  - Minimize data transferred — prove capability with samples not bulk dumps
+  - Encrypt all data in transit and at rest
+  - Rate-limit transfers to avoid volume-based alerts
+  - Clean up all staging artifacts after confirmed receipt
+tags:
+  - exfiltration
+  - data-theft
+  - covert-channel
+  - dns-tunnel
+  - steganography

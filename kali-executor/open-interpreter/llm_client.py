@@ -54,6 +54,7 @@ def _hard_timeout(seconds: int, label: str = "operation"):
 class LLMInteraction:
     """Captures all LLM interaction data for debugging"""
     timestamp: str
+    # The model actually used for this completion (proxy-resolved when available).
     model: str
     prompt_tokens: int
     completion_tokens: int
@@ -63,6 +64,11 @@ class LLMInteraction:
     response: str
     cost_usd: float = 0.0
     error: Optional[str] = None
+    reasoning_content: Optional[str] = None
+    # When using the internal LLM proxy, these capture what we asked for vs what was resolved.
+    provider: Optional[str] = None
+    requested_model: Optional[str] = None
+    requested_api_base: Optional[str] = None
 
 
 class LLMClient:
@@ -146,6 +152,11 @@ class LLMClient:
         import random  # Force import in function scope for Python 3.13 compatibility
         
         start_time = time.time()
+        reasoning_content = None  # Will be set if thinking is enabled and provider returns it
+        used_provider: Optional[str] = None
+        used_model: Optional[str] = None
+        requested_model = self.model
+        requested_api_base = self.api_base
         
         # Trim messages to control costs and stay under context limits
         # Claude: cap at 25K tokens to keep costs ~$0.03/iteration max
@@ -177,10 +188,16 @@ class LLMClient:
                 provider_override = os.getenv("LLM_PROVIDER_OVERRIDE", "").strip()
                 if provider_override:
                     payload["provider_override"] = provider_override
+                # Native thinking support (GLM-5, etc.)
+                thinking_enabled = os.getenv("LLM_THINKING_ENABLED", "").strip().lower()
+                if thinking_enabled in ("true", "1", "yes", "enabled"):
+                    payload["thinking"] = {"type": "enabled"}
 
-                hard_timeout_s = int(os.getenv("LLM_HARD_TIMEOUT_SECONDS", "120"))
+                # Default proxy timeouts were too low for "thinking"/long-context responses and caused
+                # repeated ReadTimeout retries (stalling runs). Keep env overrides, but raise defaults.
+                hard_timeout_s = int(os.getenv("LLM_HARD_TIMEOUT_SECONDS", "240"))
                 connect_timeout_s = float(os.getenv("LLM_CONNECT_TIMEOUT_SECONDS", "10"))
-                read_timeout_s = float(os.getenv("LLM_READ_TIMEOUT_SECONDS", "120"))
+                read_timeout_s = float(os.getenv("LLM_READ_TIMEOUT_SECONDS", "240"))
                 max_attempts = int(os.getenv("LLM_RETRY_MAX", "5"))
                 base_backoff = float(os.getenv("LLM_RETRY_BASE_SECONDS", "2"))
 
@@ -220,10 +237,10 @@ class LLMClient:
                                 f"LLM proxy transient error {response.status_code}. "
                                 f"Waiting {wait_time:.1f}s before retry {attempt}/{max_attempts}..."
                             )
+                            if attempt == max_attempts:
+                                raise ValueError(f"LLM proxy error {response.status_code} after {max_attempts} retries: {response.text}")
                             time.sleep(wait_time)
                             continue
-
-                            raise ValueError(f"LLM proxy error {response.status_code}: {response.text}")
                     except requests.exceptions.RequestException as e:
                         last_error = f"{type(e).__name__}"
                         if attempt == max_attempts:
@@ -242,6 +259,10 @@ class LLMClient:
 
                 data = response.json()
                 content = data.get("content") or data.get("choices", [{}])[0].get("message", {}).get("content")
+                reasoning_content = data.get("reasoning_content") or ""
+                # Proxy is the source of truth for provider/model used.
+                used_provider = (data.get("provider") or "").strip() or None
+                used_model = (data.get("model") or "").strip() or None
                 if content is None:
                     raise ValueError(f"LLM proxy returned no content ({last_error or 'unknown'})")
 
@@ -253,6 +274,9 @@ class LLMClient:
                 # Zhipu GLM API format (OpenAI-compatible with different endpoint)
                 if not self.zhipu_key:
                     raise ValueError("ZHIPU_API_KEY not set")
+
+                used_provider = "zai"
+                used_model = self.model
                 
                 # Use configured API base or default to z.ai
                 url = f"{self.api_base}/chat/completions" if not self.api_base.endswith('/chat/completions') else self.api_base
@@ -271,9 +295,9 @@ class LLMClient:
                     "temperature": temperature
                 }
                 
-                hard_timeout_s = int(os.getenv("LLM_HARD_TIMEOUT_SECONDS", "120"))
+                hard_timeout_s = int(os.getenv("LLM_HARD_TIMEOUT_SECONDS", "240"))
                 connect_timeout_s = float(os.getenv("LLM_CONNECT_TIMEOUT_SECONDS", "10"))
-                read_timeout_s = float(os.getenv("LLM_READ_TIMEOUT_SECONDS", "120"))
+                read_timeout_s = float(os.getenv("LLM_READ_TIMEOUT_SECONDS", "240"))
                 max_attempts = int(os.getenv("LLM_RETRY_MAX", "5"))
                 base_backoff = float(os.getenv("LLM_RETRY_BASE_SECONDS", "2"))
 
@@ -329,6 +353,9 @@ class LLMClient:
                 # Claude API - supports both API key (raw requests) and subscription token (SDK)
                 if not self.anthropic_token and not self.anthropic_key:
                     raise ValueError("Neither ANTHROPIC_TOKEN nor ANTHROPIC_API_KEY is set")
+
+                used_provider = "anthropic"
+                used_model = self.model
                 
                 # Convert messages format for Claude
                 system_msg = None
@@ -456,6 +483,9 @@ class LLMClient:
                 headers = {}
                 if self.is_openai and self.openai_key:
                     headers["Authorization"] = f"Bearer {self.openai_key}"
+
+                used_provider = "openai" if self.is_openai else None
+                used_model = self.model
                 
                 # GPT-5 uses max_completion_tokens instead of max_tokens
                 payload = {
@@ -547,21 +577,33 @@ class LLMClient:
             
             latency_ms = int((time.time() - start_time) * 1000)
             total_tokens = prompt_tokens + completion_tokens
+            effective_model = used_model or self.model
             
             interaction = LLMInteraction(
                 timestamp=datetime.utcnow().isoformat(),
-                model=self.model,
+                model=effective_model,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 total_tokens=total_tokens,
                 latency_ms=latency_ms,
                 messages=messages,
-                response=content
+                response=content,
+                reasoning_content=reasoning_content,
+                provider=used_provider,
+                requested_model=requested_model,
+                requested_api_base=requested_api_base,
             )
             
             self._log_interaction(interaction)
             
-            logger.info(f"LLM response: {latency_ms}ms, {interaction.total_tokens} tokens")
+            prov_str = f", provider={interaction.provider}" if interaction.provider else ""
+            model_str = f", model={interaction.model}" if interaction.model else ""
+            if reasoning_content:
+                logger.info(
+                    f"LLM response: {latency_ms}ms, {interaction.total_tokens} tokens{prov_str}{model_str}, THINKING={len(reasoning_content)} chars"
+                )
+            else:
+                logger.info(f"LLM response: {latency_ms}ms, {interaction.total_tokens} tokens{prov_str}{model_str}")
             
             return content
             
@@ -577,36 +619,114 @@ class LLMClient:
                 latency_ms=latency_ms,
                 messages=messages,
                 response="",
-                error=str(e)
+                error=str(e),
+                provider=used_provider,
+                requested_model=requested_model,
+                requested_api_base=requested_api_base,
             )
             
             self._log_interaction(interaction)
             logger.error(f"LLM error: {e}")
             raise
     
-    def _calculate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
-        """Calculate cost in USD based on model pricing"""
-        # Pricing per 1M tokens (input, output)
+    def _calculate_cost(self, prompt_tokens: int, completion_tokens: int, model: Optional[str] = None) -> float:
+        """Calculate cost in USD based on model pricing.
+        
+        Pricing per 1M tokens: (input, output)
+        Sources: OpenAI pricing page, Anthropic docs, OpenRouter API, provider sites.
+        Last updated: 2026-02-12
+        """
+        # Pricing per 1M tokens (input, output) — ordered by match specificity
         pricing = {
-            "claude-sonnet-4-20250514": (3.0, 15.0),
-            "claude-3-5-haiku-latest": (0.80, 4.0),
-            "claude-3-haiku-20240307": (0.25, 1.25),
-            "claude-opus-4-5-20250514": (15.0, 75.0),
-            "claude-opus-4-6": (15.0, 75.0),
-            "gpt-4o": (2.50, 10.0),
-            "gpt-4o-mini": (0.15, 0.60),
-            "gpt-5": (10.0, 30.0),
+            # === Anthropic Claude ===
+            "claude-opus-4-6":          (5.0, 25.0),      # Claude Opus 4.6 (Feb 2026)
+            "claude-opus-4-5":          (15.0, 75.0),      # Claude Opus 4.5
+            "claude-opus-4":            (15.0, 75.0),      # Claude Opus 4 (alias)
+            "claude-sonnet-4-5":        (3.0, 15.0),       # Claude Sonnet 4.5
+            "claude-sonnet-4":          (3.0, 15.0),       # Claude Sonnet 4
+            "claude-3-5-sonnet":        (3.0, 15.0),       # Claude 3.5 Sonnet
+            "claude-3-5-haiku":         (0.80, 4.0),       # Claude 3.5 Haiku
+            "claude-3-haiku":           (0.25, 1.25),      # Claude 3 Haiku
+            # === OpenAI GPT ===
+            "gpt-5.2-codex":           (1.75, 14.0),      # GPT-5.2 Codex
+            "gpt-5.2-pro":             (21.0, 168.0),      # GPT-5.2 Pro
+            "gpt-5.2":                 (1.75, 14.0),       # GPT-5.2
+            "gpt-5.1-codex":           (1.25, 10.0),       # GPT-5.1 Codex
+            "gpt-5.1":                 (1.25, 10.0),       # GPT-5.1
+            "gpt-5-pro":               (15.0, 120.0),      # GPT-5 Pro
+            "gpt-5-mini":              (0.25, 2.0),        # GPT-5 Mini
+            "gpt-5":                   (1.25, 10.0),       # GPT-5
+            "gpt-4.1-mini":            (0.40, 1.60),       # GPT-4.1 Mini
+            "gpt-4.1-nano":            (0.10, 0.40),       # GPT-4.1 Nano
+            "gpt-4.1":                 (2.0, 8.0),         # GPT-4.1
+            "gpt-4o-mini":             (0.15, 0.60),       # GPT-4o Mini
+            "gpt-4o":                  (2.50, 10.0),       # GPT-4o
+            "o4-mini":                 (1.10, 4.40),       # o4-mini
+            "o3-mini":                 (1.10, 4.40),       # o3-mini
+            "o3":                      (2.0, 8.0),         # o3
+            "o1-mini":                 (1.10, 4.40),       # o1-mini
+            "o1":                      (15.0, 60.0),       # o1
+            # === Moonshot / Kimi ===
+            "kimi-k2.5":              (0.45, 2.25),        # Kimi K2.5 (OpenRouter pricing)
+            "kimi-k2-thinking":       (0.45, 2.25),        # Kimi K2 Thinking
+            "kimi-k2-turbo":          (0.45, 2.25),        # Kimi K2 Turbo
+            "kimi-k2":                (0.45, 2.25),        # Kimi K2 (base)
+            "k2p5":                   (0.45, 2.25),        # kimi-coding/k2p5 alias
+            # === Z.AI / GLM ===
+            "glm-5":                  (1.0, 3.20),         # GLM 5 (OpenRouter)
+            "glm-4.7-flash":          (0.06, 0.40),        # GLM 4.7 Flash
+            "glm-4.7":                (0.40, 1.50),        # GLM 4.7 (OpenRouter pricing)
+            "glm-4.6":                (0.40, 1.50),        # GLM 4.6 (est. same tier)
+            "glm-4.5":                (0.40, 1.50),        # GLM 4.5 (est. same tier)
+            "glm-4-9b":               (0.10, 0.30),        # GLM-4 9B (small/local)
+            # === DeepSeek ===
+            "deepseek-r1":            (0.55, 2.19),        # DeepSeek R1
+            "deepseek-v3.2":          (0.27, 1.10),        # DeepSeek V3.2
+            "deepseek-v3.1":          (0.27, 1.10),        # DeepSeek V3.1
+            "deepseek-v3":            (0.27, 1.10),        # DeepSeek V3
+            # === Qwen ===
+            "qwen3-coder-next":       (0.07, 0.30),        # Qwen3 Coder Next (MoE 3B active)
+            "qwen3-coder-480b":       (0.07, 0.30),        # Qwen3 Coder 480B MoE
+            "qwen3-max-thinking":     (1.20, 6.0),         # Qwen3 Max Thinking (proprietary)
+            "qwen3-235b":             (0.14, 0.60),        # Qwen3 235B (open)
+            "qwen3":                  (0.14, 0.60),        # Qwen3 (generic)
+            # === Google Gemini ===
+            "gemini-3-pro":           (1.25, 10.0),        # Gemini 3 Pro (est.)
+            "gemini-3-flash":         (0.50, 3.0),         # Gemini 3 Flash
+            "gemini-2.5-flash":       (0.15, 0.60),        # Gemini 2.5 Flash
+            # === MiniMax ===
+            "minimax-m2.1":           (0.27, 0.95),        # MiniMax M2.1
+            "minimax-m2":             (0.27, 0.95),        # MiniMax M2
+            # === Misc ===
+            "grok":                   (3.0, 15.0),         # xAI Grok (est.)
+            "llama-3.3-70b":          (0.10, 0.30),        # Llama 3.3 70B (self-hosted/Venice)
+            "llama-4-maverick":       (0.20, 0.60),        # Llama 4 Maverick
         }
         
-        # Find matching pricing (partial match)
-        input_price, output_price = 0.0, 0.0
-        for model_key, (inp, outp) in pricing.items():
-            if model_key in self.model.lower() or self.model.lower() in model_key:
-                input_price, output_price = inp, outp
+        # Normalize model name for matching
+        model_lower = (model or self.model or "").lower()
+        # Strip common provider prefixes for matching
+        for prefix in ["anthropic/", "openai/", "openrouter/", "moonshot/", "zai/", 
+                       "venice/", "synthetic/", "cerebras/", "google/", "openai-codex/",
+                       "kimi-coding/", "opencode/", "vercel-ai-gateway/", "minimax/",
+                       "amazon-bedrock/", "hf:", "moonshotai/", "zai-org/", "zai-org-",
+                       "anthropic.", "deepseek-ai/"]:
+            if model_lower.startswith(prefix):
+                model_lower = model_lower[len(prefix):]
                 break
         
+        # Find matching pricing (partial match, longest key wins)
+        input_price, output_price = 0.0, 0.0
+        best_match_len = 0
+        for model_key, (inp, outp) in pricing.items():
+            if model_key in model_lower or model_lower in model_key:
+                if len(model_key) > best_match_len:
+                    input_price, output_price = inp, outp
+                    best_match_len = len(model_key)
+        
         if input_price == 0 and output_price == 0:
-            # Default estimate for unknown models
+            # Default estimate for unknown models — conservative mid-tier
+            logger.warning(f"No pricing found for model '{model or self.model}', using default $3/$15 per 1M tokens")
             input_price, output_price = 3.0, 15.0
         
         cost = (prompt_tokens * input_price / 1_000_000) + (completion_tokens * output_price / 1_000_000)
@@ -618,7 +738,7 @@ class LLMClient:
         self.total_tokens += interaction.total_tokens
         
         # Calculate cost based on model
-        interaction.cost_usd = self._calculate_cost(interaction.prompt_tokens, interaction.completion_tokens)
+        interaction.cost_usd = self._calculate_cost(interaction.prompt_tokens, interaction.completion_tokens, interaction.model)
         self.total_cost += interaction.cost_usd
         
         log_file = os.path.join(self.log_dir, "llm_interactions.jsonl")

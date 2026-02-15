@@ -1,10 +1,13 @@
 # =============================================================================
-# TazoSploit SaaS v2 — ONE-CLICK DOCKER COMPOSE
+# TazoSploit SaaS v2 — CORE PLATFORM
 # =============================================================================
 # Usage:
-#   docker compose up -d                    → Core platform only
-#   docker compose --profile lab up -d      → Core + Vulnerable lab targets
-#   docker compose down -v                  → Tear everything down
+#   docker compose up -d                                → Core platform
+#   docker compose -f docker-compose.lab.yml up -d      → Vulnerable lab targets
+#   docker compose down -v                              → Tear down core
+#
+# Lab targets are in docker-compose.lab.yml (separate lifecycle).
+# Kali containers connect to lab-net as an external network when lab is running.
 # =============================================================================
 
 services:
@@ -78,15 +81,22 @@ services:
       context: ./control-plane
       dockerfile: Dockerfile
     container_name: tazosploit-api
+    # IMPORTANT: Disable uvicorn access logs to avoid leaking JWTs passed via WebSocket
+    # query parameters (e.g., /ws?...token=...). Structured app logs still capture
+    # request metadata without the raw token.
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
     environment:
       - DATABASE_URL=postgresql://tazosploit:${DB_PASSWORD:-tazosploit_dev}@postgres:5432/tazosploit
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      # Long-running jobs (e.g. 24h/5000 iters) need a longer UI token TTL.
+      # Override in your environment if you want shorter sessions.
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - ENABLE_FULL_LOGGING=true
       - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
-      - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-120}
+      - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-240}
       - LLM_PROXY_RETRY_MAX=${LLM_PROXY_RETRY_MAX:-5}
       - LLM_PROXY_RETRY_BASE_SECONDS=${LLM_PROXY_RETRY_BASE_SECONDS:-2}
       - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
@@ -108,6 +118,7 @@ services:
       - ./data:/data
       - ./logs:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
+      - kali-output:/pentest/output:ro  # Read-only access to Kali recon data
     group_add:
       - "1"  # Docker socket GID on macOS
     healthcheck:
@@ -183,6 +194,7 @@ services:
       - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
       - CLAUDE_API_KEY=${ANTHROPIC_API_KEY:-}
       - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - LLM_THINKING_ENABLED=${LLM_THINKING_ENABLED:-}
       - ALLOW_SELF_REGISTRATION=${ALLOW_SELF_REGISTRATION:-false}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
@@ -237,6 +249,7 @@ services:
       - SUPERVISOR_LLM_MAX_TOKENS=${SUPERVISOR_LLM_MAX_TOKENS:-800}
       - SUPERVISOR_LLM_PROXY_TOKEN=${SUPERVISOR_LLM_PROXY_TOKEN:-}
       - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - LLM_THINKING_ENABLED=${LLM_THINKING_ENABLED:-}
       - SUPERVISOR_LLM_PROVIDER_OVERRIDE=${SUPERVISOR_LLM_PROVIDER_OVERRIDE:-}
       - SUPERVISOR_AUDIT_ALERT_TYPES=${SUPERVISOR_AUDIT_ALERT_TYPES:-stalled,noop_loop,repeated_command,no_new_findings,stalling,scan_loop}
       - SUPERVISOR_AUDIT_MAX_PER_JOB=${SUPERVISOR_AUDIT_MAX_PER_JOB:-5}
@@ -294,6 +307,7 @@ services:
       - ALL
     cap_add:
       - NET_RAW
+      - NET_ADMIN
     security_opt:
       - no-new-privileges:true
     tmpfs:
@@ -353,192 +367,6 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # ===========================================================================
-  # VULNERABLE LAB  (only with: --profile lab)
-  # ===========================================================================
-
-  dvwa:
-    image: vulnerables/web-dvwa:latest
-    platform: linux/amd64
-    container_name: lab-dvwa
-    ports:
-      - "8081:80"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  dvna:
-    image: appsecco/dvna:sqlite
-    platform: linux/amd64
-    container_name: lab-dvna
-    ports:
-      - "9091:9090"
-    environment:
-      - DVNA_DB_TYPE=sqlite
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  juiceshop:
-    image: bkimminich/juice-shop:latest
-    container_name: lab-juiceshop
-    ports:
-      - "3080:3000"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  webgoat:
-    image: webgoat/webgoat:latest
-    platform: linux/amd64
-    container_name: lab-webgoat
-    ports:
-      - "8082:8080"
-    environment:
-      - WEBGOAT_HOST=0.0.0.0
-      - WEBGOAT_PORT=8080
-    networks:
-      - lab-net
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/WebGoat/ >/dev/null || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 20s
-    profiles: [lab]
-    restart: unless-stopped
-
-  vuln-api:
-    image: python:3.11-slim
-    container_name: lab-vuln-api
-    working_dir: /app
-    volumes:
-      - ./vulnerable-lab/vulnerable-api:/app
-    command: >
-      sh -c "pip install --quiet flask flask-cors pymysql pymongo requests && python app.py"
-    ports:
-      - "5001:5000"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  admin-panel:
-    image: php:8.2-apache
-    container_name: lab-admin-panel
-    volumes:
-      - ./vulnerable-lab/admin-panel:/var/www/html
-    ports:
-      - "8888:80"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  lab-mysql:
-    image: mysql:8.0
-    container_name: lab-mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=root123
-      - MYSQL_DATABASE=dvwa
-      - MYSQL_USER=dvwa
-      - MYSQL_PASSWORD=dvwa_password
-    volumes:
-      - lab-mysql-data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  lab-postgres:
-    image: postgres:15
-    container_name: lab-postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=enterprise
-    volumes:
-      - lab-postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  lab-mongodb:
-    image: mongo:6
-    container_name: lab-mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - lab-mongodb-data:/data/db
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  lab-redis:
-    image: redis:7
-    container_name: lab-redis
-    command: redis-server --protected-mode no
-    ports:
-      - "6380:6379"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  samba:
-    image: dperson/samba:latest
-    container_name: lab-samba
-    command: -s "shared;/shared;yes;no;yes;admin;admin123"
-    ports:
-      - "445:445"
-      - "139:139"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  jumphost:
-    image: linuxserver/openssh-server:latest
-    container_name: lab-jumphost
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/New_York
-      - PASSWORD_ACCESS=true
-      - USER_PASSWORD=admin123
-      - USER_NAME=admin
-      - SUDO_ACCESS=true
-    ports:
-      - "2222:2222"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
-  lab-elasticsearch:
-    image: elasticsearch:7.17.10
-    container_name: lab-elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    ports:
-      - "9200:9200"
-    networks:
-      - lab-net
-    profiles: [lab]
-    restart: unless-stopped
-
 # =============================================================================
 # NETWORKS
 # =============================================================================
@@ -558,7 +386,10 @@ networks:
     # NOT internal — Kali needs internet for Anthropic API calls
 
   lab-net:
-    driver: bridge
+    # External network — created by docker-compose.lab.yml
+    # If lab isn't running, start it first or create manually:
+    #   docker network create tazosploit-lab
+    external: true
     name: tazosploit-lab
 
 # =============================================================================
@@ -572,6 +403,3 @@ volumes:
   tunnel-data:
   kali-output:
   kali-memory:
-  lab-mysql-data:
-  lab-postgres-data:
-  lab-mongodb-data:

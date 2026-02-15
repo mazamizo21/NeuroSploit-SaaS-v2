@@ -263,6 +263,49 @@ class AgentExecutor:
             summary=f"Phase {request.phase} completed with {len(self.current_job.findings)} findings"
         )
     
+    @staticmethod
+    def _estimate_cost(total_tokens: int, model: str) -> float:
+        """Estimate cost in USD based on model and token count.
+        Assumes ~50/50 input/output split. Uses average of input+output rate.
+        Pricing per 1M tokens: (input, output). Last updated: 2026-02-12.
+        """
+        # Average cost per 1M tokens (input + output) / 2 — for rough estimates
+        avg_rates = {
+            "claude-opus-4-6": 15.0,      "claude-opus-4-5": 45.0,
+            "claude-sonnet-4": 9.0,        "claude-3-5-haiku": 2.4,
+            "gpt-5.2": 7.875,              "gpt-5.1": 5.625,
+            "gpt-5-mini": 1.125,           "gpt-5": 5.625,
+            "gpt-4.1-mini": 1.0,           "gpt-4.1": 5.0,
+            "gpt-4o-mini": 0.375,          "gpt-4o": 6.25,
+            "kimi-k2.5": 1.35,             "kimi-k2": 1.35,       "k2p5": 1.35,
+            "glm-5": 2.1,                  "glm-4.7": 0.95,       "glm-4.7-flash": 0.23,
+            "deepseek-r1": 1.37,           "deepseek-v3": 0.685,
+            "qwen3-coder": 0.185,          "qwen3": 0.37,
+            "gemini-3-pro": 5.625,         "gemini-3-flash": 1.75,
+            "minimax-m2": 0.61,            "llama-3.3-70b": 0.2,
+        }
+        model_lower = model.lower()
+        # Strip provider prefixes
+        for prefix in ["anthropic/", "openai/", "openrouter/", "moonshot/", "zai/",
+                       "venice/", "synthetic/", "cerebras/", "kimi-coding/", "openai-codex/",
+                       "google/", "minimax/", "hf:", "moonshotai/", "zai-org/", "zai-org-",
+                       "deepseek-ai/"]:
+            if model_lower.startswith(prefix):
+                model_lower = model_lower[len(prefix):]
+                break
+        
+        rate = 0.0
+        best_len = 0
+        for key, r in avg_rates.items():
+            if key in model_lower or model_lower in key:
+                if len(key) > best_len:
+                    rate = r
+                    best_len = len(key)
+        if rate == 0:
+            rate = 9.0  # Conservative default (~Sonnet tier)
+        
+        return round(total_tokens * rate / 1_000_000, 6)
+
     def _build_phase_prompt(self, request: ExecuteRequest) -> str:
         """Build prompt for specific MITRE ATT&CK phase"""
         
@@ -396,7 +439,7 @@ Include:
             latency_ms=(time.time() - start_time) * 1000,
             messages=messages_log,
             response=messages_log[-1].get('content', '') if messages_log else '',
-            cost_estimate_usd=estimated_tokens * 0.000001  # Rough estimate
+            cost_estimate_usd=self._estimate_cost(estimated_tokens, os.getenv('LLM_MODEL', 'unknown'))
         )
         
         self.current_job.llm_transactions.append(llm_transaction)

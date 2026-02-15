@@ -6,9 +6,36 @@ priority: 75
 target_types:
   - lab
   - external
-description: Validate controlled lateral movement within approved scope.
+description: >
+  Validate and execute lateral movement across Windows, Linux, Active Directory,
+  and cloud environments. Pivot through network segments using tunneling techniques.
 mitre_techniques:
+  # Remote Services
   - T1021
+  - T1021.001  # Remote Desktop Protocol
+  - T1021.002  # SMB/Windows Admin Shares
+  - T1021.003  # Distributed Component Object Model (DCOM)
+  - T1021.004  # SSH
+  - T1021.005  # VNC
+  - T1021.006  # Windows Remote Management (WinRM)
+  # Software Deployment Tools
+  - T1072
+  # Taint Shared Content
+  - T1080
+  # Internal Spearphishing
+  - T1534
+  # Lateral Tool Transfer
+  - T1570
+  # Remote Service Session Hijacking
+  - T1563
+  - T1563.001  # SSH Hijacking
+  - T1563.002  # RDP Hijacking
+  # Use Alternate Authentication Material
+  - T1550
+  - T1550.001  # Application Access Token
+  - T1550.002  # Pass the Hash
+  - T1550.003  # Pass the Ticket
+  - T1550.004  # Web Session Cookie
 inputs:
   - creds.json
 outputs:
@@ -17,7 +44,16 @@ outputs:
   - findings.json
 prerequisites:
   - creds
+evidence_collection:
+  - Lateral movement execution logs
+  - Remote access proof (whoami on target hosts)
+  - Pivot tunnel configurations
+  - Authentication material used
 success_criteria:
   - Lateral movement path validated
+  - Multiple techniques documented per target
+  - Pivot tunnels tested where needed
 safety_notes:
   - Only move to explicitly scoped hosts
+  - Single auth attempt per host unless authorized
+  - No unauthorized persistence

@@ -1,0 +1,76 @@
+openssl:
+  description: "Encryption toolkit — AES-256 file encryption for ransomware simulation"
+  category: "impact"
+  install_cmd: "apt-get install -y openssl"
+  verify_cmd: "openssl version"
+  examples:
+    - "openssl enc -aes-256-cbc -salt -pbkdf2 -in testfile.txt -out testfile.txt.encrypted -k passphrase"
+    - "openssl enc -aes-256-cbc -d -pbkdf2 -in testfile.txt.encrypted -out testfile.txt -k passphrase"
+    - "openssl rand -hex 32  # generate encryption key"
+
+dd:
+  description: "Low-level data copy/wipe — disk wipe simulation, data destruction proof"
+  category: "impact"
+  install_cmd: ""
+  verify_cmd: "dd --version"
+  examples:
+    - "dd if=/dev/zero of=/tmp/test_wipe bs=1024 count=100  # zero-fill test file"
+    - "dd if=/dev/urandom of=/tmp/testfile bs=1024 count=10  # create test data"
+    - "dd if=/dev/zero of=/tmp/test_disk bs=1M count=100  # simulate disk wipe on test file"
+
+shred:
+  description: "Secure file deletion — overwrite files with random data before removal"
+  category: "impact"
+  install_cmd: "apt-get install -y coreutils"
+  verify_cmd: "shred --version"
+  examples:
+    - "shred -vfz -n 3 /tmp/testfile  # 3 random passes + zero fill"
+    - "shred -vfz -n 1 /tmp/test_*    # quick single-pass shred"
+
+hping3:
+  description: "Packet crafter — SYN flood, DoS simulation, network stress testing"
+  category: "impact"
+  install_cmd: "apt-get install -y hping3"
+  verify_cmd: "hping3 --version"
+  examples:
+    - "timeout 5 hping3 -S --flood -p 80 target_ip  # 5-second SYN flood"
+    - "hping3 -S -p 80 --faster target_ip -c 1000  # 1000 SYN packets"
+    - "hping3 --udp -p 53 --flood target_ip  # UDP flood simulation"
+
+stress:
+  description: "System stress testing — CPU/memory/IO load for resource hijacking proof"
+  category: "impact"
+  install_cmd: "apt-get install -y stress"
+  verify_cmd: "stress --version"
+  examples:
+    - "stress --cpu $(nproc) --timeout 10  # 10-second CPU stress"
+    - "stress --vm 2 --vm-bytes 256M --timeout 10  # memory stress"
+    - "stress --io 4 --timeout 10  # I/O stress"
+
+stress-ng:
+  description: "Advanced stress testing — more workload types, better metrics"
+  category: "impact"
+  install_cmd: "apt-get install -y stress-ng"
+  verify_cmd: "stress-ng --version"
+  examples:
+    - "stress-ng --cpu $(nproc) --timeout 10 --metrics  # CPU stress with metrics"
+    - "stress-ng --vm 2 --vm-bytes 256M --timeout 10  # memory stress"
+
+curl:
+  description: "HTTP client — web defacement verification, DoS testing, service checks"
+  category: "impact"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -o /dev/null -s -w '%{time_total}s' http://target/  # response time measurement"
+    - "curl -s http://target/index.html > /tmp/original_page.html  # backup page"
+    - "for i in $(seq 1 100); do curl -s http://target/ -o /dev/null & done  # load test"
+
+ncat:
+  description: "Network connection tool — Slowloris DoS, connection holding, service testing"
+  category: "impact"
+  install_cmd: "apt-get install -y ncat"
+  verify_cmd: "ncat --version"
+  examples:
+    - "echo -ne 'GET / HTTP/1.1\\r\\nHost: target\\r\\n' | ncat -q 30 target 80  # Slowloris connection"
+    - "ncat -z target 80  # port check"

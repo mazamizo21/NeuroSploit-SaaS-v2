@@ -69,7 +69,7 @@ class Skill:
                 meta = yaml.safe_load(f) or {}
 
         def _extract_overview(text: str) -> str:
-            match = re.search(r"##\\s+Overview\\s*\\n(.+?)(\\n##|$)", text, re.S | re.I)
+            match = re.search(r"##\s+Overview\s*\n(.+?)(\n##|$)", text, re.S | re.I)
             if match:
                 return match.group(1).strip()
             return ""

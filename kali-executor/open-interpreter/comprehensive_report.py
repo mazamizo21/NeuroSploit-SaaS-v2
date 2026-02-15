@@ -269,6 +269,69 @@ class ComprehensiveReport:
                 return False
         return True
 
+    @staticmethod
+    def _strip_llm_reasoning(text: str) -> str:
+        """Strip LLM internal monologue/reasoning from text, keeping only factual content.
+        
+        Removes patterns like:
+        - "Wait, the user *provided* that output..."
+        - "Okay, so I have two things happening..."
+        - "Let me think about this..."
+        """
+        if not text:
+            return ""
+        
+        # First pass: strip reasoning PREFIXES from text (even within single lines)
+        prefix_patterns = [
+            re.compile(r"(?i)^(?:wait|okay|ok|so|let me|hmm|alright|right|now|well|actually|thinking)[,.]?\s+.*?[.!?]\s+", re.DOTALL),
+            re.compile(r"(?i)^(?:I (?:need to|should|will|can|have to|notice|see|think|found|believe|realize))\s+.*?[.!?]\s+", re.DOTALL),
+            re.compile(r"(?i)^the user (?:\*?provided\*?|asked|wants|said)\s+.*?[.!?]\s+", re.DOTALL),
+        ]
+        
+        result = text
+        for pattern in prefix_patterns:
+            for _ in range(3):
+                match = pattern.match(result)
+                if match:
+                    remainder = result[match.end():].strip()
+                    if remainder and len(remainder) >= 10:
+                        result = remainder
+                    else:
+                        break
+                else:
+                    break
+        
+        # Remove italicized internal thoughts
+        result = re.sub(r'\*[^*]{3,}\*', '', result).strip()
+        
+        # Multi-line: remove lines that are purely reasoning
+        line_reasoning_patterns = [
+            re.compile(r"(?i)^(?:wait|okay|ok|so|let me|hmm|alright|right|now|well|actually|thinking)[,.]?\s+"),
+            re.compile(r"(?i)^(?:I (?:need to|should|will|can|have to|notice|see|think|found|believe|realize))\s+"),
+            re.compile(r"(?i)^the user (?:\*?provided\*?|asked|wants|said)\s+"),
+        ]
+        
+        if '\n' in result:
+            lines = result.split('\n')
+            clean_lines = []
+            for line in lines:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                is_pure_reasoning = False
+                for pattern in line_reasoning_patterns:
+                    if pattern.match(stripped):
+                        cleaned = pattern.sub('', stripped).strip()
+                        if not cleaned or len(cleaned) < 10:
+                            is_pure_reasoning = True
+                            break
+                if not is_pure_reasoning:
+                    clean_lines.append(stripped)
+            if clean_lines:
+                result = '\n'.join(clean_lines)
+        
+        return result.strip() if result.strip() else text.strip()
+
     def _is_local_artifact_command(self, command: str) -> bool:
         """Detect commands that only enumerate local artifacts, not target data."""
         if not command:
@@ -444,6 +507,12 @@ class ComprehensiveReport:
             'information disclosure': ('Information Disclosure', 'low'),
             'default credentials': ('Default Credentials', 'high'),
             'weak password': ('Weak Password', 'medium'),
+            'idor': ('Insecure Direct Object Reference', 'high'),
+            'insecure direct object': ('Insecure Direct Object Reference', 'high'),
+            'broken access control': ('Broken Access Control', 'high'),
+            'mass assignment': ('Mass Assignment', 'high'),
+            'path traversal': ('Path Traversal', 'high'),
+            'directory traversal': ('Directory Traversal', 'high'),
         }
         
         content_lower = content.lower()
@@ -470,13 +539,16 @@ class ComprehensiveReport:
             if mitre_match:
                 mitre_id = mitre_match.group(0)
         
+        # Strip LLM reasoning/internal monologue from evidence to keep only factual content
+        clean_evidence = self._strip_llm_reasoning(content[:500])
+        
         self.vulnerabilities.append(Vulnerability(
             type=vuln_type,
             service=target,
             endpoint=endpoint,
             payload="See evidence",
             impact=f"{severity} severity - {vuln_type}",
-            evidence=content[:500],
+            evidence=clean_evidence,
             extraction_command=extraction_cmd,
             iteration=context.get('iteration', 0),
             mitre_id=mitre_id,
@@ -1238,7 +1310,9 @@ class ComprehensiveReport:
     def _vuln_type_to_severity(self, vuln_type: str) -> str:
         critical = ['Remote Code Execution', 'Command Injection', 'Remote File Inclusion']
         high = ['SQL Injection', 'Local File Inclusion', 'File Upload', 'Directory Traversal',
-                'XML External Entity', 'Server-Side Request Forgery', 'Default Credentials']
+                'XML External Entity', 'Server-Side Request Forgery', 'Default Credentials',
+                'Insecure Direct Object Reference', 'Broken Access Control', 'Mass Assignment',
+                'Path Traversal']
         medium = ['Cross-Site Scripting', 'Cross-Site Request Forgery', 'Weak Password']
         
         if vuln_type in critical:

@@ -21,6 +21,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import httpx
+import structlog
 from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +30,7 @@ from ..database import get_db
 from ..models import Tenant
 from ..utils.crypto import decrypt_value
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 router = APIRouter()
 
@@ -112,6 +113,7 @@ class LLMChatRequest(BaseModel):
     max_tokens: int = Field(default=2048, ge=1, le=8192)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     provider_override: Optional[str] = Field(default=None, description="Optional provider id override")
+    thinking: Optional[Dict[str, Any]] = Field(default=None, description="Native thinking config, e.g. {\"type\": \"enabled\"}")
 
 
 async def _load_owner_llm_settings(db: AsyncSession) -> dict:
@@ -212,8 +214,14 @@ def _apply_thinking(messages: List[Dict[str, Any]], thinking_level: Optional[str
     return updated
 
 
-def _resolve_env_provider_config() -> dict:
-    provider = os.getenv("LLM_PROVIDER", "zhipu").lower().strip()
+def _resolve_env_provider_config(provider_override: Optional[str] = None) -> dict:
+    """Resolve provider config from environment.
+
+    `provider_override` is used for per-request overrides (e.g. jobs setting `llm_provider`).
+    This is especially important for local providers like LM Studio / Ollama, where we don't
+    want to require the SaaS owner DB to be configured.
+    """
+    provider = (provider_override or os.getenv("LLM_PROVIDER", "zhipu")).lower().strip()
     model = os.getenv("LLM_MODEL", "").strip()
     api_base = os.getenv("LLM_API_BASE", "").strip()
     api_style = _infer_api_style(provider)
@@ -338,27 +346,48 @@ async def llm_chat(req: LLMChatRequest, request: Request, db: AsyncSession = Dep
 
     LOCAL_PROVIDERS = {"lmstudio", "lm-studio", "ollama"}
 
-    # If .env specifies a local provider, use env config directly (skip owner DB)
-    env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
-    if env_provider in LOCAL_PROVIDERS and not provider_override:
-        cfg = _resolve_env_provider_config()
+    # If a request explicitly asks for a local provider, honor it directly from env.
+    # This avoids requiring an owner DB config for LM Studio / Ollama.
+    if provider_override in LOCAL_PROVIDERS:
+        cfg = _resolve_env_provider_config(provider_override)
     else:
-        owner_cfg = _resolve_owner_provider_config(llm_settings, provider_override)
-        if owner_cfg.get("error"):
-            if provider_override and provider_override not in LOCAL_PROVIDERS:
-                raise HTTPException(status_code=400, detail=f"LLM provider override error: {owner_cfg.get('error')}")
-            if provider_override in LOCAL_PROVIDERS:
-                # Local providers don't need owner DB config — fall through to env
-                owner_cfg = {}
-            else:
+        # If .env specifies a local provider, use env config directly (skip owner DB)
+        env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+        if env_provider in LOCAL_PROVIDERS and not provider_override:
+            cfg = _resolve_env_provider_config()
+        else:
+            owner_cfg = _resolve_owner_provider_config(llm_settings, provider_override)
+            if owner_cfg.get("error"):
+                if provider_override and provider_override not in LOCAL_PROVIDERS:
+                    raise HTTPException(status_code=400, detail=f"LLM provider override error: {owner_cfg.get('error')}")
                 raise HTTPException(status_code=500, detail=f"Owner LLM provider error: {owner_cfg.get('error')}")
-        cfg = owner_cfg or _resolve_env_provider_config()
+            cfg = owner_cfg or _resolve_env_provider_config()
     provider_id = cfg.get("provider_id") or "unknown"
     api_style = cfg.get("api_style") or "openai"
     api_base = cfg.get("api_base") or ""
     model = cfg.get("model") or "glm-4.7"
     auth_method = (cfg.get("auth_method") or "api_key").lower()
     credential = cfg.get("credential") or ""
+
+    # Safe observability: log resolved provider/model WITHOUT logging prompts or credentials.
+    # This is the canonical source of truth for "are we using GLM-5 vs local vs Claude?"
+    try:
+        logger.info(
+            "llm_proxy_resolved",
+            request_id=request.headers.get("X-Request-ID"),
+            provider_override=provider_override,
+            resolved_provider=provider_id,
+            resolved_model=model,
+            api_style=api_style,
+            api_base=api_base,
+            source=cfg.get("source"),
+            thinking_level=thinking_level or None,
+            thinking_requested=bool(req.thinking),
+            max_tokens=req.max_tokens,
+            temperature=req.temperature,
+        )
+    except Exception:
+        pass
 
     # Allow Claude subscription setup-token fallback when no API key is configured.
     if not credential and provider_id in {"anthropic", "claude"}:
@@ -396,6 +425,9 @@ async def llm_chat(req: LLMChatRequest, request: Request, db: AsyncSession = Dep
                         "max_tokens": req.max_tokens,
                         "temperature": req.temperature,
                     }
+                    # Native thinking support (GLM-5, etc.)
+                    if req.thinking:
+                        payload["thinking"] = req.thinking
                     headers = {
                         "Authorization": f"Bearer {credential}",
                         "Content-Type": "application/json",
@@ -432,7 +464,7 @@ async def llm_chat(req: LLMChatRequest, request: Request, db: AsyncSession = Dep
                             await asyncio.sleep(wait_time)
                             continue
                         usage = data.get("usage", {}) or {}
-                        return {
+                        result = {
                             "provider": provider_id,
                             "model": model,
                             "content": content,
@@ -445,6 +477,12 @@ async def llm_chat(req: LLMChatRequest, request: Request, db: AsyncSession = Dep
                                 ),
                             },
                         }
+                        # Include reasoning_content if present (native thinking)
+                        if choices:
+                            reasoning = choices[0].get("message", {}).get("reasoning_content")
+                            if reasoning:
+                                result["reasoning_content"] = reasoning
+                        return result
 
                 elif api_style == "anthropic":
                     if not api_base:

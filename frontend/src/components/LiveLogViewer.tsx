@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, Shield, AlertTriangle, CheckCircle, Smartphone } from 'lucide-react';
-import { useDopamine } from '@/context/DopamineContext';
+import React, { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Terminal, Shield, AlertTriangle, CheckCircle } from "lucide-react";
+import { useDopamine } from "@/context/DopamineContext";
+import { api } from "@/lib/api";
 
 interface LogEntry {
     timestamp: string;
@@ -13,51 +14,103 @@ interface LogEntry {
     details?: string;
 }
 
+interface ActivityItem {
+    id: string;
+    type: string; // finding | job_completed | job_failed
+    title: string;
+    detail: string;
+    severity?: string | null;
+    timestamp: string;
+}
+
 export const LiveLogViewer: React.FC = () => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const { triggerCriticalFinding, triggerSuccess, triggerWarning } = useDopamine();
     const processedRef = useRef<Set<string>>(new Set());
+    const initialLoadedRef = useRef(false);
+    const [connected, setConnected] = useState<boolean | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<string>("");
 
-    // Simulate reading from the logs file via an API (mocked for now as we don't have the API route yet)
-    // In a real implementation, we would poll an API endpoint that reads `logs/llm_interactions.jsonl`
     useEffect(() => {
-        const mockLogs: LogEntry[] = [
-            { timestamp: new Date().toISOString(), source: 'System', message: 'TazoSploit v2.0 initialized', type: 'info' },
-            { timestamp: new Date().toISOString(), source: 'Orchestrator', message: 'Connected to control plane', type: 'success' },
-        ];
-        setLogs(mockLogs);
-
-        const interval = setInterval(() => {
-            // Simulate incoming logs - in production this would fetch from /api/logs
-            const events = [
-                { msg: "Scanning port 443...", type: 'info' },
-                { msg: "Directories enumerated: /admin, /login, /config", type: 'info' },
-                { msg: "VULNERABILITY DETECTED: SQL Injection in login form", type: 'critical' },
-                { msg: "Payload successfully executed", type: 'success' },
-                { msg: "Connection timed out retrying...", type: 'warning' },
-                { msg: "Analyzing response headers...", type: 'info' },
-            ];
-
-            const randomEvent = events[Math.floor(Math.random() * events.length)];
-            const newLog: LogEntry = {
+        let cancelled = false;
+        setLogs([
+            {
                 timestamp: new Date().toISOString(),
-                source: 'Agent-01',
-                message: randomEvent.msg,
-                type: randomEvent.type as any
+                source: "System",
+                message: "Connecting to control plane activity stream...",
+                type: "info",
+            },
+        ]);
+
+        function mapItemToLog(item: ActivityItem): LogEntry {
+            const sev = String(item.severity || "").toLowerCase();
+            let type: LogEntry["type"] = "info";
+            if (item.type === "finding") {
+                if (sev === "critical") type = "critical";
+                else if (sev === "high") type = "error";
+                else if (sev === "medium") type = "warning";
+                else type = "info";
+            } else if (item.type === "job_completed") type = "success";
+            else if (item.type === "job_failed") type = "error";
+
+            const source =
+                item.type === "finding"
+                    ? `FINDING/${String(item.severity || "info").toUpperCase()}`
+                    : String(item.type).replaceAll("_", " ").toUpperCase();
+            const message = item.detail ? `${item.title} · ${item.detail}` : item.title;
+
+            return {
+                timestamp: item.timestamp || new Date().toISOString(),
+                source,
+                message,
+                type,
             };
+        }
 
-            setLogs(prev => [...prev.slice(-49), newLog]); // Keep last 50
+        async function load() {
+            try {
+                const res = await api.get("/api/v1/dashboard/activity?limit=20");
+                const items: ActivityItem[] = Array.isArray(res) ? res : [];
+                if (cancelled) return;
 
-            // Trigger Dopamine effects based on log type
-            if (randomEvent.type === 'critical') triggerCriticalFinding();
-            if (randomEvent.type === 'success') triggerSuccess();
-            if (randomEvent.type === 'warning') triggerWarning();
+                setConnected(true);
+                setLastUpdated(new Date().toLocaleTimeString());
 
-        }, 3000);
+                // Trigger dopamine effects only for NEW items after the first successful load.
+                for (const item of items) {
+                    const key = `${item.type}:${item.id}`;
+                    if (processedRef.current.has(key)) continue;
+                    processedRef.current.add(key);
+                    if (!initialLoadedRef.current) continue;
 
-        return () => clearInterval(interval);
-    }, []);
+                    const sev = String(item.severity || "").toLowerCase();
+                    if (item.type === "finding" && sev === "critical") triggerCriticalFinding();
+                    else if (item.type === "job_completed") triggerSuccess();
+                    else triggerWarning();
+                }
+                if (!initialLoadedRef.current) {
+                    // Seed the processed set on first success so we don't celebrate historical items.
+                    for (const item of items) processedRef.current.add(`${item.type}:${item.id}`);
+                    initialLoadedRef.current = true;
+                }
+
+                // Activity endpoint returns newest-first; render oldest-first.
+                const mapped = items.slice().reverse().map(mapItemToLog);
+                setLogs(mapped.slice(-50));
+            } catch {
+                if (cancelled) return;
+                setConnected(false);
+            }
+        }
+
+        load();
+        const interval = window.setInterval(load, 7000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [triggerCriticalFinding, triggerSuccess, triggerWarning]);
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -136,8 +189,11 @@ export const LiveLogViewer: React.FC = () => {
 
             {/* Status Bar */}
             <div className="px-4 py-2 bg-[#12121a] border-t border-white/5 flex items-center justify-between text-[10px] text-gray-500 font-mono">
-                <span>STATUS: ACTIVE</span>
-                <span>CONNECTION: ENCRYPTED (AES-256)</span>
+                <span>
+                    STATUS:{" "}
+                    {connected === null ? "CONNECTING" : connected ? "ONLINE" : "OFFLINE"}
+                </span>
+                <span>UPDATED: {lastUpdated || "—"}</span>
             </div>
         </div>
     );

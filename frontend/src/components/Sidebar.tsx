@@ -7,7 +7,6 @@ import {
   Crosshair,
   FileText,
   Settings,
-  Shield,
   Network,
   Menu,
   X,

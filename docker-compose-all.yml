@@ -82,11 +82,14 @@ services:
       - DATABASE_URL=postgresql://tazosploit:${DB_PASSWORD:-tazosploit_dev}@postgres:5432/tazosploit
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      # Long-running jobs (e.g. 24h/5000 iters) need a longer UI token TTL.
+      # Override in your environment if you want shorter sessions.
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - ENABLE_FULL_LOGGING=true
       - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
-      - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-120}
+      - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-240}
       - LLM_PROXY_RETRY_MAX=${LLM_PROXY_RETRY_MAX:-5}
       - LLM_PROXY_RETRY_BASE_SECONDS=${LLM_PROXY_RETRY_BASE_SECONDS:-2}
       - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}

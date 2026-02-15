@@ -2,14 +2,40 @@ id: persistence
 name: Persistence
 category: persistence
 phase: POST_EXPLOIT
-priority: 60
+priority: 65
 target_types:
   - lab
   - external
-description: Assess persistence risk without leaving lasting changes.
+description: >
+  Establish and maintain access to compromised systems via OS-level, service-level,
+  and web-based persistence mechanisms. Dual-mode: evidence-only validation (default)
+  or active persistence deployment when authorized.
+tags:
+  - persistence
+  - backdoor
+  - c2-callback
+  - stealth
 mitre_techniques:
-  - T1053
-  - T1547
+  - T1053         # Scheduled Task/Job
+  - T1053.001     # At
+  - T1053.003     # Cron
+  - T1053.005     # Scheduled Task
+  - T1547         # Boot or Logon Autostart Execution
+  - T1547.001     # Registry Run Keys / Startup Folder
+  - T1547.004     # Winlogon Helper DLL
+  - T1547.006     # Kernel Modules and Extensions
+  - T1546         # Event Triggered Execution
+  - T1546.003     # WMI Event Subscription
+  - T1546.004     # Unix Shell Configuration Modification
+  - T1546.015     # COM Object Hijacking
+  - T1543.002     # Systemd Service
+  - T1543.003     # Windows Service
+  - T1098.004     # SSH Authorized Keys
+  - T1505.003     # Web Shell
+  - T1574.001     # DLL Search Order Hijacking
+  - T1574.006     # Dynamic Linker Hijacking (LD_PRELOAD)
+  - T1037.004     # RC Scripts
+  - T1556.003     # Pluggable Authentication Modules
 inputs:
   - access.json
 outputs:
@@ -18,10 +44,22 @@ outputs:
   - persistence_risks.json
   - evidence.json
   - findings.json
+  - handoff.json
 prerequisites:
   - access
+evidence_collection:
+  - Persistence mechanism inventory
+  - Risk assessment documentation
+  - Reboot survival validation
+  - Cleanup procedure documentation
 success_criteria:
   - Persistence locations inventoried safely
   - Risks documented with evidence
+  - No unauthorized changes performed (disabled mode)
+  - Persistence survives reboot/logout (enabled mode)
+  - All changes documented for cleanup (enabled mode)
 safety_notes:
   - Do not create persistent backdoors unless explicitly authorized
+  - Always document every change for reliable cleanup
+  - Test dangerous techniques (PAM, Winlogon) in lab first
+  - Never deploy more than one method simultaneously unless instructed

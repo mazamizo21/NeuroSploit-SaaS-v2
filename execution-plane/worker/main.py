@@ -33,6 +33,44 @@ class Worker:
         self.docker_client = docker.from_env()
         self.current_job = None
         self._cancel_event = asyncio.Event()
+
+    @staticmethod
+    def _is_container_not_found_error(e: Exception) -> bool:
+        """Detect Docker errors caused by container restarts/removals while a job is running."""
+        msg = str(e) or ""
+        return (
+            "No such container" in msg
+            or "No such exec instance" in msg
+            or ("404 Client Error" in msg and "/containers/" in msg)
+        )
+
+    async def _exec_run_retry(self, container, *, cmd, workdir: str = None, retries: int = 1):
+        """Run exec in a Kali container, retrying if the container restarted mid-job."""
+        cur = container
+        last_err = None
+        retries = max(0, int(retries or 0))
+        for attempt in range(retries + 1):
+            try:
+                res = cur.exec_run(cmd=cmd, workdir=workdir) if workdir else cur.exec_run(cmd=cmd)
+                return cur, res
+            except Exception as e:
+                last_err = e
+                if attempt >= retries or not self._is_container_not_found_error(e):
+                    raise
+                # Best-effort: reacquire a reserved Kali container for the current job.
+                new_container = await self._get_kali_container(
+                    job_id=self.current_job,
+                    ttl_seconds=DEFAULT_TIMEOUT + 600,
+                )
+                logger.warning(
+                    "container_exec_retry",
+                    job_id=self.current_job,
+                    old_container_id=getattr(cur, "id", None),
+                    new_container_id=getattr(new_container, "id", None),
+                    error=str(e)[:200],
+                )
+                cur = new_container
+        raise last_err
         
     @staticmethod
     def _is_valid_credential(username: str, password: str) -> bool:
@@ -73,7 +111,7 @@ class Worker:
         if u.isalpha() and "@" not in u and "." not in u and "_" not in u and "-" not in u:
             if not any(c.isdigit() for c in u):
                 service_accounts = {
-                    "root", "admin", "postgres", "mysql", "redis", "www",
+                    "root", "admin", "app", "postgres", "mysql", "redis", "www",
                     "apache", "nginx", "ubuntu", "centos", "guest", "ftp",
                     "ssh", "git", "jenkins", "tomcat", "oracle", "sa",
                     "nobody", "daemon", "bin", "sys", "sync", "backup",
@@ -245,6 +283,9 @@ class Worker:
             "evidence",
             "proof_of_concept",
             "remediation",
+            # These are persisted in DB and used for accurate counts/UX.
+            "verified",
+            "is_false_positive",
         }
         for f in findings:
             if not isinstance(f, dict):
@@ -334,7 +375,7 @@ class Worker:
                 # Increment live finding counters in Redis
                 if "credential_found" in line_lower:
                     r.hincrby(f"job:{job_id}:live_stats", "credentials", 1)
-                elif "vulnerability_found" in line_lower:
+                elif "vulnerability_found" in line_lower or "vulnerability_proven" in line_lower:
                     r.hincrby(f"job:{job_id}:live_stats", "vulnerabilities", 1)
                 elif "access_gained" in line_lower:
                     r.hincrby(f"job:{job_id}:live_stats", "access_gained", 1)
@@ -424,7 +465,8 @@ class Worker:
         self._cancel_event.clear()
         
         logger.info("job_executing", job_id=job_id, tenant_id=tenant_id)
-        
+        container = None  # Set once we successfully reserve a Kali executor container
+
         try:
             # Check if this is a resume
             is_resume = False
@@ -464,11 +506,17 @@ class Worker:
                     await self._update_job_status(job_id, "failed", {"error": msg})
                     return
             
-            # Update status to running
+            # Update status to running (include worker_id for forensics).
             await self._update_job_status(job_id, "running", {})
             
             # Find available Kali container
-            container = await self._get_kali_container()
+            timeout_seconds = int(job_details.get("timeout_seconds", DEFAULT_TIMEOUT) or DEFAULT_TIMEOUT)
+            container = await self._get_kali_container(job_id=job_id, ttl_seconds=timeout_seconds + 600)
+            # Record container mapping on the job as soon as we have it (for forensics/debugging).
+            try:
+                await self._update_job_status(job_id, "running", {}, container_id=container.id)
+            except Exception:
+                pass
             
             # Execute via direct exec into container
             output_dir = f"/pentest/output/{job_id}"
@@ -484,17 +532,32 @@ class Worker:
             cost_usd = llm_stats.get("total_cost_usd", 0.0)
             result["tokens_used"] = tokens_used
             result["cost_usd"] = cost_usd
+            result_findings = len(result.get("findings", []) or [])
+            live_findings = int(result.get("live_findings_count") or 0)
+            summary_findings = max(result_findings, live_findings)
 
             # N2: If cancel was triggered during execution, mark as completed_by_cancel
             if self._cancel_event.is_set():
-                await self._update_job_status(job_id, "cancelled", result)
+                await self._update_job_status(job_id, "cancelled", result, container_id=getattr(container, "id", None))
                 await self.redis.set(f"job:{job_id}:terminal", "cancelled", ex=86400)
-                logger.info("job_completed_by_cancel", job_id=job_id, findings=len(result.get("findings", [])))
+                logger.info(
+                    "job_completed_by_cancel",
+                    job_id=job_id,
+                    findings=summary_findings,
+                    result_findings=result_findings,
+                    live_findings=live_findings,
+                )
             else:
                 # Update job status with full result
-                await self._update_job_status(job_id, "completed", result)
+                await self._update_job_status(job_id, "completed", result, container_id=getattr(container, "id", None))
                 await self.redis.set(f"job:{job_id}:terminal", "completed", ex=86400)
-                logger.info("job_completed", job_id=job_id, findings=len(result.get("findings", [])))
+                logger.info(
+                    "job_completed",
+                    job_id=job_id,
+                    findings=summary_findings,
+                    result_findings=result_findings,
+                    live_findings=live_findings,
+                )
             
         except Exception as e:
             logger.error("job_failed", job_id=job_id, error=str(e))
@@ -505,38 +568,81 @@ class Worker:
                 pass
         
         finally:
-            self.current_job = None
-    
-    async def _get_kali_container(self):
-        """Get an available Kali container from the pool"""
-        # Try multiple strategies to find a running Kali container
-        
-        # 1. By label
-        containers = self.docker_client.containers.list(
-            filters={"label": "tazosploit.role=kali-executor", "status": "running"}
-        )
-        if containers:
-            return containers[0]
-        
-        # 2. By compose service name patterns (handles replicas: tazosploit-kali-1, tazosploit-kali-2, etc.)
-        all_running = self.docker_client.containers.list(filters={"status": "running"})
-        kali_containers = [
-            c for c in all_running
-            if any(pat in c.name.lower() for pat in ["kali-executor", "tazosploit-kali-", "tazosploit_kali"])
-        ]
-        if kali_containers:
-            return kali_containers[0]
-        
-        # 3. By image name  
-        for c in self.docker_client.containers.list(filters={"status": "running"}):
+            # Release Kali executor reservation (prevents multiple jobs colliding in the same container)
             try:
-                img_tags = c.image.tags
-                if any("kali" in t.lower() for t in img_tags):
-                    return c
+                if container is not None and self.redis is not None:
+                    key = f"kali:{container.id}:lock"
+                    val = await self.redis.get(key)
+                    if val == str(job_id):
+                        await self.redis.delete(key)
             except Exception:
                 pass
-        
-        raise Exception("No Kali containers available. Is the kali service running?")
+            self.current_job = None
+    
+    async def _get_kali_container(self, job_id: str = None, ttl_seconds: int = None):
+        """Get an available Kali container from the pool.
+
+        IMPORTANT: we reserve containers with a Redis lock so multiple workers don't pick the same
+        Kali executor concurrently (cross-job interference and unsafe pkill side-effects).
+        """
+        # If Redis isn't ready yet, fall back to best-effort selection.
+        can_lock = bool(job_id and self.redis is not None)
+        ttl = int(ttl_seconds or DEFAULT_TIMEOUT or 3600)
+        wait_s = int(os.getenv("KALI_ACQUIRE_WAIT_SECONDS", "60"))
+        sleep_s = float(os.getenv("KALI_ACQUIRE_RETRY_SECONDS", "1"))
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + max(1, wait_s)
+
+        def _candidate_kali_containers():
+            # Try multiple strategies to find running Kali containers
+            containers = self.docker_client.containers.list(
+                filters={"label": "tazosploit.role=kali-executor", "status": "running"}
+            )
+            if containers:
+                return containers
+
+            all_running = self.docker_client.containers.list(filters={"status": "running"})
+            kali_containers = [
+                c for c in all_running
+                if any(pat in c.name.lower() for pat in ["kali-executor", "tazosploit-kali-", "tazosploit_kali"])
+            ]
+            if kali_containers:
+                return kali_containers
+
+            # Fallback by image tag match
+            out = []
+            for c in all_running:
+                try:
+                    img_tags = c.image.tags
+                    if any("kali" in t.lower() for t in img_tags):
+                        out.append(c)
+                except Exception:
+                    pass
+            return out
+
+        while True:
+            candidates = list(_candidate_kali_containers())
+            # Stable ordering avoids stampedes (both workers grabbing the same "first" container).
+            candidates.sort(key=lambda c: c.name)
+
+            if not candidates:
+                raise Exception("No Kali containers available. Is the kali service running?")
+
+            if not can_lock:
+                return candidates[0]
+
+            for c in candidates:
+                key = f"kali:{c.id}:lock"
+                try:
+                    ok = await self.redis.set(key, str(job_id), nx=True, ex=ttl)
+                except Exception:
+                    ok = None
+                if ok:
+                    return c
+
+            if loop.time() >= deadline:
+                raise Exception("No free Kali containers available (all locked). Try scaling kali executors.")
+            await asyncio.sleep(max(0.1, sleep_s))
     
     async def _run_in_container(self, container, job_details: dict, job_id: str, resume: bool = False) -> dict:
         """Execute job in Kali container by directly exec'ing the dynamic agent"""
@@ -653,6 +759,22 @@ class Worker:
         try:
             allow_command_chaining = phase in ("EXPLOIT", "FULL", "POST_EXPLOIT", "LATERAL")
             strict_evidence_only = phase in ("VULN_SCAN", "EXPLOIT", "POST_EXPLOIT", "LATERAL", "FULL")
+            config_block = job_details.get("config") if isinstance(job_details.get("config"), dict) else {}
+            thinking_enabled = bool(config_block.get("thinking_enabled")) or os.getenv("LLM_THINKING_ENABLED", "").strip().lower() in ("true", "1")
+            llm_profile_value = job_details.get("llm_profile") or config_block.get("llm_profile")
+            agent_freedom_value = job_details.get("agent_freedom")
+            if agent_freedom_value is None:
+                agent_freedom_value = config_block.get("agent_freedom")
+
+            # Auto-complete defaults:
+            # The agent supports auto-completing after N "idle" iterations once proof exists.
+            # For long runs (e.g. 24h/5000 iters), that behavior is typically undesirable.
+            auto_complete_idle_iterations = config_block.get("auto_complete_idle_iterations")
+            if auto_complete_idle_iterations is None:
+                auto_complete_idle_iterations = 0 if int(max_iterations or 0) >= 2000 else 50
+            auto_complete_min_iterations = config_block.get("auto_complete_min_iterations")
+            if auto_complete_min_iterations is None:
+                auto_complete_min_iterations = 50
             # Start exec with streaming
             exec_handle = container.client.api.exec_create(
                 container.id,
@@ -684,13 +806,15 @@ class Worker:
                     "EXPLOIT_TOOLCHAIN": "true" if phase in ("EXPLOIT", "FULL") else "false",
                     "STRICT_EVIDENCE_ONLY": str(bool(strict_evidence_only)).lower(),
                     "ALLOW_SELF_REGISTRATION": "true" if relax_exploit_restrictions else "false",
-                    "AUTO_COMPLETE_IDLE_ITERATIONS": str(job_details.get("config", {}).get("auto_complete_idle_iterations", 20) if isinstance(job_details.get("config"), dict) else 20),
+                    "AUTO_COMPLETE_IDLE_ITERATIONS": str(auto_complete_idle_iterations),
+                    "AUTO_COMPLETE_MIN_ITERATIONS": str(auto_complete_min_iterations),
                     **({"LLM_PROVIDER_OVERRIDE": llm_provider_override} if llm_provider_override else {}),
-                    **({"LLM_API_BASE": job_details.get("config", {}).get("llm_api_base")} if isinstance(job_details.get("config"), dict) and job_details["config"].get("llm_api_base") else {}),
-                    **({"LLM_MODEL": job_details.get("config", {}).get("llm_model")} if isinstance(job_details.get("config"), dict) and job_details["config"].get("llm_model") else {}),
+                    **({"LLM_THINKING_ENABLED": "true"} if thinking_enabled else {}),
+                    **({"LLM_API_BASE": config_block.get("llm_api_base")} if config_block.get("llm_api_base") else {}),
+                    **({"LLM_MODEL": config_block.get("llm_model")} if config_block.get("llm_model") else {}),
                     # LLM Profile system — controls agent freedom/strictness
-                    **({"LLM_PROFILE": job_details.get("config", {}).get("llm_profile")} if isinstance(job_details.get("config"), dict) and job_details["config"].get("llm_profile") else {}),
-                    **({"AGENT_FREEDOM": str(job_details.get("config", {}).get("agent_freedom"))} if isinstance(job_details.get("config"), dict) and job_details["config"].get("agent_freedom") else {}),
+                    **({"LLM_PROFILE": llm_profile_value} if llm_profile_value else {}),
+                    **({"AGENT_FREEDOM": str(agent_freedom_value)} if agent_freedom_value is not None else {}),
                 }
             )
             exec_id = exec_handle["Id"]
@@ -736,7 +860,9 @@ class Worker:
                     if self._cancel_event.is_set():
                         logger.info("cancel_killing_process", job_id=job_id)
                         try:
-                            # N8: Send SIGTERM first for graceful shutdown
+                            # Targeted kill first (job_id / output_dir), then fallback to broad tool-name kills.
+                            for pat in [output_dir, job_id]:
+                                container.exec_run(cmd=["pkill", "-15", "-f", pat])
                             for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                                 container.exec_run(cmd=["pkill", "-15", "-f", proc])
                             logger.info("sigterm_sent", job_id=job_id)
@@ -749,6 +875,8 @@ class Worker:
                                 break
                         if not task.done():
                             try:
+                                for pat in [output_dir, job_id]:
+                                    container.exec_run(cmd=["pkill", "-9", "-f", pat])
                                 for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                                     container.exec_run(cmd=["pkill", "-9", "-f", proc])
                                 logger.info("sigkill_sent", job_id=job_id)
@@ -782,6 +910,19 @@ class Worker:
                             logger.warn("live_findings_push_error", error=str(e))
                     
                     await asyncio.sleep(1)
+
+                # IMPORTANT: if the stream collector exited early due to CANCEL, the exec'ed process can still
+                # be running. Ensure we terminate job processes even when `collect_output()` stops.
+                if self._cancel_event.is_set():
+                    logger.info("cancel_killing_process", job_id=job_id, reason="stream_task_done")
+                    try:
+                        for pat in [output_dir, job_id]:
+                            container.exec_run(cmd=["pkill", "-15", "-f", pat])
+                        await asyncio.sleep(2)
+                        for pat in [output_dir, job_id]:
+                            container.exec_run(cmd=["pkill", "-9", "-f", pat])
+                    except Exception:
+                        pass
                 try:
                     await asyncio.wait_for(task, timeout=5)
                 except (asyncio.TimeoutError, asyncio.CancelledError):
@@ -796,9 +937,13 @@ class Worker:
                 logger.warn("job_timeout", job_id=job_id, timeout=timeout_seconds)
                 try:
                     # N8: SIGTERM first, then SIGKILL after 10s
+                    for pat in [output_dir, job_id]:
+                        container.exec_run(cmd=["pkill", "-15", "-f", pat])
                     for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                         container.exec_run(cmd=["pkill", "-15", "-f", proc])
                     await asyncio.sleep(10)
+                    for pat in [output_dir, job_id]:
+                        container.exec_run(cmd=["pkill", "-9", "-f", pat])
                     for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                         container.exec_run(cmd=["pkill", "-9", "-f", proc])
                 except Exception:
@@ -824,6 +969,7 @@ class Worker:
             result = self._read_container_results(container, output_dir, output_text)
             result["exit_code"] = exit_code
             result["raw_output"] = output_text[-5000:]  # Last 5KB of output
+            result["live_findings_count"] = int(pushed_findings_count or 0)
             
             return result
             
@@ -976,6 +1122,7 @@ class Worker:
         - creds.json (credential findings)
         """
         headers = {"Authorization": f"Bearer {INTERNAL_AUTH}"}
+        include_unverified = os.getenv("LIVE_FINDINGS_INCLUDE_UNVERIFIED", "false").strip().lower() in ("1", "true", "yes")
         
         try:
             findings = []
@@ -1012,6 +1159,8 @@ class Worker:
                             is_exploited = vuln.get("exploited", False)
                             has_proof = bool(vuln.get("proof"))
                             vuln_type = vuln.get("type", "Unknown")
+                            if not (is_exploited or has_proof) and not include_unverified:
+                                continue
                             
                             # Build evidence: prefer proof > exploit_evidence > last attempt evidence > details
                             evidence = ""
@@ -1027,6 +1176,8 @@ class Worker:
                                         break
                             if not evidence:
                                 evidence = vuln.get("details", "")
+                            if not evidence and not include_unverified:
+                                continue
                             
                             # Severity: proven exploits get their real severity, unproven get downgraded
                             if is_exploited or has_proof:
@@ -1042,11 +1193,11 @@ class Worker:
                                 desc_parts.append(f"Auto-detected {vuln_type} auth bypass from command.")
                             desc_parts.append(self._format_finding_description(vuln.get("details", ""), vuln))
                             if is_exploited and not has_proof:
-                                desc_parts.append("Th {status_tag}. High/critical severity requires concrete proof; downgraded.")
+                                desc_parts.append(f"The finding is {status_tag}. High/critical severity requires concrete proof; downgraded.")
                             elif has_proof:
-                                desc_parts.append(f"Th {status_tag}. Exploitation confirmed with evidence.")
+                                desc_parts.append(f"The finding is {status_tag}. Exploitation confirmed with evidence.")
                             else:
-                                desc_parts.append(f"Th {status_tag}. High/critical severity requires concrete proof; downgraded.")
+                                desc_parts.append(f"The finding is {status_tag}. High/critical severity requires concrete proof; downgraded.")
                             
                             attempt_count = vuln.get("attempt_count", 0)
                             if attempt_count > 0:
@@ -1059,6 +1210,8 @@ class Worker:
                                 "finding_type": "vulnerability",
                                 "target": vuln.get("target", ""),
                                 "evidence": str(evidence)[:1000],
+                                "verified": bool(is_exploited or has_proof),
+                                "is_false_positive": False,
                                 "_vuln_key": key,  # Track for dedup
                                 "_exploited": is_exploited,
                                 "_has_proof": has_proof,
@@ -1082,6 +1235,8 @@ class Worker:
                             "finding_type": "credential_access",
                             "target": data.get("credential_found", "").split(":")[0] if ":" in data.get("credential_found", "") else "",
                             "evidence": data.get("evidence", ""),
+                            "verified": True,
+                            "is_false_positive": False,
                         })
                     elif isinstance(data, list):
                         for cred in data:
@@ -1092,6 +1247,8 @@ class Worker:
                                     "severity": "critical",
                                     "finding_type": "credential_access",
                                     "evidence": cred.get("evidence", ""),
+                                    "verified": True,
+                                    "is_false_positive": False,
                                 })
             except Exception:
                 pass
@@ -1321,12 +1478,18 @@ class Worker:
             findings = result.get("findings", [])
             if findings:
                 findings = self._normalize_findings(findings)
+                # Findings posted at job completion are treated as verified outputs.
+                for f in findings:
+                    f.setdefault("verified", True)
+                    f.setdefault("is_false_positive", False)
             
             # Prefer root findings.json if present (agent writes here)
             try:
-                exec_result = container.exec_run(
+                container, exec_result = await self._exec_run_retry(
+                    container,
                     cmd=["cat", f"{output_dir}/findings.json"],
-                    workdir="/pentest"
+                    workdir="/pentest",
+                    retries=1,
                 )
                 if exec_result.exit_code == 0:
                     root_findings = json.loads(exec_result.output.decode())
@@ -1334,6 +1497,9 @@ class Worker:
                         root_findings = root_findings.get("findings", [])
                     if isinstance(root_findings, list) and root_findings:
                         findings = self._normalize_findings(root_findings)
+                        for f in findings:
+                            f.setdefault("verified", True)
+                            f.setdefault("is_false_positive", False)
                         result["findings"] = findings
                         logger.info("findings_from_root", count=len(findings))
             except Exception as e:
@@ -1341,15 +1507,20 @@ class Worker:
 
             # Also try reading from the container's evidence directory
             try:
-                exec_result = container.exec_run(
+                container, exec_result = await self._exec_run_retry(
+                    container,
                     cmd=["cat", f"{output_dir}/evidence/findings.json"],
-                    workdir="/pentest"
+                    workdir="/pentest",
+                    retries=1,
                 )
                 if exec_result.exit_code == 0:
                     evidence_findings = json.loads(exec_result.output.decode())
                     if isinstance(evidence_findings, list) and len(evidence_findings) > len(findings):
                         # Normalize findings to ensure they have required fields (title, severity)
                         findings = self._normalize_findings(evidence_findings)
+                        for f in findings:
+                            f.setdefault("verified", True)
+                            f.setdefault("is_false_positive", False)
                         result["findings"] = findings
                         logger.info("findings_from_evidence", count=len(findings))
             except Exception as e:
@@ -1442,9 +1613,11 @@ class Worker:
                 if creds:  # Already found credentials
                     break
                 try:
-                    exec_result = container.exec_run(
+                    container, exec_result = await self._exec_run_retry(
+                        container,
                         cmd=["cat", cred_file],
-                        workdir="/pentest"
+                        workdir="/pentest",
+                        retries=1,
                     )
                     if exec_result.exit_code == 0:
                         data = json.loads(exec_result.output.decode())
@@ -1533,7 +1706,8 @@ class Worker:
                 client.make_bucket(bucket)
             
             # List evidence files in container
-            exec_result = container.exec_run(
+            container, exec_result = await self._exec_run_retry(
+                container,
                 # Only upload JSON artifacts plus newline-delimited JSON from evidence/
                 # (do NOT upload large run logs like agent_executions.jsonl).
                 cmd=[
@@ -1541,20 +1715,25 @@ class Worker:
                     "-lc",
                     f"find '{output_dir}' -type f \\( -name '*.json' -o -path '{output_dir}/evidence/*.jsonl' \\)",
                 ],
-                workdir="/pentest"
+                workdir="/pentest",
+                retries=1,
             )
             
             files = [f.strip() for f in exec_result.output.decode().strip().split("\n") if f.strip()]
             
             for filepath in files:
                 try:
-                    file_content = container.exec_run(cmd=["cat", filepath])
+                    container, file_content = await self._exec_run_retry(
+                        container,
+                        cmd=["cat", filepath],
+                        retries=1,
+                    )
                     if file_content.exit_code == 0:
                         data = file_content.output
-                        filename = os.path.basename(filepath)
-                        object_name = f"{tenant_id}/{job_id}/{filename}"
+                        relpath = os.path.relpath(filepath, output_dir).lstrip("./")
+                        object_name = f"{tenant_id}/{job_id}/{relpath}"
                         content_type = "application/json"
-                        if filename.endswith(".jsonl"):
+                        if relpath.endswith(".jsonl"):
                             content_type = "application/x-ndjson"
                         
                         client.put_object(
@@ -1564,7 +1743,7 @@ class Worker:
                             len(data),
                             content_type=content_type
                         )
-                        logger.info("evidence_uploaded", file=filename, bucket=bucket)
+                        logger.info("evidence_uploaded", file=relpath, bucket=bucket)
                 except Exception as e:
                     logger.warn("evidence_upload_error", file=filepath, error=str(e))
                     
@@ -1597,15 +1776,18 @@ class Worker:
         except Exception as e:
             logger.warning("report_validation_error", job_id=job_id, error=str(e))
     
-    async def _update_job_status(self, job_id: str, status: str, result: dict):
+    async def _update_job_status(self, job_id: str, status: str, result: dict, container_id: str = None):
         """Update job status in control plane and Redis"""
         try:
             # Update via control plane API
             headers = {"Authorization": f"Bearer {INTERNAL_AUTH}"}
+            payload = {"status": status, "result": result, "worker_id": WORKER_ID}
+            if container_id:
+                payload["container_id"] = container_id
             async with httpx.AsyncClient() as client:
                 await client.patch(
                     f"{CONTROL_PLANE_URL}/api/v1/jobs/{job_id}",
-                    json={"status": status, "result": result},
+                    json=payload,
                     headers=headers
                 )
         except Exception as e:

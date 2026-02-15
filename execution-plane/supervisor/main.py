@@ -620,7 +620,7 @@ class Supervisor:
 
     async def _is_supervisor_enabled(self, job_id: Optional[str] = None) -> bool:
         now = time.time()
-        # Check per-job override first
+        # Check per-job override first — per-job ALWAYS wins over global
         if job_id:
             cached = self._job_enabled_cache.get(job_id)
             if cached and now - cached[1] < SUPERVISOR_ENABLED_CACHE_SECONDS:
@@ -630,9 +630,15 @@ class Supervisor:
                 if val is not None:
                     enabled = str(val).strip().lower() in ("1", "true", "yes", "on")
                     self._job_enabled_cache[job_id] = (enabled, now)
+                    logger.debug("supervisor_enabled_check", job_id=job_id, source="per_job_redis", enabled=enabled)
                     return enabled
-            except Exception:
-                pass
+            except Exception as e:
+                # BUG FIX: On Redis failure, use stale per-job cache instead of
+                # falling through to global (which may be false).
+                if cached:
+                    logger.warn("supervisor_enabled_redis_fail_using_stale_cache", job_id=job_id, error=str(e), stale_value=cached[0])
+                    return cached[0]
+                logger.warn("supervisor_enabled_redis_fail_no_cache", job_id=job_id, error=str(e))
         # Fall back to global setting
         if now - self._enabled_cache_ts < SUPERVISOR_ENABLED_CACHE_SECONDS:
             return self._enabled_cache_value
@@ -777,7 +783,7 @@ class Supervisor:
             "You are a supervising safety/quality agent for an autonomous penetration testing worker. "
             "You see alerts about stalling, repeated commands, scan/enumeration loops, or lack of progress. "
             "Return a STRICT JSON object with keys: action, severity, rationale, hint, next_strategy, confidence. "
-            "Allowed actions: ignore, hint, retry, reset, stop. "
+            "Allowed actions: ignore, hint, force_pivot, inject_command, reset, stop. "
             "Do not include any extra text outside JSON."
         )
 
@@ -969,25 +975,31 @@ class Supervisor:
             return "early_terminate"
 
         # Escalation ladder based on accumulated action count
-        if hint_count < 2:
+        # Thresholds: 1 hint → force_pivot → inject_command → early_terminate
+        if hint_count < 1:
             return "hint"
-        elif hint_count < 4:
+        elif hint_count < 2:
             return "force_pivot"
-        elif hint_count < 6:
+        elif hint_count < 4:
             return "inject_command"
         else:
             return "early_terminate"
 
     async def _maybe_execute_action(self, job_id: str, state: JobState, decision: Dict) -> None:
         if not SUPERVISOR_ACTIONS_ENABLED:
+            logger.debug("escalation_blocked", job_id=job_id, reason="SUPERVISOR_ACTIONS_ENABLED=false")
             return
         if not await self._is_supervisor_enabled(job_id):
+            logger.info("escalation_blocked", job_id=job_id, reason="supervisor_not_enabled", action_count=state.action_count)
             return
         if not decision:
+            logger.debug("escalation_blocked", job_id=job_id, reason="empty_decision")
             return
         if state.action_count >= SUPERVISOR_ACTION_MAX_PER_JOB:
+            logger.info("escalation_blocked", job_id=job_id, reason="action_count_max_reached", action_count=state.action_count, max=SUPERVISOR_ACTION_MAX_PER_JOB)
             return
         if state.last_action_ts and time.time() - state.last_action_ts < SUPERVISOR_ACTION_COOLDOWN_SECONDS:
+            logger.debug("escalation_blocked", job_id=job_id, reason="cooldown", seconds_remaining=int(SUPERVISOR_ACTION_COOLDOWN_SECONDS - (time.time() - state.last_action_ts)))
             return
 
         # Fix #5: Apply escalation ladder

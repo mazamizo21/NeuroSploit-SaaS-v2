@@ -165,9 +165,16 @@ class Worker:
             for key, val in kv_pairs:
                 extracted_parts.append(f"{key.title()}: {val}")
         
-        # 3. Strip shell commands (lines starting with common shell prefixes)
+        # 3. Strip shell commands AND LLM reasoning/internal monologue
         lines = cleaned.split('\n')
         prose_lines = []
+        # LLM reasoning patterns to skip
+        llm_reasoning_patterns = [
+            re.compile(r'^(?:wait|okay|ok|so|let me|hmm|alright|right|now|well|actually|thinking),?\s', re.I),
+            re.compile(r'^(?:I (?:need to|should|will|can|have to|notice|see|think|found|believe|realize))', re.I),
+            re.compile(r'^the user (?:\*?provided\*?|asked|wants|said)', re.I),
+            re.compile(r'^\*[^*]+\*$'),  # Pure italicized thoughts
+        ]
         for line in lines:
             stripped = line.strip()
             # Skip shell commands, pipes, and JSON blobs
@@ -178,6 +185,9 @@ class Worker:
             if re.match(r"^['\"]?\{", stripped):
                 continue
             if not stripped:
+                continue
+            # Skip LLM internal reasoning/monologue
+            if any(p.match(stripped) for p in llm_reasoning_patterns):
                 continue
             prose_lines.append(stripped)
         
@@ -689,8 +699,8 @@ class Worker:
                     **({"LLM_API_BASE": job_details.get("config", {}).get("llm_api_base")} if isinstance(job_details.get("config"), dict) and job_details["config"].get("llm_api_base") else {}),
                     **({"LLM_MODEL": job_details.get("config", {}).get("llm_model")} if isinstance(job_details.get("config"), dict) and job_details["config"].get("llm_model") else {}),
                     # LLM Profile system — controls agent freedom/strictness
-                    **({"LLM_PROFILE": job_details.get("config", {}).get("llm_profile")} if isinstance(job_details.get("config"), dict) and job_details["config"].get("llm_profile") else {}),
-                    **({"AGENT_FREEDOM": str(job_details.get("config", {}).get("agent_freedom"))} if isinstance(job_details.get("config"), dict) and job_details["config"].get("agent_freedom") else {}),
+                    **({"LLM_PROFILE": job_details["llm_profile"]} if job_details.get("llm_profile") else {}),
+                    **({"AGENT_FREEDOM": str(job_details["agent_freedom"])} if job_details.get("agent_freedom") else {}),
                 }
             )
             exec_id = exec_handle["Id"]
@@ -736,7 +746,9 @@ class Worker:
                     if self._cancel_event.is_set():
                         logger.info("cancel_killing_process", job_id=job_id)
                         try:
-                            # N8: Send SIGTERM first for graceful shutdown
+                            # Targeted kill first (job_id / output_dir), then fallback to broad tool-name kills.
+                            for pat in [output_dir, job_id]:
+                                container.exec_run(cmd=["pkill", "-15", "-f", pat])
                             for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                                 container.exec_run(cmd=["pkill", "-15", "-f", proc])
                             logger.info("sigterm_sent", job_id=job_id)
@@ -749,6 +761,8 @@ class Worker:
                                 break
                         if not task.done():
                             try:
+                                for pat in [output_dir, job_id]:
+                                    container.exec_run(cmd=["pkill", "-9", "-f", pat])
                                 for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                                     container.exec_run(cmd=["pkill", "-9", "-f", proc])
                                 logger.info("sigkill_sent", job_id=job_id)
@@ -782,6 +796,19 @@ class Worker:
                             logger.warn("live_findings_push_error", error=str(e))
                     
                     await asyncio.sleep(1)
+
+                # IMPORTANT: if the stream collector exited early due to CANCEL, the exec'ed process can still
+                # be running. Ensure we terminate job processes even when `collect_output()` stops.
+                if self._cancel_event.is_set():
+                    logger.info("cancel_killing_process", job_id=job_id, reason="stream_task_done")
+                    try:
+                        for pat in [output_dir, job_id]:
+                            container.exec_run(cmd=["pkill", "-15", "-f", pat])
+                        await asyncio.sleep(2)
+                        for pat in [output_dir, job_id]:
+                            container.exec_run(cmd=["pkill", "-9", "-f", pat])
+                    except Exception:
+                        pass
                 try:
                     await asyncio.wait_for(task, timeout=5)
                 except (asyncio.TimeoutError, asyncio.CancelledError):
@@ -796,9 +823,13 @@ class Worker:
                 logger.warn("job_timeout", job_id=job_id, timeout=timeout_seconds)
                 try:
                     # N8: SIGTERM first, then SIGKILL after 10s
+                    for pat in [output_dir, job_id]:
+                        container.exec_run(cmd=["pkill", "-15", "-f", pat])
                     for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                         container.exec_run(cmd=["pkill", "-15", "-f", proc])
                     await asyncio.sleep(10)
+                    for pat in [output_dir, job_id]:
+                        container.exec_run(cmd=["pkill", "-9", "-f", pat])
                     for proc in ["dynamic_agent.py", "sqlmap", "nikto", "hydra"]:
                         container.exec_run(cmd=["pkill", "-9", "-f", proc])
                 except Exception:
@@ -1013,20 +1044,27 @@ class Worker:
                             has_proof = bool(vuln.get("proof"))
                             vuln_type = vuln.get("type", "Unknown")
                             
-                            # Build evidence: prefer proof > exploit_evidence > last attempt evidence > details
+                            # Build evidence: prefer proof > last attempt evidence (stdout/stderr)
+                            # IMPORTANT: Never use LLM narrative text (details, exploit_evidence,
+                            # claimed_exploit_evidence) as evidence — only real tool output.
                             evidence = ""
                             if has_proof:
                                 evidence = vuln["proof"]
-                            elif vuln.get("exploit_evidence"):
-                                evidence = vuln["exploit_evidence"]
                             elif vuln.get("attempts"):
-                                # Use the last successful attempt's evidence
+                                # Use the last successful attempt's evidence (actual stdout/stderr)
                                 for att in reversed(vuln["attempts"]):
                                     if att.get("success") and att.get("evidence"):
                                         evidence = att["evidence"]
                                         break
+                                # If no successful attempt, use the last attempt's output anyway
+                                if not evidence:
+                                    for att in reversed(vuln["attempts"]):
+                                        if att.get("evidence"):
+                                            evidence = att["evidence"]
+                                            break
+                            # Fallback: use a concise description, NOT raw LLM text
                             if not evidence:
-                                evidence = vuln.get("details", "")
+                                evidence = f"{vuln_type} detected at {vuln.get('target', 'unknown')} — awaiting exploitation proof"
                             
                             # Severity: proven exploits get their real severity, unproven get downgraded
                             if is_exploited or has_proof:
@@ -1042,11 +1080,11 @@ class Worker:
                                 desc_parts.append(f"Auto-detected {vuln_type} auth bypass from command.")
                             desc_parts.append(self._format_finding_description(vuln.get("details", ""), vuln))
                             if is_exploited and not has_proof:
-                                desc_parts.append("Th {status_tag}. High/critical severity requires concrete proof; downgraded.")
+                                desc_parts.append(f"{status_tag}. High/critical severity requires concrete proof; downgraded.")
                             elif has_proof:
-                                desc_parts.append(f"Th {status_tag}. Exploitation confirmed with evidence.")
+                                desc_parts.append(f"{status_tag}. Exploitation confirmed with evidence.")
                             else:
-                                desc_parts.append(f"Th {status_tag}. High/critical severity requires concrete proof; downgraded.")
+                                desc_parts.append(f"{status_tag}. High/critical severity requires concrete proof; downgraded.")
                             
                             attempt_count = vuln.get("attempt_count", 0)
                             if attempt_count > 0:

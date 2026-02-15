@@ -21,7 +21,8 @@ function TerminalInner() {
     if (!termRef.current || !sessionId) return;
 
     let term: any;
-    let ws: WebSocket;
+    let ws: WebSocket | null = null;
+    let handleResize: (() => void) | null = null;
 
     async function init() {
       const { Terminal } = await import("@xterm/xterm");
@@ -45,7 +46,8 @@ function TerminalInner() {
       term.open(termRef.current!);
       fitAddon.fit();
 
-      window.addEventListener("resize", () => fitAddon.fit());
+      handleResize = () => fitAddon.fit();
+      window.addEventListener("resize", handleResize);
 
       // Connect WebSocket
       ws = new WebSocket(wsUrl(`/api/v1/terminal/ws/terminal/${sessionId}`));
@@ -74,7 +76,7 @@ function TerminalInner() {
       };
 
       term.onData((data: string) => {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(data);
         }
       });
@@ -83,6 +85,7 @@ function TerminalInner() {
     init();
 
     return () => {
+      if (handleResize) window.removeEventListener("resize", handleResize);
       ws?.close();
       term?.dispose();
     };

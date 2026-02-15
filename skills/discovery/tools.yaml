@@ -1,0 +1,233 @@
+enum4linux-ng:
+  description: "Next-gen SMB/LDAP/RPC enumeration tool for Windows and Samba systems"
+  category: "smb"
+  install_cmd: "pip3 install enum4linux-ng"
+  verify_cmd: "enum4linux-ng --version"
+  url: "https://github.com/cddmp/enum4linux-ng"
+  examples:
+    - "enum4linux-ng -As <target>"
+    - "enum4linux-ng <target> -u '<user>' -p '<pass>' -oY out"
+    - "enum4linux-ng <target> -A -C"
+    - "enum4linux-ng <target> -u '<user>' -p '<pass>' -R -oJ out.json"
+  notes: "Wraps nmblookup, net, rpcclient, smbclient. Use -As for all safe checks, -R for RID cycling."
+
+ldapsearch:
+  description: "LDAP query tool for Active Directory and directory services enumeration"
+  category: "ldap"
+  install_cmd: "apt-get install -y ldap-utils"
+  verify_cmd: "ldapsearch -VV"
+  examples:
+    - "ldapsearch -x -H ldap://<dc> -b 'dc=domain,dc=local' '(objectClass=user)' sAMAccountName"
+    - "ldapsearch -x -H ldap://<dc> -D 'user@domain.local' -w '<pass>' -b 'dc=domain,dc=local' '(memberOf=CN=Domain Admins,CN=Users,dc=domain,dc=local)'"
+    - "ldapsearch -x -H ldap://<dc> -b 'dc=domain,dc=local' '(servicePrincipalName=*)' sAMAccountName servicePrincipalName"
+    - "ldapsearch -x -H ldap://<dc> -b 'dc=domain,dc=local' '(objectClass=group)' cn member"
+  notes: "Part of ldap-utils. Use -x for simple auth, -H for host URI, -b for base DN."
+
+bloodhound-python:
+  description: "Python BloodHound ingestor for Active Directory enumeration from Linux"
+  category: "active_directory"
+  install_cmd: "pip3 install bloodhound"
+  verify_cmd: "bloodhound-python --version"
+  url: "https://github.com/dirkjanm/BloodHound.py"
+  examples:
+    - "bloodhound-python -u '<user>' -p '<pass>' -d <domain> -dc <dc_fqdn> -c all"
+    - "bloodhound-python -u '<user>' -p '<pass>' -d <domain> -dc <dc_fqdn> -c all --zip"
+    - "bloodhound-python -u '<user>' -p '<pass>' -d <domain> -dc <dc_fqdn> -c all -ns <dns_server>"
+    - "bloodhound-python -u '<user>' -hashes :<nthash> -d <domain> -dc <dc_fqdn> -c all"
+  notes: "Collectors: Group, LocalAdmin, Session, Trusts, Default, DCOnly, DCOM, RDP, PSRemote, LoggedOn, Container, ObjectProps, ACL, All."
+
+seatbelt:
+  description: "C# host-survey tool for offensive and defensive security checks on Windows"
+  category: "windows"
+  install_cmd: "Manual — compile from source or use prebuilt binary"
+  verify_cmd: "Seatbelt.exe -h"
+  url: "https://github.com/GhostPack/Seatbelt"
+  examples:
+    - ".\\Seatbelt.exe -group=all"
+    - ".\\Seatbelt.exe -group=system"
+    - ".\\Seatbelt.exe -group=user"
+    - ".\\Seatbelt.exe AntiVirus AppLocker LocalGroups LocalUsers ChromiumPresence CloudCredentials"
+    - ".\\Seatbelt.exe -group=all -computername=<target> -username=<user> -password=<pass>"
+  notes: "Groups: system, user, misc, all. Supports remote enumeration with + marked commands."
+
+linpeas:
+  description: "Linux Privilege Escalation Awesome Script — comprehensive Linux enumeration"
+  category: "linux"
+  install_cmd: "curl -L https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh -o linpeas.sh && chmod +x linpeas.sh"
+  verify_cmd: "head -5 linpeas.sh"
+  url: "https://github.com/peass-ng/PEASS-ng"
+  examples:
+    - "./linpeas.sh"
+    - "./linpeas.sh -a"
+    - "./linpeas.sh -a -o /dev/shm/linpeas.txt"
+    - "curl -L https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh"
+    - "./linpeas.sh -a > /dev/shm/linpeas.txt"
+  notes: "Use -a for all checks (5-10 min). Variants: linpeas_fat.sh (embedded tools), linpeas.sh (default), linpeas_small.sh (minimal). No dependencies."
+
+winpeas:
+  description: "Windows Privilege Escalation Awesome Script — comprehensive Windows enumeration"
+  category: "windows"
+  install_cmd: "Download from https://github.com/peass-ng/PEASS-ng/releases/latest"
+  verify_cmd: ".\\winPEASx64.exe --help"
+  url: "https://github.com/peass-ng/PEASS-ng"
+  examples:
+    - ".\\winPEASx64.exe"
+    - ".\\winPEASx64.exe quiet"
+    - ".\\winPEASx64.exe systeminfo userinfo"
+    - ".\\winPEASx64.exe servicesinfo applicationsinfo"
+    - ".\\winPEASx64.exe quiet cmd fast"
+  notes: "Requires .NET >= 4.5.2. Variants: winPEASx64.exe, winPEASx86.exe, winPEAS.bat, winPEAS.ps1."
+
+pspy:
+  description: "Unprivileged Linux process snooping — monitor processes and cron jobs without root"
+  category: "linux"
+  install_cmd: "Download from https://github.com/DominicBreuker/pspy/releases"
+  verify_cmd: "./pspy64 --help"
+  url: "https://github.com/DominicBreuker/pspy"
+  examples:
+    - "./pspy64"
+    - "./pspy64 -pf -i 1000"
+    - "./pspy64 -r /tmp -r /etc/cron.d -r /var/spool/cron"
+    - "./pspy64 -p=false -f"
+    - "./pspy64 -c"
+  notes: "Flags: -p (print commands, default on), -f (file events), -r (recursive watch dirs), -d (non-recursive dirs), -i (scan interval ms), -c (color by UID)."
+
+powerview:
+  description: "PowerShell AD enumeration framework — part of PowerSploit"
+  category: "active_directory"
+  install_cmd: "IEX(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1')"
+  verify_cmd: "Get-Command Get-DomainUser"
+  url: "https://github.com/PowerShellMafia/PowerSploit/tree/master/Recon"
+  examples:
+    - "Import-Module .\\PowerView.ps1; Get-DomainUser"
+    - "Get-DomainController"
+    - "Get-DomainGroup -Identity 'Domain Admins'"
+    - "Get-DomainGroupMember -Identity 'Domain Admins' -Recurse"
+    - "Get-DomainTrust"
+    - "Get-DomainUser -SPN"
+    - "Find-InterestingDomainAcl -ResolveGUIDs"
+    - "Find-DomainShare -CheckShareAccess"
+  notes: "Must import module first. Use -Domain flag for cross-domain queries. Get-DomainUser -SPN finds kerberoastable accounts."
+
+adrecon:
+  description: "PowerShell AD recon tool that extracts and reports comprehensive AD data"
+  category: "active_directory"
+  install_cmd: "Download from https://github.com/adrecon/ADRecon"
+  verify_cmd: "Get-Help .\\ADRecon.ps1"
+  url: "https://github.com/adrecon/ADRecon"
+  examples:
+    - ".\\ADRecon.ps1"
+    - ".\\ADRecon.ps1 -DomainController <dc> -Credential <domain\\user>"
+    - ".\\ADRecon.ps1 -Collect Users,Groups,Computers,Trusts"
+    - ".\\ADRecon.ps1 -GenExcel C:\\temp\\ADRecon-Report.xlsx"
+  notes: "Generates Excel reports. Collects: Forest, Domain, Trusts, Sites, Subnets, PasswordPolicy, DCs, Users, SPNs, Groups, OUs, GPOs, DNS, Printers, Computers, LAPS, BitLocker, ACLs."
+
+rpcclient:
+  description: "Samba RPC client for MS-RPC enumeration of Windows hosts"
+  category: "smb"
+  install_cmd: "apt-get install -y samba-client"
+  verify_cmd: "rpcclient --version"
+  examples:
+    - "rpcclient -U '' -N <target>"
+    - "rpcclient -U '<user>%<pass>' <target> -c 'enumdomusers'"
+    - "rpcclient -U '<user>%<pass>' <target> -c 'enumdomgroups'"
+    - "rpcclient -U '<user>%<pass>' <target> -c 'queryuser <rid>'"
+    - "rpcclient -U '<user>%<pass>' <target> -c 'getdompwinfo'"
+    - "rpcclient -U '<user>%<pass>' <target> -c 'lookupnames administrator'"
+  notes: "Key commands: enumdomusers, enumdomgroups, queryuser <rid>, querygroupmem <rid>, getdompwinfo, lsaenumsid, lookupnames, lookupsids."
+
+nbtscan:
+  description: "NetBIOS name scanner for discovering Windows hosts on a network"
+  category: "network"
+  install_cmd: "apt-get install -y nbtscan"
+  verify_cmd: "nbtscan -h"
+  examples:
+    - "nbtscan 10.0.0.0/24"
+    - "nbtscan -r 10.0.0.0/24"
+    - "nbtscan -v -s : 10.0.0.0/24"
+    - "nbtscan -f targets.txt"
+  notes: "Flags: -r (use local port 137 for scans), -v (verbose), -s <sep> (output separator), -f (read targets from file), -t <timeout>."
+
+smbclient:
+  description: "Samba client for SMB share enumeration and file access"
+  category: "smb"
+  install_cmd: "apt-get install -y smbclient"
+  verify_cmd: "smbclient --version"
+  examples:
+    - "smbclient -L //<target> -N"
+    - "smbclient -L //<target> -U '<user>%<pass>'"
+    - "smbclient //<target>/<share> -U '<user>%<pass>'"
+    - "smbclient //<target>/<share> -U '<user>%<pass>' -c 'recurse ON; prompt OFF; mget *'"
+  notes: "Use -N for null session, -L to list shares, -c for commands. Interactive commands: ls, get, put, cd, recurse, prompt, mget."
+
+showmount:
+  description: "NFS share enumeration — show exported filesystems from NFS server"
+  category: "nfs"
+  install_cmd: "apt-get install -y nfs-common"
+  verify_cmd: "showmount --version"
+  examples:
+    - "showmount -e <target>"
+    - "showmount -a <target>"
+    - "showmount -d <target>"
+  notes: "Flags: -e (show exports), -a (show all mount points), -d (show directories). Mount with: mount -t nfs <target>:/<share> /mnt/nfs."
+
+finger:
+  description: "User information lookup tool for finger protocol (TCP 79)"
+  category: "users"
+  install_cmd: "apt-get install -y finger"
+  verify_cmd: "finger --version 2>&1 || which finger"
+  examples:
+    - "finger @<target>"
+    - "finger <username>@<target>"
+    - "finger -lmsp"
+  notes: "Legacy protocol. May reveal usernames, real names, login times, shell, home directory. Rarely enabled on modern systems."
+
+net_commands:
+  description: "Windows built-in net commands for user, group, share, and domain enumeration"
+  category: "windows_builtin"
+  install_cmd: "Built-in to Windows"
+  verify_cmd: "net help"
+  examples:
+    - "net user"
+    - "net user /domain"
+    - "net localgroup administrators"
+    - "net group \"Domain Admins\" /domain"
+    - "net group \"Enterprise Admins\" /domain"
+    - "net share"
+    - "net use"
+    - "net view"
+    - "net view /domain"
+    - "net accounts"
+    - "net accounts /domain"
+    - "net config workstation"
+  notes: "No installation needed. Core Windows enumeration. net user /domain and net group /domain require domain membership."
+
+wmic:
+  description: "Windows Management Instrumentation command-line tool for system queries"
+  category: "windows_builtin"
+  install_cmd: "Built-in to Windows (deprecated in favor of PowerShell CIM cmdlets)"
+  verify_cmd: "wmic /?"
+  examples:
+    - "wmic product get name,version"
+    - "wmic service list config"
+    - "wmic process list brief"
+    - "wmic useraccount list brief"
+    - "wmic group list brief"
+    - "wmic startup list full"
+    - "wmic os get caption,version,buildnumber"
+    - "wmic /namespace:\\\\root\\SecurityCenter2 path AntiVirusProduct get displayName,productState"
+    - "wmic qfe list brief"
+  notes: "Deprecated since Windows 10 21H1 but still widely available. Use Get-CimInstance in PowerShell as replacement."
+
+nmap:
+  description: "Network Mapper — host discovery, port scanning, and service enumeration"
+  category: "network"
+  install_cmd: "apt-get install -y nmap"
+  verify_cmd: "nmap --version"
+  examples:
+    - "nmap -sn 10.0.0.0/24 -oG ping_sweep.gnmap"
+    - "nmap -sS --top-ports 100 -T4 <target> -oA quick_scan"
+    - "nmap -sV -sC -p- -T4 <target> -oA full_scan"
+    - "nmap -sU --top-ports 50 <target>"
+    - "nmap --script smb-enum-shares,smb-enum-users <target>"
+  notes: "For discovery context: use -sn for host sweep, -sV -sC for service enum, --script for specific enumeration. -oG for greppable output."

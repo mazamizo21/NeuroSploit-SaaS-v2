@@ -82,13 +82,26 @@ async def create_session(
 ):
     """Create a new terminal session (starts tmux in a Kali container)."""
     import docker
+    from docker.errors import DockerException
 
     tid = current_user.tenant_id
     session_id = str(uuid.uuid4())
     tmux_name = f"ts-{session_id[:8]}"
 
     # Find a kali container
-    client = docker.from_env()
+    try:
+        client = docker.from_env()
+    except (DockerException, PermissionError) as e:
+        # Avoid crashing (which can surface as a browser CORS error). Return a clear 503 instead.
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Terminal backend unavailable: cannot connect to the Docker daemon. "
+                "Ensure the control-plane container can access /var/run/docker.sock (Docker Desktop: add the socket group, "
+                "or run the API container with sufficient privileges). "
+                f"Error: {e}"
+            ),
+        )
     container_name = body.container_name
     if not container_name:
         containers = client.containers.list(status="running")
@@ -225,7 +238,20 @@ async def terminal_ws(websocket: WebSocket, session_id: str):
     tmux_session = session["tmux_session"]
 
     import docker
-    client = docker.from_env()
+    from docker.errors import DockerException
+    try:
+        client = docker.from_env()
+    except (DockerException, PermissionError) as e:
+        await websocket.send_json(
+            {
+                "error": (
+                    "Terminal backend unavailable: cannot connect to the Docker daemon. "
+                    f"Error: {e}"
+                )
+            }
+        )
+        await websocket.close()
+        return
 
     try:
         container = client.containers.get(container_name)

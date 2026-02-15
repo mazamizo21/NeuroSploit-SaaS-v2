@@ -6,10 +6,49 @@ priority: 85
 target_types:
   - lab
   - external
-description: Identify, validate, and document credentials discovered during testing.
+description: >
+  Identify, extract, validate, and document credentials across Windows, Linux,
+  Active Directory, web applications, and cloud environments during penetration testing.
 mitre_techniques:
+  # Brute Force
   - T1110
-  - T1555
+  - T1110.001  # Password Guessing
+  - T1110.002  # Password Cracking
+  - T1110.003  # Password Spraying
+  - T1110.004  # Credential Stuffing
+  # OS Credential Dumping
+  - T1003
+  - T1003.001  # LSASS Memory
+  - T1003.002  # Security Account Manager (SAM)
+  - T1003.003  # NTDS
+  - T1003.004  # LSA Secrets
+  - T1003.005  # Cached Domain Credentials
+  - T1003.006  # DCSync
+  - T1003.007  # Proc Filesystem (/proc)
+  - T1003.008  # /etc/passwd and /etc/shadow
+  # Unsecured Credentials
+  - T1552
+  - T1552.001  # Credentials In Files
+  - T1552.002  # Credentials in Registry
+  - T1552.003  # Bash History
+  - T1552.004  # Private Keys
+  - T1552.005  # Cloud Instance Metadata API
+  - T1552.006  # Group Policy Preferences
+  - T1552.007  # Container API
+  # Steal or Forge Kerberos Tickets
+  - T1558
+  - T1558.001  # Golden Ticket
+  - T1558.002  # Silver Ticket
+  - T1558.003  # Kerberoasting
+  - T1558.004  # AS-REP Roasting
+  # Adversary-in-the-Middle
+  - T1557
+  # Steal Web Session Cookie
+  - T1539
+  # Steal Application Access Token
+  - T1528
+  # Steal or Forge Authentication Certificates
+  - T1649
 inputs:
   - evidence.json
 outputs:
@@ -18,7 +57,16 @@ outputs:
   - findings.json
 prerequisites:
   - access
+evidence_collection:
+  - Credential dumps and hash extractions
+  - Kerberos ticket captures
+  - Cracking results and validated credentials
+  - Unsecured credential findings
 success_criteria:
   - Credentials identified and validated
+  - Hash types identified and cracking attempted
+  - Evidence properly redacted
 safety_notes:
   - Avoid brute-force unless explicitly allowed
+  - Respect account lockout policies
+  - Redact all credentials in reports

@@ -1,0 +1,207 @@
+# =============================================================================
+# TazoSploit — VULNERABLE LAB TARGETS
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.lab.yml up -d      → Start all lab targets
+#   docker compose -f docker-compose.lab.yml down -v     → Tear down lab targets
+#
+# NOTE: Kali containers (in main docker-compose.yml) connect to lab-net
+#       as an external network, so they can reach these targets when running.
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # WEB APPLICATION TARGETS
+  # ===========================================================================
+
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    platform: linux/amd64
+    container_name: lab-dvwa
+    ports:
+      - "8081:80"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  dvna:
+    image: appsecco/dvna:sqlite
+    platform: linux/amd64
+    container_name: lab-dvna
+    ports:
+      - "9091:9090"
+    environment:
+      - DVNA_DB_TYPE=sqlite
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  juiceshop:
+    image: bkimminich/juice-shop:latest
+    container_name: lab-juiceshop
+    ports:
+      - "3080:3000"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  webgoat:
+    image: webgoat/webgoat:latest
+    platform: linux/amd64
+    container_name: lab-webgoat
+    ports:
+      - "8082:8080"
+    environment:
+      - WEBGOAT_HOST=0.0.0.0
+      - WEBGOAT_PORT=8080
+    networks:
+      - lab-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/WebGoat/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  vuln-api:
+    image: python:3.11-slim
+    container_name: lab-vuln-api
+    working_dir: /app
+    volumes:
+      - ./vulnerable-lab/vulnerable-api:/app
+    command: >
+      sh -c "pip install --quiet flask flask-cors pymysql pymongo requests && python app.py"
+    ports:
+      - "5001:5000"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  admin-panel:
+    image: php:8.2-apache
+    container_name: lab-admin-panel
+    volumes:
+      - ./vulnerable-lab/admin-panel:/var/www/html
+    ports:
+      - "8888:80"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  # ===========================================================================
+  # LAB INFRASTRUCTURE (databases, services)
+  # ===========================================================================
+
+  lab-mysql:
+    image: mysql:8.0
+    container_name: lab-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=dvwa_password
+    volumes:
+      - lab-mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  lab-postgres:
+    image: postgres:15
+    container_name: lab-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=enterprise
+    volumes:
+      - lab-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  lab-mongodb:
+    image: mongo:6
+    container_name: lab-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - lab-mongodb-data:/data/db
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  lab-redis:
+    image: redis:7
+    container_name: lab-redis
+    command: redis-server --protected-mode no
+    ports:
+      - "6380:6379"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  samba:
+    image: dperson/samba:latest
+    container_name: lab-samba
+    command: -s "shared;/shared;yes;no;yes;admin;admin123"
+    ports:
+      - "445:445"
+      - "139:139"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  jumphost:
+    image: linuxserver/openssh-server:latest
+    container_name: lab-jumphost
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - PASSWORD_ACCESS=true
+      - USER_PASSWORD=admin123
+      - USER_NAME=admin
+      - SUDO_ACCESS=true
+    ports:
+      - "2222:2222"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+  lab-elasticsearch:
+    image: elasticsearch:7.17.10
+    container_name: lab-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - lab-net
+    restart: unless-stopped
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+
+networks:
+  lab-net:
+    driver: bridge
+    name: tazosploit-lab
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+
+volumes:
+  lab-mysql-data:
+  lab-postgres-data:
+  lab-mongodb-data:

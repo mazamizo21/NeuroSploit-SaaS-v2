@@ -170,6 +170,8 @@ class Job(Base):
     authorization_confirmed = Column(Boolean, default=False)
     exploit_mode = Column(String(20), default="explicit_only")
     llm_provider = Column(String(100))  # Optional per-job LLM provider override
+    llm_profile = Column(String(20))   # Agent profile: strict/balanced/relaxed/unleashed/unhinged
+    agent_freedom = Column(Integer)     # Agent freedom level 1-10 (overrides profile)
     supervisor_enabled = Column(Boolean)        # None = use global default
     supervisor_provider = Column(String(100))   # None = use global default
     allow_persistence = Column(Boolean, default=False)

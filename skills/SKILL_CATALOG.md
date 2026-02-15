@@ -9,12 +9,13 @@ Auto-generated catalog of available skills.
 - MITRE: T1110, T1555
 - Tools: mimikatz, hashcat, john, hashid, cewl, crunch, fcrackzip, pdfcrack, secretsdump, laZagne, parse_hashcat_show
 
-## Defense Evasion (`defense_evasion`)
+## Defense Evasion & Cleanup (`defense_evasion`)
 
 - Category: `defense_evasion`
-- Description: Assess evasion risks without disabling defenses.
-- MITRE: T1562, T1070
-- Tools: system_tools, lnav, logwatch, tcpdump, tshark, lynis, tiger, summarize_defense_controls
+- Description: Evade detection, manipulate logs, obfuscate payloads, clean artifacts, and bypass security controls.
+- MITRE: T1070, T1070.001, T1070.002, T1070.003, T1070.004, T1070.006, T1070.009, T1562, T1562.001, T1562.002, T1055, T1055.001, T1055.012, T1027, T1027.002, T1027.010, T1140, T1036, T1036.001, T1036.002, T1036.003, T1036.004, T1036.005, T1036.007, T1036.009, T1564, T1564.001, T1564.010, T1218, T1218.005, T1218.010, T1218.011, T1572, T1071, T1573, T1497, T1497.001, T1497.002, T1497.003, T1622, T1202, T1220, T1480, T1006, T1548, T1548.001, T1548.002, T1548.003, T1134, T1134.001, T1134.002, T1134.004, T1134.005, T1550, T1550.002, T1550.003, T1550.004, T1222, T1556, T1556.001, T1556.002, T1556.003, T1556.004, T1553, T1553.001, T1553.002, T1553.003, T1553.004, T1553.005, T1205, T1205.001, T1205.002, T1484, T1484.001, T1484.002
+- Tools: msfvenom, veil, shellter, shred, srm, wevtutil, auditctl, journalctl, touch, upx, base64, openssl...
+- Tags: evasion, cleanup, stealth, anti-forensics, log-manipulation
 
 ## Example Skill (`example_skill`)
 
@@ -54,9 +55,9 @@ Auto-generated catalog of available skills.
 ## Persistence (`persistence`)
 
 - Category: `persistence`
-- Description: Assess persistence risk without leaving lasting changes.
-- MITRE: T1053, T1547
-- Tools: system_tools, winpeas, seatbelt, linpeas, normalize_persistence
+- Description: Establish and manage persistent access on compromised systems. Includes Linux (cron, systemd, shell profiles, SSH keys, LD_PRELOAD, PAM) and Windows (registry, scheduled tasks, WMI, services, DLL hijacking, Winlogon) persistence mechanisms, plus web persistence (webshells, database triggers). Evidence-only by default; active persistence requires allow_persistence=true.
+- MITRE: T1053, T1053.003, T1053.005, T1543, T1543.002, T1543.003, T1547, T1547.001, T1547.004, T1546, T1546.003, T1546.004, T1098, T1098.004, T1574, T1574.001, T1574.006, T1556, T1556.003, T1037, T1037.004, T1505.003
+- Tools: cron_persistence, systemd_persistence, ssh_keys, reg_persistence, schtasks_persistence, sc_persistence, linpeas, winpeas, seatbelt, normalize_persistence
 
 ## Privilege Escalation (`privilege_escalation`)
 

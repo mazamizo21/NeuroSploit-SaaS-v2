@@ -1,0 +1,63 @@
+id: collection
+name: Collection
+category: collection
+phase: POST_EXPLOIT
+priority: 70
+target_types:
+  - lab
+  - external
+description: >
+  Post-exploitation data collection techniques — credential harvesting, sensitive
+  file discovery, screen/input capture, email/communication theft, and data staging
+  for exfiltration. Covers MITRE ATT&CK Tactic TA0009 (Collection).
+mitre_techniques:
+  - T1560       # Archive Collected Data
+  - T1560.001   # Archive via Utility
+  - T1119       # Automated Collection
+  - T1185       # Browser Session Hijacking
+  - T1115       # Clipboard Data
+  - T1530       # Data from Cloud Storage
+  - T1213       # Data from Information Repositories
+  - T1005       # Data from Local System
+  - T1039       # Data from Network Shared Drive
+  - T1074       # Data Staged
+  - T1074.001   # Local Data Staging
+  - T1114       # Email Collection
+  - T1056       # Input Capture
+  - T1056.001   # Keylogging
+  - T1113       # Screen Capture
+  - T1557       # Adversary-in-the-Middle
+inputs:
+  - access.json
+outputs:
+  - collection.json
+  - staged_data.json
+  - credentials.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - access
+evidence_collection:
+  - Credential extraction outputs
+  - Sensitive file listings and samples
+  - Screenshot and keylog captures
+  - Email harvest results
+  - Data staging manifests
+success_criteria:
+  - Target data identified and collected
+  - Data staged and prepared for exfiltration
+  - Evidence captured with minimal footprint
+  - Collection artifacts documented for cleanup
+safety_notes:
+  - Minimize data collected — prove capability with samples not bulk dumps
+  - Elevated privileges recommended for full credential access
+  - Respect scope boundaries for data collection
+  - Document all collected data for client disclosure
+tags:
+  - collection
+  - credentials
+  - data-staging
+  - keylogging
+  - screenshots
+  - email
+  - post-exploitation

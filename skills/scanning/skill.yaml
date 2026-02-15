@@ -4,23 +4,46 @@ category: scanning
 phase: VULN_SCAN
 priority: 85
 target_types:
-- lab
-- external
-description: Identify likely vulnerabilities and misconfigurations with safe, automated
-  scans.
+  - lab
+  - external
+description: >
+  Systematic vulnerability identification using automated scanners (nuclei, nmap NSE,
+  nikto, sqlmap, testssl), manual validation, and CVE correlation. Service-aware scanning
+  with false positive reduction and evidence-based reporting.
 mitre_techniques:
-- T1595
-- T1190
+  - T1595
+  - T1595.001
+  - T1595.002
+  - T1190
+  - T1046
+  - T1592
+  - T1018
 inputs:
-- services.json
+  - ports.json
+  - services.json
+  - tech_fingerprint.json
+  - endpoints.json
 outputs:
-- vulns.json
-- findings.json
-- scan_findings.json
-- evidence.json
+  - vulns.json
+  - findings.json
+  - scan_findings.json
+  - evidence.json
 prerequisites:
-- services
+  - reconnaissance
+evidence_collection:
+  - Raw scanner output (nuclei JSON, nmap XML, nikto report)
+  - Manual validation with curl request/response
+  - CVE correlation with version evidence
+  - False positive analysis and severity calibration
+  - Exploit-DB matches with searchsploit
 success_criteria:
-- Vulnerabilities identified with evidence
+  - Vulnerabilities identified with validated evidence
+  - False positives reduced through manual verification
+  - Service-specific scans completed for all discovered services
+  - CVE correlation performed for all versioned services
 safety_notes:
-- Use conservative rate limits on external targets
+  - Use conservative rate limits on external targets (50-100 req/s max)
+  - No destructive nuclei templates unless explicitly authorized
+  - Validate findings before reporting to minimize false positives
+  - Stagger scans to avoid overwhelming target services
+  - SQLMap only on discovered injectable parameters, never blind
