@@ -3,6 +3,19 @@
 Test GLM 4.7 model via LM Studio
 """
 
+# This is a manual local smoke test script (LM Studio) and should not be part
+# of the automated pytest suite.
+if __name__ != "__main__":
+    try:
+        import pytest  # type: ignore
+
+        pytest.skip(
+            "Manual LM Studio smoke test (not part of automated suite)",
+            allow_module_level=True,
+        )
+    except Exception:
+        pass
+
 import os
 import sys
 import json

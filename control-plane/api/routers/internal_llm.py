@@ -113,6 +113,11 @@ class LLMChatRequest(BaseModel):
     max_tokens: int = Field(default=2048, ge=1, le=8192)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     provider_override: Optional[str] = Field(default=None, description="Optional provider id override")
+    model_override: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Optional model override (OpenClaw-style provider/model or raw upstream model id)",
+    )
     thinking: Optional[Dict[str, Any]] = Field(default=None, description="Native thinking config, e.g. {\"type\": \"enabled\"}")
 
 
@@ -343,6 +348,9 @@ async def llm_chat(req: LLMChatRequest, request: Request, db: AsyncSession = Dep
     thinking_level = (llm_settings.get("thinking_level") or os.getenv("LLM_THINKING_LEVEL", "")).strip().lower()
 
     provider_override = (req.provider_override or "").strip().lower() or None
+    model_override = (req.model_override or "").strip() or None
+    if model_override and any(ch.isspace() for ch in model_override):
+        raise HTTPException(status_code=400, detail="model_override must not contain whitespace")
 
     LOCAL_PROVIDERS = {"lmstudio", "lm-studio", "ollama"}
 
@@ -369,6 +377,9 @@ async def llm_chat(req: LLMChatRequest, request: Request, db: AsyncSession = Dep
     auth_method = (cfg.get("auth_method") or "api_key").lower()
     credential = cfg.get("credential") or ""
 
+    if model_override:
+        model = _normalize_model(provider_id, model_override)
+
     # Safe observability: log resolved provider/model WITHOUT logging prompts or credentials.
     # This is the canonical source of truth for "are we using GLM-5 vs local vs Claude?"
     try:
@@ -376,6 +387,7 @@ async def llm_chat(req: LLMChatRequest, request: Request, db: AsyncSession = Dep
             "llm_proxy_resolved",
             request_id=request.headers.get("X-Request-ID"),
             provider_override=provider_override,
+            model_override=model_override,
             resolved_provider=provider_id,
             resolved_model=model,
             api_style=api_style,

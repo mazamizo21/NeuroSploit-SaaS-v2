@@ -520,7 +520,7 @@ class Worker:
             
             # Execute via direct exec into container
             output_dir = f"/pentest/output/{job_id}"
-            result = await self._run_in_container(container, job_details, job_id, resume=is_resume)
+            result = await self._run_in_container(container, job_details, job_id, tenant_id, resume=is_resume)
             result["job_phase"] = phase
             
             # Post structured findings to API
@@ -536,6 +536,9 @@ class Worker:
             live_findings = int(result.get("live_findings_count") or 0)
             summary_findings = max(result_findings, live_findings)
 
+            # If agent was stopped (pause), mark as paused (stop/resume flow)
+            paused_flag = bool(result.get("paused") or str(result.get("status") or "").lower() == "paused")
+
             # N2: If cancel was triggered during execution, mark as completed_by_cancel
             if self._cancel_event.is_set():
                 await self._update_job_status(job_id, "cancelled", result, container_id=getattr(container, "id", None))
@@ -546,6 +549,15 @@ class Worker:
                     findings=summary_findings,
                     result_findings=result_findings,
                     live_findings=live_findings,
+                )
+            elif paused_flag:
+                await self._update_job_status(job_id, "paused", result, container_id=getattr(container, "id", None))
+                await self.redis.set(f"job:{job_id}:terminal", "paused", ex=86400)
+                logger.info(
+                    "job_paused",
+                    job_id=job_id,
+                    findings=summary_findings,
+                    iteration=result.get("iterations"),
                 )
             else:
                 # Update job status with full result
@@ -644,7 +656,7 @@ class Worker:
                 raise Exception("No free Kali containers available (all locked). Try scaling kali executors.")
             await asyncio.sleep(max(0.1, sleep_s))
     
-    async def _run_in_container(self, container, job_details: dict, job_id: str, resume: bool = False) -> dict:
+    async def _run_in_container(self, container, job_details: dict, job_id: str, tenant_id: str, resume: bool = False) -> dict:
         """Execute job in Kali container by directly exec'ing the dynamic agent"""
         # Publish container mapping for supervisor actions
         try:
@@ -761,6 +773,8 @@ class Worker:
             strict_evidence_only = phase in ("VULN_SCAN", "EXPLOIT", "POST_EXPLOIT", "LATERAL", "FULL")
             config_block = job_details.get("config") if isinstance(job_details.get("config"), dict) else {}
             thinking_enabled = bool(config_block.get("thinking_enabled")) or os.getenv("LLM_THINKING_ENABLED", "").strip().lower() in ("true", "1")
+            llm_api_base_override = str(config_block.get("llm_api_base") or "").strip()
+            llm_model_override = str(job_details.get("llm_model") or config_block.get("llm_model") or "").strip()
             llm_profile_value = job_details.get("llm_profile") or config_block.get("llm_profile")
             agent_freedom_value = job_details.get("agent_freedom")
             if agent_freedom_value is None:
@@ -784,7 +798,8 @@ class Worker:
                     "LOG_DIR": f"/pentest/logs/{job_id}",
                     "OUTPUT_DIR": output_dir,
                     "JOB_ID": job_id,
-                    "TENANT_ID": str(job_details.get("tenant_id", "")),
+                    # JobResponse does not include tenant_id; rely on the queue payload.
+                    "TENANT_ID": str(tenant_id or ""),
                     "TARGET_TYPE": target_type,
                     "JOB_PHASE": phase,
                     "EFFECTIVE_PHASE": "FULL" if (auto_escalate_recon and phase == "RECON" and exploit_mode == "autonomous") else phase,
@@ -810,8 +825,9 @@ class Worker:
                     "AUTO_COMPLETE_MIN_ITERATIONS": str(auto_complete_min_iterations),
                     **({"LLM_PROVIDER_OVERRIDE": llm_provider_override} if llm_provider_override else {}),
                     **({"LLM_THINKING_ENABLED": "true"} if thinking_enabled else {}),
-                    **({"LLM_API_BASE": config_block.get("llm_api_base")} if config_block.get("llm_api_base") else {}),
-                    **({"LLM_MODEL": config_block.get("llm_model")} if config_block.get("llm_model") else {}),
+                    **({"LLM_API_BASE": llm_api_base_override} if llm_api_base_override else {}),
+                    **({"LLM_MODEL_OVERRIDE": llm_model_override} if llm_model_override else {}),
+                    **({"LLM_MODEL": llm_model_override} if llm_model_override else {}),
                     # LLM Profile system — controls agent freedom/strictness
                     **({"LLM_PROFILE": llm_profile_value} if llm_profile_value else {}),
                     **({"AGENT_FREEDOM": str(agent_freedom_value)} if agent_freedom_value is not None else {}),
@@ -889,8 +905,8 @@ class Worker:
                     if tick >= 30 and tick - last_findings_push >= 30:
                         try:
                             new_count = await self._push_live_findings(
-                                job_id, 
-                                str(job_details.get("tenant_id", "")), 
+                                job_id,
+                                str(tenant_id or ""),
                                 container, 
                                 output_dir,
                                 pushed_findings_count
@@ -899,7 +915,7 @@ class Worker:
                             # Also push loot (credentials/tokens found)
                             await self._push_live_loot(
                                 job_id,
-                                str(job_details.get("tenant_id", "")),
+                                str(tenant_id or ""),
                                 container,
                                 output_dir
                             )
@@ -1052,6 +1068,14 @@ class Worker:
                     data = _load_json_forgiving(file_result.output.decode())
                     if data is None:
                         raise json.JSONDecodeError("Could not parse JSON", file_result.output.decode(), 0)
+
+                    # Preserve pause/resume state from the agent report. Without this, a user stop
+                    # signal (dynamic_agent returns {status:"paused", paused:true}) gets lost and the
+                    # worker incorrectly marks the job as completed.
+                    if "status" in data and "status" not in result:
+                        result["status"] = data.get("status")
+                    if "paused" in data and "paused" not in result:
+                        result["paused"] = bool(data.get("paused"))
                     
                     # Merge findings (if we didn't get them from evidence dir)
                     if "findings" in data and not result["findings"]:

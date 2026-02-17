@@ -50,6 +50,11 @@ services:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
 
+  neo4j:
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+
   # Redis is only needed on the internal docker network (redis:6379).
   redis:
     # Prevent containers/tenants from reaching Redis via the host gateway IP.

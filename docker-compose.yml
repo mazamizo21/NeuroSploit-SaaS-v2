@@ -72,6 +72,103 @@ services:
       retries: 5
     restart: unless-stopped
 
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: tazosploit-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-changeme123}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j-data:/data
+    networks:
+      - exec-net
+      - control-net
+      - kali-net
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc 'echo > /dev/tcp/127.0.0.1/7474'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Empire C2 — PowerShell post-exploitation framework (REST API)
+  # ---------------------------------------------------------------------------
+  empire:
+    image: bcsecurity/empire:latest
+    container_name: tazosploit-empire
+    ports:
+      - "1337:1337"
+      - "5000:5000"
+    networks:
+      - exec-net
+      - kali-net
+    restart: unless-stopped
+    command: ["server", "--restip", "0.0.0.0", "--restport", "1337"]
+    profiles:
+      - tools
+
+  # ---------------------------------------------------------------------------
+  # OWASP ZAP — Web application security scanner (REST API)
+  # ---------------------------------------------------------------------------
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: tazosploit-zap
+    ports:
+      - "8090:8090"
+    networks:
+      - exec-net
+      - kali-net
+    command: >
+      zap.sh -daemon -host 0.0.0.0 -port 8090
+      -config api.disablekey=true
+      -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # ---------------------------------------------------------------------------
+  # BeEF — Browser Exploitation Framework (REST API + hook.js)
+  # ---------------------------------------------------------------------------
+  beef:
+    image: beefproject/beef:latest
+    container_name: tazosploit-beef
+    ports:
+      - "3000:3000"
+      - "6789:6789"
+    networks:
+      - exec-net
+      - kali-net
+    environment:
+      - BEEF_USER=beef
+      - BEEF_PASSWD=beef123
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # ---------------------------------------------------------------------------
+  # Sliver C2 — Cross-platform C2 framework (gRPC API)
+  # ---------------------------------------------------------------------------
+  sliver:
+    image: bcsecurity/sliver:latest
+    container_name: tazosploit-sliver
+    ports:
+      - "31337:31337"
+      - "8888:8888"
+    networks:
+      - exec-net
+      - kali-net
+    volumes:
+      - sliver-data:/root/.sliver
+    restart: unless-stopped
+    profiles:
+      - tools
+
   # ===========================================================================
   # CONTROL PLANE
   # ===========================================================================
@@ -95,6 +192,12 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - ENABLE_FULL_LOGGING=true
+      # Copilot diagnostics access control (defense-in-depth)
+      # When true: only the job creator (or admin/owner roles) can call /api/v1/jobs/{id}/copilot.
+      - JOB_STRICT_OWNER_ACCESS=${JOB_STRICT_OWNER_ACCESS:-true}
+      # Copilot bounded log tail (redacted). Keeps Copilot job-scoped but able to cite concrete evidence.
+      - JOB_COPILOT_LOG_TAIL_LINES=${JOB_COPILOT_LOG_TAIL_LINES:-200}
+      - JOB_COPILOT_LOG_TAIL_ENTRIES=${JOB_COPILOT_LOG_TAIL_ENTRIES:-1200}
       - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
       - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-240}
       - LLM_PROXY_RETRY_MAX=${LLM_PROXY_RETRY_MAX:-5}
@@ -296,12 +399,23 @@ services:
       - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
       - ALLOW_SELF_REGISTRATION=${ALLOW_SELF_REGISTRATION:-false}
       - DOM_RENDERER_URL=http://dom-renderer:8080/render
+      # Redis is required for interactive controls (stop/resume/approval/guidance)
+      # and for Sprint 3 per-job settings (job:{id}:settings).
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      # Sprint 2: Knowledge graph (Neo4j)
+      - KNOWLEDGE_GRAPH_ENABLED=${KNOWLEDGE_GRAPH_ENABLED:-true}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-changeme123}
+      - KG_INJECT_EVERY=${KG_INJECT_EVERY:-5}
+      - KG_SUMMARY_MAX_CHARS=${KG_SUMMARY_MAX_CHARS:-1800}
     volumes:
       - kali-output:/pentest/output  # Persist session files across container restarts for resume
       - kali-memory:/pentest/memory  # Persist AI memory across container restarts
       - ./skills:/opt/tazosploit/skills:ro
     networks:
       - kali-net
+      - exec-net
       - lab-net
     cap_drop:
       - ALL
@@ -400,6 +514,8 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  neo4j-data:
+  sliver-data:
   tunnel-data:
   kali-output:
   kali-memory:

@@ -1,0 +1,74 @@
+id: c2_evasion
+name: C2 Evasion & Payload Hardening
+category: evasion
+phase: EXPLOIT
+priority: 93
+target_types:
+  - lab
+  - external
+description: >
+  Harden Sliver implants against AV/EDR detection before delivery.
+  Applies a multi-layer evasion pipeline: shellcode generation, Donut
+  processing (AMSI/ETW bypass), ScareCrow wrapping (EDR unhooking,
+  indirect syscalls, code signing), and pre-flight testing against
+  Defender/ThreatCheck. Selects evasion intensity based on detected
+  target defenses. Maintains a library of pre-tested golden implants
+  for rapid deployment.
+tags:
+  - evasion
+  - av-bypass
+  - edr-bypass
+  - amsi
+  - etw
+  - scarecrow
+  - donut
+  - obfuscation
+mitre_techniques:
+  - T1027       # Obfuscated Files or Information
+  - T1027.001   # Binary Padding
+  - T1027.002   # Software Packing
+  - T1027.005   # Indicator Removal from Tools
+  - T1027.009   # Embedded Payloads
+  - T1027.013   # Encrypted/Encoded File
+  - T1140       # Deobfuscate/Decode Files or Information
+  - T1553.002   # Code Signing (spoofed certs via ScareCrow)
+  - T1562.001   # Disable or Modify Tools (AMSI/ETW patching)
+  - T1574.002   # DLL Side-Loading
+  - T1055       # Process Injection
+  - T1055.001   # Dynamic-link Library Injection
+  - T1055.012   # Process Hollowing
+  - T1218       # System Binary Proxy Execution
+  - T1036       # Masquerading
+  - T1036.005   # Match Legitimate Name or Location
+inputs:
+  - access.json
+  - services.json
+  - tech_fingerprint.json
+outputs:
+  - evasion_report.json
+  - payload_manifest.json
+  - evidence.json
+prerequisites:
+  - access
+tools:
+  - sliver-client
+  - ScareCrow
+  - donut
+  - python3
+evidence_collection:
+  - Evasion pipeline steps applied
+  - Pre-flight test results (ThreatCheck output)
+  - Payload entropy score
+  - ScareCrow loader type selected
+  - Code signing details (if applied)
+success_criteria:
+  - Payload passes pre-flight ThreatCheck (no detections)
+  - File entropy below 7.9 (avoids heuristic flags)
+  - Evasion method matched to target defenses
+  - Payload format matched to delivery method
+safety_notes:
+  - NEVER upload payloads to VirusTotal (burns signatures)
+  - Pre-flight test in isolated environment only
+  - Golden implants expire — re-test monthly
+  - External engagements MUST use full evasion chain
+  - Document all evasion techniques for report

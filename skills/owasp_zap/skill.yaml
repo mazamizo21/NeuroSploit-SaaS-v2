@@ -1,0 +1,61 @@
+id: owasp_zap
+name: OWASP ZAP Web Scanner
+category: vuln_scanning
+phase: RECON
+priority: 70
+target_types:
+  - lab
+  - external
+description: >
+  Automated web application security scanner with full REST API.
+  Use ZAP for: spidering, active scanning, authenticated testing, API scanning.
+  100+ scan rules for SQLi, XSS, CSRF, path traversal, SSRF, auth bypass.
+  More powerful than nikto/nuclei for deep web app testing.
+tags:
+  - web
+  - scanner
+  - zap
+  - owasp
+  - sqli
+  - xss
+  - csrf
+mitre_techniques:
+  - T1190  # Exploit Public-Facing Application
+  - T1189  # Drive-by Compromise
+  - T1059.007  # JavaScript
+inputs:
+  - services.json
+  - tech_fingerprint.json
+outputs:
+  - vulnerabilities.json
+  - evidence.json
+tools:
+  - curl
+  - zaproxy
+evidence_collection:
+  - Spider results (discovered URLs)
+  - Active scan alerts with severity
+  - Alert details with evidence
+commands:
+  spider: |
+    curl -s "http://zap:8090/JSON/spider/action/scan?url={TARGET_URL}&maxChildren=50"
+  spider_status: |
+    curl -s "http://zap:8090/JSON/spider/view/status?scanId={SCAN_ID}"
+  active_scan: |
+    curl -s "http://zap:8090/JSON/ascan/action/scan?url={TARGET_URL}&recurse=true"
+  scan_status: |
+    curl -s "http://zap:8090/JSON/ascan/view/status?scanId={SCAN_ID}"
+  get_alerts: |
+    curl -s "http://zap:8090/JSON/alert/view/alerts?baseurl={TARGET_URL}&start=0&count=100"
+  ajax_spider: |
+    curl -s "http://zap:8090/JSON/ajaxSpider/action/scan?url={TARGET_URL}"
+  alert_summary: |
+    curl -s "http://zap:8090/JSON/alert/view/alertsSummary?baseurl={TARGET_URL}"
+success_criteria:
+  - Spider discovers application endpoints
+  - Active scan completes without errors
+  - Alerts returned with severity classification
+safety_notes:
+  - Active scanning generates significant traffic
+  - May trigger WAF/IDS alerts
+  - Use passive-only mode for stealth requirements

@@ -150,10 +150,13 @@ GLM remains safe because:
 
 ## Job-Level Provider Override
 - Jobs can optionally set `llm_provider` to override the global default.
+- Jobs can optionally set `llm_model` to override the model used for that job.
 - Per-job selection always supersedes the global default.
 - The UI exposes this in the Create Pentest form as “LLM Provider Override”.
+- The UI also exposes “LLM Model Override” once a provider override is selected (grouped dropdown w/ optgroups, mirroring Redamon).
 - The executor passes this to the internal proxy as `provider_override`.
 - Internally this is conveyed via `LLM_PROVIDER_OVERRIDE` in the Kali container environment.
+- Model overrides are conveyed via `LLM_MODEL_OVERRIDE` and sent to the internal proxy as `model_override`.
 - If the provider is not enabled, job creation fails with a 400.
 
 ## Environment Variables

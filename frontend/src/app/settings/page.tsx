@@ -670,6 +670,9 @@ function SettingsInner() {
                     };
                     const modelOptions = provider.models || [];
                     const hasModelOptions = modelOptions.length > 0;
+                    const modelGroups = provider.modelGroups || [];
+                    const hasModelGroups = modelGroups.length > 0;
+                    const modelLabel = (model: string) => provider.modelLabels?.[model] || model;
                     const isKnownModel = hasModelOptions && modelOptions.includes(input.model);
                     const modelSelectValue = isKnownModel ? input.model : "__custom__";
                     const customModelValue = isKnownModel ? "" : input.model;
@@ -758,11 +761,21 @@ function SettingsInner() {
                                     }
                                   }}
                                 >
-                                  {modelOptions.map((model) => (
-                                    <option key={model} value={model}>
-                                      {model}
-                                    </option>
-                                  ))}
+                                  {hasModelGroups
+                                    ? modelGroups.map((group) => (
+                                        <optgroup key={group.label} label={group.label}>
+                                          {group.models.map((model) => (
+                                            <option key={model} value={model}>
+                                              {modelLabel(model)}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      ))
+                                    : modelOptions.map((model) => (
+                                        <option key={model} value={model}>
+                                          {modelLabel(model)}
+                                        </option>
+                                      ))}
                                   <option value="__custom__">Custom...</option>
                                 </select>
                                 {modelSelectValue === "__custom__" && (

@@ -188,6 +188,9 @@ class LLMClient:
                 provider_override = os.getenv("LLM_PROVIDER_OVERRIDE", "").strip()
                 if provider_override:
                     payload["provider_override"] = provider_override
+                model_override = os.getenv("LLM_MODEL_OVERRIDE", "").strip()
+                if model_override:
+                    payload["model_override"] = model_override
                 # Native thinking support (GLM-5, etc.)
                 thinking_enabled = os.getenv("LLM_THINKING_ENABLED", "").strip().lower()
                 if thinking_enabled in ("true", "1", "yes", "enabled"):

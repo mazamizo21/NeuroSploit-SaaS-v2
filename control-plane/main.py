@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse, Response
 import structlog
 import redis.asyncio as redis
 from sqlalchemy import select, func
+from sqlalchemy import text
 
 from api.database import engine, get_db
 from api.models import Base, Job, Tenant, JobStatus
@@ -57,6 +58,55 @@ async def lifespan(app: FastAPI):
     # Initialize database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Ensure DB enum has the paused state (Postgres only; best-effort).
+        try:
+            await conn.execute(
+                text(
+                    """
+                    DO $$
+                    BEGIN
+                        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'job_status') THEN
+                            IF NOT EXISTS (
+                                SELECT 1
+                                FROM pg_type t
+                                JOIN pg_enum e ON t.oid = e.enumtypid
+                                WHERE t.typname = 'job_status'
+                                  AND e.enumlabel = 'paused'
+                            ) THEN
+                                ALTER TYPE job_status ADD VALUE 'paused';
+                            END IF;
+                        END IF;
+                    END$$;
+                    """
+                )
+            )
+            logger.info("job_status_enum_checked", added_value="paused")
+        except Exception as e:
+            # Non-Postgres DBs or restricted permissions: do not block startup.
+            logger.warning("job_status_enum_check_failed", error=str(e))
+
+        # Best-effort schema upgrades for additive columns (no manual migrations).
+        try:
+            await conn.execute(
+                text(
+                    """
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1
+                            FROM information_schema.columns
+                            WHERE table_name = 'jobs'
+                              AND column_name = 'llm_model'
+                        ) THEN
+                            ALTER TABLE jobs ADD COLUMN llm_model VARCHAR(255);
+                        END IF;
+                    END$$;
+                    """
+                )
+            )
+            logger.info("jobs_llm_model_column_checked")
+        except Exception as e:
+            logger.warning("jobs_llm_model_column_check_failed", error=str(e))
     logger.info("database_initialized")
     
     # Initialize Redis connection

@@ -69,7 +69,7 @@ class JobScheduler:
                         job_id = parts[1] if len(parts) > 1 else None
                         payload = json.loads(data) if isinstance(data, str) else data
                         status = (payload or {}).get("status")
-                        if job_id and status in {"completed", "failed", "cancelled", "timeout"}:
+                        if job_id and status in {"completed", "failed", "cancelled", "timeout", "paused"}:
                             if job_id in self.running_jobs:
                                 del self.running_jobs[job_id]
                                 logger.info("job_slot_released", job_id=job_id, status=status)

@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     authorization_confirmed BOOLEAN DEFAULT FALSE,
     exploit_mode VARCHAR(20) DEFAULT 'explicit_only',
     llm_provider VARCHAR(100),
+    llm_model VARCHAR(255),
     allow_persistence BOOLEAN DEFAULT FALSE,
     allow_defense_evasion BOOLEAN DEFAULT FALSE,
     allow_scope_expansion BOOLEAN DEFAULT FALSE,
@@ -403,6 +404,12 @@ END $$;
 -- Add llm_provider column to jobs
 DO $$ BEGIN
     ALTER TABLE jobs ADD COLUMN llm_provider VARCHAR(100);
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Add llm_model column to jobs
+DO $$ BEGIN
+    ALTER TABLE jobs ADD COLUMN llm_model VARCHAR(255);
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 

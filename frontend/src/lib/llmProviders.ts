@@ -1,3 +1,8 @@
+export type LlmModelGroup = {
+  label: string;
+  models: string[];
+};
+
 export type LlmProviderDef = {
   id: string;
   label: string;
@@ -5,6 +10,10 @@ export type LlmProviderDef = {
   defaultBase: string;
   defaultModel: string;
   models: string[];
+  /** Optional optgroup definitions for rendering a grouped model dropdown. */
+  modelGroups?: LlmModelGroup[];
+  /** Optional map of model id -> human-friendly label for dropdowns. */
+  modelLabels?: Record<string, string>;
   authOptions: { id: string; label: string }[];
 };
 
@@ -66,6 +75,62 @@ const VENICE_MODELS = [
   "venice/minimax-m21",
 ];
 
+// Mirror the model dropdown structure from Redamon (optgroups + descriptive labels).
+const OPENAI_MODELS = [
+  "openai/gpt-5.2",
+  "openai/gpt-5.2-pro",
+  "openai/gpt-5",
+  "openai/gpt-5-mini",
+  "openai/gpt-5-nano",
+  "openai/gpt-4.1",
+  "openai/gpt-4.1-mini",
+  "openai/gpt-4.1-nano",
+];
+
+const OPENAI_MODEL_GROUPS: LlmModelGroup[] = [
+  { label: "GPT-5.2", models: ["openai/gpt-5.2", "openai/gpt-5.2-pro"] },
+  { label: "GPT-5", models: ["openai/gpt-5", "openai/gpt-5-mini", "openai/gpt-5-nano"] },
+  { label: "GPT-4.1", models: ["openai/gpt-4.1", "openai/gpt-4.1-mini", "openai/gpt-4.1-nano"] },
+];
+
+const OPENAI_MODEL_LABELS: Record<string, string> = {
+  "openai/gpt-5.2": "gpt-5.2 - Flagship reasoning model",
+  "openai/gpt-5.2-pro": "gpt-5.2-pro - Smarter, more precise (Responses API)",
+  "openai/gpt-5": "gpt-5 - Previous reasoning model",
+  "openai/gpt-5-mini": "gpt-5-mini - Faster, cost-efficient GPT-5",
+  "openai/gpt-5-nano": "gpt-5-nano - Fastest, cheapest GPT-5",
+  "openai/gpt-4.1": "gpt-4.1 - Smartest non-reasoning model",
+  "openai/gpt-4.1-mini": "gpt-4.1-mini - Fast, cost-efficient",
+  "openai/gpt-4.1-nano": "gpt-4.1-nano - Fastest, cheapest",
+};
+
+const CODEX_MODELS = ["openai-codex/gpt-5.2", "openai-codex/gpt-5.2-pro"];
+
+const CODEX_MODEL_GROUPS: LlmModelGroup[] = [
+  { label: "GPT-5.2", models: CODEX_MODELS },
+];
+
+const CODEX_MODEL_LABELS: Record<string, string> = {
+  "openai-codex/gpt-5.2": "gpt-5.2 - Flagship reasoning model",
+  "openai-codex/gpt-5.2-pro": "gpt-5.2-pro - Smarter, more precise (Responses API)",
+};
+
+const ANTHROPIC_MODELS = [
+  "anthropic/claude-opus-4-6",
+  "anthropic/claude-sonnet-4-5-20250929",
+  "anthropic/claude-haiku-4-5-20251001",
+];
+
+const ANTHROPIC_MODEL_GROUPS: LlmModelGroup[] = [
+  { label: "Anthropic Claude", models: ANTHROPIC_MODELS },
+];
+
+const ANTHROPIC_MODEL_LABELS: Record<string, string> = {
+  "anthropic/claude-opus-4-6": "Claude Opus 4.6 - Most capable model",
+  "anthropic/claude-sonnet-4-5-20250929": "Claude Sonnet 4.5 - Balanced performance",
+  "anthropic/claude-haiku-4-5-20251001": "Claude Haiku 4.5 - Fast and efficient",
+};
+
 export const OWNER_LLM_PROVIDERS: LlmProviderDef[] = [
   {
     id: "openai",
@@ -73,7 +138,9 @@ export const OWNER_LLM_PROVIDERS: LlmProviderDef[] = [
     apiStyle: "openai",
     defaultBase: "https://api.openai.com/v1",
     defaultModel: "openai/gpt-5.2",
-    models: ["openai/gpt-5.2", "openai/gpt-5-mini"],
+    models: OPENAI_MODELS,
+    modelGroups: OPENAI_MODEL_GROUPS,
+    modelLabels: OPENAI_MODEL_LABELS,
     authOptions: [{ id: "api_key", label: "API key (Option A)" }],
   },
   {
@@ -82,7 +149,9 @@ export const OWNER_LLM_PROVIDERS: LlmProviderDef[] = [
     apiStyle: "openai",
     defaultBase: "https://api.openai.com/v1",
     defaultModel: "openai-codex/gpt-5.2",
-    models: ["openai-codex/gpt-5.2"],
+    models: CODEX_MODELS,
+    modelGroups: CODEX_MODEL_GROUPS,
+    modelLabels: CODEX_MODEL_LABELS,
     authOptions: [
       { id: "oauth_token", label: "OAuth token (Option B)" },
       { id: "api_key", label: "API key (Option A)" },
@@ -93,8 +162,10 @@ export const OWNER_LLM_PROVIDERS: LlmProviderDef[] = [
     label: "Anthropic (Claude)",
     apiStyle: "anthropic",
     defaultBase: "https://api.anthropic.com/v1/messages",
-    defaultModel: "anthropic/claude-opus-4-5",
-    models: ["anthropic/claude-opus-4-5", "anthropic/claude-sonnet-4-5"],
+    defaultModel: "anthropic/claude-opus-4-6",
+    models: ANTHROPIC_MODELS,
+    modelGroups: ANTHROPIC_MODEL_GROUPS,
+    modelLabels: ANTHROPIC_MODEL_LABELS,
     authOptions: [
       { id: "api_key", label: "API key (Option A)" },
       { id: "setup_token", label: "Setup token (Option B)" },

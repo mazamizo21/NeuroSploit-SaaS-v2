@@ -154,6 +154,9 @@ RUN pip3 install --break-system-packages --ignore-installed --no-cache-dir \
     # Utilities
     colorama tqdm rich \
     httpx aiohttp \
+    redis \
+    # Knowledge graph (Sprint 2)
+    neo4j \
     # LLM Integration
     litellm openai "anthropic>=0.45.0" \
     # Skills metadata parsing
@@ -176,7 +179,8 @@ RUN git clone --depth=1 https://github.com/bitsadmin/wesng.git /opt/wesng
 RUN git clone --depth=1 https://github.com/mzet-/linux-exploit-suggester.git /opt/linux-exploit-suggester
 
 # SecLists wordlists
-RUN git clone --depth=1 https://github.com/danielmiessler/SecLists.git /opt/SecLists
+RUN git clone --depth=1 https://github.com/danielmiessler/SecLists.git /opt/SecLists && \
+    ln -sf /opt/SecLists /usr/share/seclists
 
 # PayloadsAllTheThings
 RUN git clone --depth=1 https://github.com/swisskyrepo/PayloadsAllTheThings.git /opt/PayloadsAllTheThings
@@ -218,6 +222,137 @@ RUN ln -sf /opt/tazosploit/tools/websearch.py /usr/local/bin/websearch && \
 RUN if [ -f /opt/tazosploit/requirements.txt ]; then \
         pip3 install --break-system-packages --no-cache-dir -r /opt/tazosploit/requirements.txt; \
     fi
+
+# =============================================================================
+# SLIVER C2 CLIENT (v1.7.1 — arm64)
+# =============================================================================
+
+RUN curl -sSL -o /usr/local/bin/sliver-client \
+    "https://github.com/BishopFox/sliver/releases/download/v1.7.1/sliver-client_linux-arm64" && \
+    chmod +x /usr/local/bin/sliver-client && \
+    echo "✓ Sliver client v1.7.1 (linux-arm64) installed"
+
+# =============================================================================
+# SLIVER PYTHON (gRPC programmatic interaction)
+# =============================================================================
+
+RUN pip3 install --break-system-packages --no-cache-dir \
+    sliver-py grpcio protobuf && \
+    echo "✓ sliver-py + gRPC installed"
+
+# =============================================================================
+# GO TOOLCHAIN (1.22.12 — needed for ScareCrow build)
+# =============================================================================
+
+ENV GO_VERSION=1.22.12
+RUN curl -sSL "https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz" | tar -C /usr/local -xzf - && \
+    echo "✓ Go ${GO_VERSION} (linux-arm64) installed"
+ENV PATH="/usr/local/go/bin:/root/go/bin:${PATH}"
+ENV GOPATH="/root/go"
+
+# =============================================================================
+# SCARECROW (EDR bypass loader — built from source with Go)
+# =============================================================================
+
+# mingw-w64 + osslsigncode needed for ScareCrow's Windows DLL cross-compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    mingw-w64 osslsigncode openssl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth=1 https://github.com/Tylous/ScareCrow.git /opt/ScareCrow && \
+    cd /opt/ScareCrow && \
+    go build -o /usr/local/bin/ScareCrow . && \
+    echo "✓ ScareCrow built and installed"
+
+# =============================================================================
+# DONUT (PE → shellcode converter with AMSI/ETW bypass)
+# =============================================================================
+
+RUN arch="$(uname -m)" && \
+    git clone --depth=1 https://github.com/TheWover/donut.git /opt/donut && \
+    cd /opt/donut && \
+    if [ "$arch" = "x86_64" ] || [ "$arch" = "amd64" ]; then \
+        make && \
+        cp /opt/donut/donut /usr/local/bin/donut && \
+        chmod +x /usr/local/bin/donut && \
+        echo "✓ Donut compiled and installed"; \
+    else \
+        echo "⚠️ Donut build skipped on arch=$arch (upstream ships x86_64-only aplib libs; arm64 build fails)"; \
+    fi
+
+# Donut Python module (for programmatic shellcode generation)
+RUN arch="$(uname -m)" && \
+    if [ "$arch" = "x86_64" ] || [ "$arch" = "amd64" ]; then \
+        pip3 install --break-system-packages --no-cache-dir donut-shellcode && \
+        echo "✓ donut-shellcode Python module installed"; \
+    else \
+        echo "⚠️ donut-shellcode skipped on arch=$arch (no arm64 wheel; build fails due to x86_64-only aplib libs)"; \
+    fi
+
+# =============================================================================
+# SHARP COLLECTION (pre-compiled .NET offensive tools for execute-assembly)
+# =============================================================================
+
+RUN git clone --depth=1 https://github.com/Flangvik/SharpCollection.git /opt/sharp-collection && \
+    echo "✓ SharpCollection cloned to /opt/sharp-collection"
+
+# =============================================================================
+# GOLDEN IMPLANTS DIRECTORY (pre-built implant library)
+# =============================================================================
+
+RUN mkdir -p \
+    /opt/sliver/golden/windows/x64 \
+    /opt/sliver/golden/windows/x86 \
+    /opt/sliver/golden/linux/x64 \
+    /opt/sliver/golden/linux/arm64 \
+    /opt/sliver/golden/shellcode \
+    /opt/sliver/configs && \
+    echo "✓ Golden implants directory structure created"
+
+# =============================================================================
+# EVASION SCRIPTS DIRECTORY
+# =============================================================================
+
+RUN mkdir -p /opt/tazosploit/evasion && \
+    echo "✓ Evasion scripts directory created"
+
+# =============================================================================
+# TOOL VERIFICATION SCRIPTS
+# =============================================================================
+
+COPY scripts/verify-tools.sh /opt/tazosploit/scripts/verify-tools.sh
+COPY scripts/tools-update.sh /opt/tazosploit/scripts/tools-update.sh
+RUN chmod +x /opt/tazosploit/scripts/*.sh
+
+# =============================================================================
+# SLIVER + EVASION TOOLCHAIN VERIFICATION (build fails if anything missing)
+# =============================================================================
+
+RUN echo "=== Verifying Sliver + Evasion Toolchain ===" && \
+    arch="$(uname -m)" && \
+    test -x /usr/local/bin/sliver-client && echo "  ✓ sliver-client" && \
+    test -x /usr/local/bin/ScareCrow     && echo "  ✓ ScareCrow" && \
+    if [ "$arch" = "x86_64" ] || [ "$arch" = "amd64" ]; then \
+        test -x /usr/local/bin/donut && echo "  ✓ donut"; \
+    else \
+        echo "  ⚠️ donut skipped (arch=$arch)"; \
+    fi && \
+    test -x /usr/local/go/bin/go         && echo "  ✓ Go toolchain" && \
+    test -d /opt/sharp-collection        && echo "  ✓ SharpCollection" && \
+    test -d /opt/ScareCrow               && echo "  ✓ ScareCrow source" && \
+    test -d /opt/donut                   && echo "  ✓ Donut source" && \
+    test -d /opt/sliver/golden           && echo "  ✓ Golden implants dir" && \
+    test -d /opt/tazosploit/evasion      && echo "  ✓ Evasion scripts dir" && \
+    python3 -c "import sliver; print('  ✓ sliver-py')" && \
+    python3 -c "import grpc; print('  ✓ grpcio')" && \
+    if [ "$arch" = "x86_64" ] || [ "$arch" = "amd64" ]; then \
+        python3 -c "import donut; print('  ✓ donut-shellcode')"; \
+    else \
+        echo "  ⚠️ donut-shellcode skipped (arch=$arch)"; \
+    fi && \
+    sliver-client version 2>/dev/null || true && \
+    go version && \
+    echo "=== All Sliver + Evasion tools verified ==="
 
 # =============================================================================
 # ENTRYPOINT AND WORKING DIRECTORY

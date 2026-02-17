@@ -9,6 +9,8 @@ target_types:
 description: >
   Validate and execute lateral movement across Windows, Linux, Active Directory,
   and cloud environments. Pivot through network segments using tunneling techniques.
+  Supports Sliver C2 pivots (TCP/named pipe) for routing through compromised hosts
+  and deploying additional implants on lateral movement targets.
 mitre_techniques:
   # Remote Services
   - T1021
@@ -36,6 +38,10 @@ mitre_techniques:
   - T1550.002  # Pass the Hash
   - T1550.003  # Pass the Ticket
   - T1550.004  # Web Session Cookie
+  # Sliver C2 Pivots
+  - T1572       # Protocol Tunneling (Sliver TCP/named pipe pivots)
+  - T1090       # Proxy (Sliver SOCKS5/port forwarding)
+  - T1090.001   # Internal Proxy (SOCKS5 through C2 session)
 inputs:
   - creds.json
 outputs:

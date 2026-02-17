@@ -25,9 +25,11 @@ export function statusColor(s: string) {
     pending: "text-yellow-400",
     queued: "text-blue-400",
     running: "text-green-400 animate-pulse",
+    paused: "text-amber-300",
     completed: "text-green-500",
     failed: "text-red-500",
     cancelled: "text-gray-400",
+    timeout: "text-red-400",
   };
   return map[s] || "text-gray-400";
 }

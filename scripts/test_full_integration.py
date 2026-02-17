@@ -4,6 +4,19 @@ TazoSploit  v2 - Full Integration Test
 Tests LLM -> Kali -> Target with complete logging
 """
 
+# This script is meant to be executed inside the Kali container where /pentest
+# exists. When collected by pytest on the host, it fails during import.
+if __name__ != "__main__":
+    try:
+        import pytest  # type: ignore
+
+        pytest.skip(
+            "Container-only integration smoke test (expects /pentest). Run it as a script, not via pytest.",
+            allow_module_level=True,
+        )
+    except Exception:
+        pass
+
 import os
 import sys
 import json

@@ -5,6 +5,22 @@ Tests that the platform can build attack graphs from pentest findings
 and use simulation + ML prediction on real data
 """
 
+# This file is a runnable E2E integration script, not a proper pytest module
+# (it uses print-driven flow and function return values).
+if __name__ != "__main__":
+    try:
+        import sys as _sys
+
+        if "pytest" in _sys.modules:
+            import pytest  # type: ignore
+
+            pytest.skip(
+                "E2E integration script (run directly: python3 tests/e2e/test_attack_graph_integration.py)",
+                allow_module_level=True,
+            )
+    except Exception:
+        pass
+
 import sys
 import json
 from pathlib import Path

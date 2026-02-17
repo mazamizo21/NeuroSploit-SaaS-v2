@@ -63,6 +63,8 @@ export const api = {
   get: (path: string) => apiFetch(path).then((r) => r.json()),
   post: (path: string, body: unknown) =>
     apiFetch(path, { method: "POST", body: JSON.stringify(body) }).then((r) => r.json()),
+  put: (path: string, body: unknown) =>
+    apiFetch(path, { method: "PUT", body: JSON.stringify(body) }).then((r) => r.json()),
   patch: (path: string, body: unknown) =>
     apiFetch(path, { method: "PATCH", body: JSON.stringify(body) }).then((r) => r.json()),
   delete: (path: string) => apiFetch(path, { method: "DELETE" }).then((r) => r.json()),

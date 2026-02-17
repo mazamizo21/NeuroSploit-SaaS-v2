@@ -9,7 +9,8 @@ target_types:
 description: >
   Establish and maintain access to compromised systems via OS-level, service-level,
   and web-based persistence mechanisms. Dual-mode: evidence-only validation (default)
-  or active persistence deployment when authorized.
+  or active persistence deployment when authorized. Can leverage Sliver beacons for
+  persistent C2 access with configurable check-in intervals and jitter for stealth.
 tags:
   - persistence
   - backdoor
@@ -36,6 +37,7 @@ mitre_techniques:
   - T1574.006     # Dynamic Linker Hijacking (LD_PRELOAD)
   - T1037.004     # RC Scripts
   - T1556.003     # Pluggable Authentication Modules
+  - T1573         # Encrypted Channel (Sliver beacon persistence)
 inputs:
   - access.json
 outputs:

