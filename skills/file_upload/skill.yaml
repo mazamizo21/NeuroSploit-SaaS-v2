@@ -1,0 +1,41 @@
+id: file_upload
+name: File Upload Exploitation
+category: exploitation
+phase: EXPLOIT
+priority: 85
+target_types:
+  - lab
+  - external
+description: >
+  Exploit insecure file upload functionality to achieve Remote Code Execution (RCE).
+  Covers extension bypass, content-type manipulation, magic bytes injection,
+  web shell uploads, polyglot files, EXIF injection, and path traversal in filenames.
+mitre_techniques:
+  - T1190  # Exploit Public-Facing Application
+  - T1059  # Command and Scripting Interpreter
+  - T1505.003  # Web Shell
+inputs:
+  - services.json
+  - vulns.json
+outputs:
+  - evidence.json
+  - findings.json
+  - shells.json
+prerequisites:
+  - vulns
+success_criteria:
+  - File upload restriction bypassed
+  - Uploaded file executes server-side (RCE confirmed)
+  - All bypass techniques and responses documented
+safety_notes:
+  - Only upload to explicitly authorized targets
+  - Use benign proof-of-concept payloads (phpinfo, whoami) over destructive shells
+  - Clean up uploaded files after testing
+  - Document every file uploaded (name, location, content)
+tags:
+  - web
+  - upload
+  - rce
+  - webshell
+  - bypass
+  - polyglot

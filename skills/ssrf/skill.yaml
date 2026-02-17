@@ -1,0 +1,43 @@
+id: ssrf
+name: Server-Side Request Forgery
+category: exploitation
+phase: EXPLOIT
+priority: 85
+target_types:
+  - lab
+  - external
+description: >
+  Detect and exploit SSRF vulnerabilities to access internal services, cloud metadata,
+  and pivot into internal networks. Covers URL parsing bypasses, protocol smuggling,
+  DNS rebinding, redirect chains, and cloud IMDS exploitation (AWS/GCP/Azure).
+mitre_techniques:
+  - T1190  # Exploit Public-Facing Application
+  - T1552.005  # Cloud Instance Metadata API
+  - T1046  # Network Service Scanning
+  - T1018  # Remote System Discovery
+inputs:
+  - services.json
+  - vulns.json
+outputs:
+  - evidence.json
+  - findings.json
+  - cloud_metadata.json
+prerequisites:
+  - vulns
+success_criteria:
+  - SSRF confirmed with internal resource access proof
+  - Cloud metadata extracted or internal service enumerated
+  - All payloads and responses documented
+safety_notes:
+  - Never access production cloud metadata without authorization
+  - Internal port scanning may trigger IDS/IPS
+  - DNS rebinding requires external infrastructure
+  - Document all internal IPs and services discovered
+tags:
+  - web
+  - ssrf
+  - cloud
+  - metadata
+  - imds
+  - internal
+  - pivoting

@@ -1,0 +1,58 @@
+id: sliver_persistence
+name: Sliver Persistence Mechanisms
+category: persistence
+phase: POST_EXPLOIT
+priority: 78
+target_types:
+  - lab
+  - external
+description: >
+  Establish persistent access through Sliver C2 using multiple persistence
+  mechanisms: registry run keys, scheduled tasks, services, cron jobs, systemd
+  units, SSH key injection, DLL hijacking, and WMI event subscriptions.
+  Ensures C2 reconnection survives reboots and user logoffs.
+tags:
+  - c2
+  - sliver
+  - persistence
+  - scheduled-task
+  - registry
+  - service
+  - cron
+  - systemd
+mitre_techniques:
+  - T1547.001   # Boot or Logon Autostart Execution: Registry Run Keys
+  - T1053.005   # Scheduled Task
+  - T1543.003   # Windows Service
+  - T1053.003   # Cron
+  - T1543.002   # Systemd Service
+  - T1098.004   # SSH Authorized Keys
+  - T1574.001   # DLL Search Order Hijacking
+  - T1546.003   # WMI Event Subscription
+  - T1037       # Boot or Logon Initialization Scripts
+inputs:
+  - c2_session.json
+  - access.json
+outputs:
+  - persistence.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - c2_session
+tools:
+  - sliver
+  - sliver-client
+evidence_collection:
+  - Persistence mechanism installed
+  - Survival test (reboot + reconnection)
+  - Registry/service/task entries created
+  - Cleanup commands documented
+success_criteria:
+  - Persistence survives reboot
+  - C2 session re-established after reboot
+  - Cleanup procedure documented
+safety_notes:
+  - Only install persistence on authorized targets
+  - Always document what was installed for cleanup
+  - Prefer reversible mechanisms (tasks > drivers)
+  - External engagements require explicit persistence authorization

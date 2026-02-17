@@ -18,6 +18,10 @@ import structlog
 from ..database import get_db
 from ..utils.redact import redact_obj, redact_text
 from ..utils.intent_classifier import build_job_config_from_intent, classify_fast
+from ..utils.job_settings import (
+    sanitize_job_settings as _sanitize_job_settings,
+    job_settings_ttl_seconds as _job_settings_ttl_seconds,
+)
 from ..models import Job, JobStatus, Scope, Tenant, AuditLog, Finding
 from ..auth import get_current_user, require_permission
 
@@ -634,110 +638,8 @@ def _build_copilot_context(job: Job, live_stats: dict, findings: list[dict], ext
 # Sprint 3 — Job Settings (per-job overrides stored in Redis)
 # =============================================================================
 
-JOB_SETTINGS_ALLOWED_KEYS = {
-    "USE_STRUCTURED_OUTPUT",
-    "TOOL_USAGE_TRACKER_ENABLED",
-    "EXPLOITATION_INJECTOR_ENABLED",
-    "TOOL_PHASE_GATE_ENABLED",
-    "REQUIRE_APPROVAL_FOR_EXPLOITATION",
-    "REQUIRE_APPROVAL_FOR_POST_EXPLOITATION",
-    "KNOWLEDGE_GRAPH_ENABLED",
-    "KG_INJECT_EVERY",
-    "KG_SUMMARY_MAX_CHARS",
-    # Safe runtime knobs
-    "AUTO_COMPLETE_IDLE_ITERATIONS",
-    "AUTO_COMPLETE_MIN_ITERATIONS",
-    "LLM_THINKING_ENABLED",
-}
-
-JOB_SETTINGS_BOOL_KEYS = {
-    "USE_STRUCTURED_OUTPUT",
-    "TOOL_USAGE_TRACKER_ENABLED",
-    "EXPLOITATION_INJECTOR_ENABLED",
-    "TOOL_PHASE_GATE_ENABLED",
-    "REQUIRE_APPROVAL_FOR_EXPLOITATION",
-    "REQUIRE_APPROVAL_FOR_POST_EXPLOITATION",
-    "KNOWLEDGE_GRAPH_ENABLED",
-    "LLM_THINKING_ENABLED",
-}
-
-JOB_SETTINGS_INT_KEYS = {
-    "KG_INJECT_EVERY",
-    "KG_SUMMARY_MAX_CHARS",
-    "AUTO_COMPLETE_IDLE_ITERATIONS",
-    "AUTO_COMPLETE_MIN_ITERATIONS",
-}
-
-
-def _coerce_job_setting_bool(value: Any) -> Optional[bool]:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return bool(value)
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
-    return None
-
-
-def _sanitize_job_settings(raw: Any) -> Dict[str, Any]:
-    """Allowlist + type-safe coercion for per-job settings stored in Redis."""
-
-    if not isinstance(raw, dict):
-        return {}
-
-    out: Dict[str, Any] = {}
-    for raw_key, raw_val in raw.items():
-        if raw_key is None:
-            continue
-        key = str(raw_key).strip().upper()
-        if key not in JOB_SETTINGS_ALLOWED_KEYS:
-            continue
-
-        if key in JOB_SETTINGS_BOOL_KEYS:
-            coerced = _coerce_job_setting_bool(raw_val)
-            if coerced is not None:
-                out[key] = coerced
-            continue
-
-        if key in JOB_SETTINGS_INT_KEYS:
-            try:
-                out[key] = int(raw_val)
-            except Exception:
-                continue
-            continue
-
-        # Future-proof: ignored today (we only allow bool/int keys).
-
-    # Bounds for numeric knobs
-    if "KG_INJECT_EVERY" in out:
-        out["KG_INJECT_EVERY"] = max(1, min(int(out["KG_INJECT_EVERY"]), 50))
-    if "KG_SUMMARY_MAX_CHARS" in out:
-        out["KG_SUMMARY_MAX_CHARS"] = max(200, min(int(out["KG_SUMMARY_MAX_CHARS"]), 20000))
-    if "AUTO_COMPLETE_IDLE_ITERATIONS" in out:
-        # 0 disables auto-complete; otherwise clamp to a reasonable upper bound.
-        out["AUTO_COMPLETE_IDLE_ITERATIONS"] = max(0, min(int(out["AUTO_COMPLETE_IDLE_ITERATIONS"]), 5000))
-    if "AUTO_COMPLETE_MIN_ITERATIONS" in out:
-        out["AUTO_COMPLETE_MIN_ITERATIONS"] = max(0, min(int(out["AUTO_COMPLETE_MIN_ITERATIONS"]), 5000))
-
-    return out
-
-
-def _job_settings_ttl_seconds(timeout_seconds: Optional[int]) -> int:
-    """Return Redis TTL for job settings.
-
-    Rules:
-    - At least 24h (so long-running jobs don't lose settings mid-run)
-    - Otherwise: timeout + 1h buffer
-    - Cap at 7 days
-    """
-
-    try:
-        base = int(timeout_seconds or 3600)
-    except Exception:
-        base = 3600
-
-    ttl = max(base + 3600, 86400)
-    return min(ttl, 604800)
+# NOTE: Sanitization/TTL logic is centralized in api.utils.job_settings so unit
+# tests can import it without pulling in FastAPI.
 
 
 class JobSettingsUpdateRequest(BaseModel):
@@ -1049,18 +951,21 @@ async def create_job(
         str(job.id)
     )
 
-    # Set per-job supervisor overrides in Redis (24h TTL)
+    # Set per-job supervisor overrides in Redis.
+    # IMPORTANT: TTL must outlive long-running jobs; otherwise the supervisor
+    # can silently fall back to the global default mid-run.
+    supervisor_ttl = _job_settings_ttl_seconds(getattr(job, "timeout_seconds", None))
     if job_data.supervisor_enabled is not None:
         await redis.set(
             f"job:{job.id}:supervisor_enabled",
             "true" if job_data.supervisor_enabled else "false",
-            ex=86400,
+            ex=supervisor_ttl,
         )
     if supervisor_provider_override:
         await redis.set(
             f"job:{job.id}:supervisor_provider",
             supervisor_provider_override,
-            ex=86400,
+            ex=supervisor_ttl,
         )
 
     logger.info(
@@ -1391,6 +1296,28 @@ async def resume_job(
     # Clear stop flag so resumed agent doesn't immediately halt again.
     try:
         await redis.delete(f"job:{job_id}:stop_signal")
+    except Exception:
+        pass
+
+    # Re-assert per-job supervisor overrides on resume so behavior is consistent
+    # even if the original per-job Redis TTL expired.
+    try:
+        supervisor_ttl = _job_settings_ttl_seconds(getattr(job, "timeout_seconds", None))
+
+        if getattr(job, "supervisor_enabled", None) is not None:
+            await redis.set(
+                f"job:{job_id}:supervisor_enabled",
+                "true" if bool(job.supervisor_enabled) else "false",
+                ex=supervisor_ttl,
+            )
+        else:
+            await redis.delete(f"job:{job_id}:supervisor_enabled")
+
+        provider = str(getattr(job, "supervisor_provider", "") or "").strip()
+        if provider:
+            await redis.set(f"job:{job_id}:supervisor_provider", provider, ex=supervisor_ttl)
+        else:
+            await redis.delete(f"job:{job_id}:supervisor_provider")
     except Exception:
         pass
     await redis.lpush(

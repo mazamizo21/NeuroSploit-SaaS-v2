@@ -148,10 +148,19 @@ def _parse_session_output(output: str, target_ip: str, mode: str) -> dict | None
 
 def write_c2_session_artifact(session_info: dict, output_dir: str, job_id: str = "") -> str:
     """Write c2_session.json artifact for phase gate consumption."""
+    # NOTE:
+    # - The DynamicAgent already runs with --output-dir=/pentest/output/<JOB_ID>, and also sets JOB_ID.
+    # - If we always nest output_dir/JOB_ID, we'd incorrectly write:
+    #     /pentest/output/<JOB_ID>/<JOB_ID>/c2_session.json
+    #   which the C2 phase gate will NOT find.
+    artifact_dir = output_dir
     if job_id:
-        artifact_dir = os.path.join(output_dir, job_id)
-    else:
-        artifact_dir = output_dir
+        try:
+            out_base = os.path.basename(os.path.abspath(output_dir))
+        except Exception:
+            out_base = ""
+        if out_base != job_id:
+            artifact_dir = os.path.join(output_dir, job_id)
     os.makedirs(artifact_dir, exist_ok=True)
 
     artifact = {

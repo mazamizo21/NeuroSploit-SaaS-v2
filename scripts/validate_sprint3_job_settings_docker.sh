@@ -85,6 +85,10 @@ settings = {
     'KNOWLEDGE_GRAPH_ENABLED': False,
     'REQUIRE_APPROVAL_FOR_EXPLOITATION': True,
     'KG_INJECT_EVERY': 9,
+    # Safe runtime knobs
+    'AUTO_COMPLETE_IDLE_ITERATIONS': 123,
+    'AUTO_COMPLETE_MIN_ITERATIONS': 45,
+    'LLM_THINKING_ENABLED': True,
 }
 r.set(key, json.dumps(settings, ensure_ascii=True), ex=3600)
 print('redis_set_ok=True', 'key=', key)
@@ -97,12 +101,18 @@ print('agent_use_structured_output=', getattr(tag, 'use_structured_output', None
 print('agent_knowledge_graph_enabled=', getattr(tag, 'knowledge_graph_enabled', None))
 print('agent_approval_exploit=', os.getenv('REQUIRE_APPROVAL_FOR_EXPLOITATION'))
 print('agent_kg_inject_every=', getattr(tag, 'kg_inject_every', None))
+print('agent_auto_complete_idle_iterations=', os.getenv('AUTO_COMPLETE_IDLE_ITERATIONS'))
+print('agent_auto_complete_min_iterations=', os.getenv('AUTO_COMPLETE_MIN_ITERATIONS'))
+print('agent_llm_thinking_enabled=', os.getenv('LLM_THINKING_ENABLED'))
 
 assert tag.job_id == job_id, f'Expected JOB_ID={job_id} got {tag.job_id}'
 assert tag.use_structured_output is True
 assert tag.knowledge_graph_enabled is False
 assert os.getenv('REQUIRE_APPROVAL_FOR_EXPLOITATION', '').lower() in ('1','true','yes')
 assert int(tag.kg_inject_every) == 9
+assert os.getenv('AUTO_COMPLETE_IDLE_ITERATIONS') == '123'
+assert os.getenv('AUTO_COMPLETE_MIN_ITERATIONS') == '45'
+assert os.getenv('LLM_THINKING_ENABLED', '').lower() in ('1','true','yes')
 print('job_settings_applied_ok=True')
 PY\
 "

@@ -473,11 +473,11 @@ Use this format in your response when you learn something valuable:
 Categories:
 - package_name: "mysql client package is mariadb-client"
 - tool_installed: "installed hydra successfully"
-- credential_found: "admin:password works for DVWA"
+- credential_found: "admin:password works for target login"
 - vulnerability_found: "SQL injection in login.php"
 - technique_worked: "hydra http-post-form syntax: ..."
 - technique_failed: "sqlmap didn't work on this target"
-- target_info: "DVWA v1.10 running on Apache"
+- target_info: "target running Apache 2.4 with PHP 8.1"
 
 Only save VALUABLE information, not every step.
 """

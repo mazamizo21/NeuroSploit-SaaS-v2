@@ -1,0 +1,60 @@
+id: sliver_pivoting
+name: Sliver Pivoting & Network Tunneling
+category: lateral_movement
+phase: POST_EXPLOIT
+priority: 80
+target_types:
+  - lab
+  - external
+description: >
+  Pivot through compromised hosts to reach internal networks using Sliver C2
+  port forwarding, SOCKS5 proxying, reverse port forwards, and named pipe
+  pivots. Enables scanning and exploitation of hosts not directly reachable
+  from the attack platform.
+tags:
+  - c2
+  - sliver
+  - pivoting
+  - port-forwarding
+  - socks-proxy
+  - lateral-movement
+  - tunneling
+mitre_techniques:
+  - T1572       # Protocol Tunneling
+  - T1090       # Proxy
+  - T1090.001   # Internal Proxy
+  - T1090.002   # External Proxy
+  - T1021       # Remote Services
+  - T1021.001   # Remote Desktop Protocol
+  - T1021.002   # SMB/Windows Admin Shares
+  - T1021.004   # SSH
+  - T1021.006   # Windows Remote Management
+inputs:
+  - c2_session.json
+outputs:
+  - lateral.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - c2_session
+tools:
+  - sliver
+  - sliver-client
+  - proxychains
+  - nmap
+  - crackmapexec
+  - evil-winrm
+evidence_collection:
+  - Port forward configurations
+  - SOCKS proxy setup
+  - Internal network scan results
+  - Lateral movement proof (whoami on pivoted hosts)
+success_criteria:
+  - Port forward or SOCKS proxy established
+  - Internal hosts accessible through pivot
+  - At least one lateral movement path validated
+safety_notes:
+  - Only pivot to in-scope hosts
+  - Document all tunnels for cleanup
+  - Monitor bandwidth usage to avoid detection
+  - Close all tunnels after engagement

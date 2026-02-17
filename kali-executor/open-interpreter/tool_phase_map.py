@@ -79,8 +79,63 @@ DEFAULT_TOOL_PHASE_MAP: Dict[str, List[str]] = {
     "sqlmap": ["VULN_DISCOVERY", "EXPLOITATION", "POST_EXPLOIT"],
     "msfconsole": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
     "msfvenom": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "msfdb": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "msfrpc": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "msfrpcd": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "msfupdate": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "msf6": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "meterpreter": ["C2_DEPLOY", "POST_EXPLOIT"],
     "hydra": ["VULN_DISCOVERY", "EXPLOITATION", "POST_EXPLOIT"],
     "medusa": ["VULN_DISCOVERY", "EXPLOITATION"],
+    "commix": ["VULN_DISCOVERY", "EXPLOITATION"],
+
+    # ── Metasploit Post-Exploitation Modules ──────────────────────
+    # These are logical tool names derived from Metasploit module paths.
+    # The agent may emit these as tool hints when classifying msfconsole commands.
+
+    # Credential Harvesting (post/windows/gather/*)
+    "hashdump": ["POST_EXPLOIT"],
+    "smart_hashdump": ["POST_EXPLOIT"],
+    "cachedump": ["POST_EXPLOIT"],
+    "lsa_secrets": ["POST_EXPLOIT"],
+    "mimikatz": ["POST_EXPLOIT"],
+    "kiwi": ["POST_EXPLOIT"],
+    "credential_collector": ["POST_EXPLOIT"],
+
+    # Privilege Escalation (exploit/windows/local/*, post/multi/recon/*)
+    "getsystem": ["POST_EXPLOIT"],
+    "local_exploit_suggester": ["POST_EXPLOIT"],
+    "bypassuac": ["POST_EXPLOIT"],
+    "bypassuac_eventvwr": ["POST_EXPLOIT"],
+    "bypassuac_fodhelper": ["POST_EXPLOIT"],
+    "bypassuac_comhijack": ["POST_EXPLOIT"],
+    "bypassuac_sdclt": ["POST_EXPLOIT"],
+    "bypassuac_silentcleanup": ["POST_EXPLOIT"],
+    "juicy_potato": ["POST_EXPLOIT"],
+    "printspoofer": ["POST_EXPLOIT"],
+    "godpotato": ["POST_EXPLOIT"],
+    "sweetpotato": ["POST_EXPLOIT"],
+    "pwnkit": ["POST_EXPLOIT"],
+
+    # Token Manipulation (incognito)
+    "incognito": ["POST_EXPLOIT"],
+    "impersonate_token": ["POST_EXPLOIT"],
+    "steal_token": ["POST_EXPLOIT"],
+
+    # Pivoting & Tunneling
+    "autoroute": ["POST_EXPLOIT"],
+    "socks_proxy": ["POST_EXPLOIT"],
+    "portfwd": ["POST_EXPLOIT"],
+    "proxychains": ["POST_EXPLOIT"],
+    "proxychains4": ["POST_EXPLOIT"],
+
+    # Persistence (post/windows/manage/persistence_*, exploit/windows/local/persistence_*)
+    "persistence_exe": ["POST_EXPLOIT"],
+    "persistence_service": ["POST_EXPLOIT"],
+    "schtasks_exec": ["POST_EXPLOIT"],
+    "registry_persistence": ["POST_EXPLOIT"],
+    "sshkey_persistence": ["POST_EXPLOIT"],
+    "enable_rdp": ["POST_EXPLOIT"],
 
     # Lateral / post-exploit toolchain
     "crackmapexec": ["EXPLOITATION", "POST_EXPLOIT"],
@@ -93,11 +148,31 @@ DEFAULT_TOOL_PHASE_MAP: Dict[str, List[str]] = {
     "impacket-dcomexec": ["EXPLOITATION", "POST_EXPLOIT"],
     "impacket-mssqlclient": ["EXPLOITATION", "POST_EXPLOIT"],
     "impacket-secretsdump": ["POST_EXPLOIT"],
+    "impacket-ntlmrelayx": ["EXPLOITATION", "POST_EXPLOIT"],
+    "impacket-getST": ["POST_EXPLOIT"],
+    "impacket-getTGT": ["POST_EXPLOIT"],
+    "impacket-GetNPUsers": ["EXPLOITATION", "POST_EXPLOIT"],
+    "impacket-GetUserSPNs": ["EXPLOITATION", "POST_EXPLOIT"],
 
-    "mimikatz": ["POST_EXPLOIT"],
+    # AD post-exploitation tools
     "bloodhound": ["POST_EXPLOIT"],
     "sharphound": ["POST_EXPLOIT"],
     "rubeus": ["POST_EXPLOIT"],
+    "certipy": ["POST_EXPLOIT"],
+    "pywhisker": ["POST_EXPLOIT"],
+    "ldapdomaindump": ["POST_EXPLOIT"],
+    "adidnsdump": ["POST_EXPLOIT"],
+
+    # Windows post-exploitation tools
+    "winpeas": ["POST_EXPLOIT"],
+    "linpeas": ["POST_EXPLOIT"],
+    "seatbelt": ["POST_EXPLOIT"],
+    "sharpup": ["POST_EXPLOIT"],
+    "powerup": ["POST_EXPLOIT"],
+    "powerview": ["POST_EXPLOIT"],
+    "pypykatz": ["POST_EXPLOIT"],
+    "nanodump": ["POST_EXPLOIT"],
+    "procdump": ["POST_EXPLOIT"],
 
     # Shell access
     "nc": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
@@ -120,9 +195,54 @@ DEFAULT_TOOL_PHASE_MAP: Dict[str, List[str]] = {
     "beef": ["EXPLOITATION", "POST_EXPLOIT"],
     "beef-xss": ["EXPLOITATION", "POST_EXPLOIT"],
 
-    # Sliver C2 (post-exploitation)
+    # Sliver C2 (full lifecycle: implant gen → deploy → post-exploit)
     "sliver": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
     "sliver-client": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "sliver-server": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+
+    # Sliver helper scripts (TazoSploit automation wrappers)
+    "generate_implant": ["EXPLOITATION", "C2_DEPLOY"],
+    "generate_implant.py": ["EXPLOITATION", "C2_DEPLOY"],
+    "deliver_payload": ["EXPLOITATION", "C2_DEPLOY"],
+    "deliver_payload.py": ["EXPLOITATION", "C2_DEPLOY"],
+    "verify_callback": ["C2_DEPLOY", "POST_EXPLOIT"],
+    "verify_callback.py": ["C2_DEPLOY", "POST_EXPLOIT"],
+    "c2_post_exploit": ["POST_EXPLOIT"],
+    "c2_post_exploit.py": ["POST_EXPLOIT"],
+    "evasion_pipeline": ["EXPLOITATION", "C2_DEPLOY"],
+    "evasion_pipeline.py": ["EXPLOITATION", "C2_DEPLOY"],
+
+    # Evasion toolchain (Donut / ScareCrow / pre-flight)
+    "scarecrow": ["EXPLOITATION", "C2_DEPLOY"],
+    "donut": ["EXPLOITATION", "C2_DEPLOY"],
+    "threatcheck": ["EXPLOITATION", "C2_DEPLOY"],
+    "defendercheck": ["EXPLOITATION", "C2_DEPLOY"],
+
+    # BOF/.NET assembly tools (executed through Sliver sessions)
+    "sharpdpapi": ["POST_EXPLOIT"],
+    "sharpchromium": ["POST_EXPLOIT"],
+    "sharpkatz": ["POST_EXPLOIT"],
+    "sharppersist": ["POST_EXPLOIT"],
+    "adsearch": ["POST_EXPLOIT"],
+    "standin": ["POST_EXPLOIT"],
+    "sharpgpoabuse": ["POST_EXPLOIT"],
+    "sharpbypassuac": ["POST_EXPLOIT"],
+    "sharpdllproxy": ["POST_EXPLOIT"],
+    "sharpwifi": ["POST_EXPLOIT"],
+
+    # Pivoting / tunneling tools
+    "chisel": ["EXPLOITATION", "POST_EXPLOIT"],
+    "ligolo": ["POST_EXPLOIT"],
+    "ligolo-ng": ["POST_EXPLOIT"],
+
+    # Linux post-exploit enumeration
+    "linpeas.sh": ["POST_EXPLOIT"],
+    "pspy": ["POST_EXPLOIT"],
+
+    # Mythic C2 (post-exploitation)
+    "mythic": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "mythic-cli": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
+    "mythic_c2.py": ["EXPLOITATION", "C2_DEPLOY", "POST_EXPLOIT"],
 }
 
 
@@ -142,7 +262,12 @@ def _filter_known_phases(phases: Iterable[str]) -> List[str]:
     return out
 
 
-def is_tool_allowed(tool_name: str, phase: str, tool_phase_map: Optional[Dict[str, List[str]]] = None) -> bool:
+def is_tool_allowed(tool_name: str, phase: str, tool_phase_map: Optional[Dict[str, List[str]]] = None,
+                     job_phase: str = "") -> bool:
+    # FULL job phase = all tools allowed (multi-target needs recon + exploit + post-exploit)
+    if str(job_phase or "").strip().upper() == "FULL":
+        return True
+
     tool = normalize_tool_name(tool_name)
     if not tool:
         return True

@@ -1,0 +1,64 @@
+jwt_tool:
+  description: "JWT security testing toolkit — decode, tamper, brute-force, exploit JWTs"
+  category: "exploitation"
+  install_cmd: "pip3 install jwt_tool"
+  verify_cmd: "jwt_tool --help | head -n 3"
+  examples:
+    - "jwt_tool <JWT_TOKEN>"
+    - "jwt_tool <JWT_TOKEN> -T"
+    - "jwt_tool <JWT_TOKEN> -X a"
+    - "jwt_tool <JWT_TOKEN> -X k -pk public.pem"
+    - "jwt_tool <JWT_TOKEN> -C -d /usr/share/wordlists/rockyou.txt"
+
+burpsuite:
+  description: "Intercept and modify authentication requests, session tokens, authorization headers"
+  category: "web"
+  install_cmd: "apt-get install -y burpsuite"
+  verify_cmd: "which burpsuite"
+  examples:
+    - "burpsuite"
+
+ffuf:
+  description: "Fuzz endpoints for forced browsing and IDOR enumeration"
+  category: "discovery"
+  install_cmd: "apt-get install -y ffuf"
+  verify_cmd: "ffuf -V"
+  examples:
+    - "ffuf -u 'http://target/api/users/FUZZ' -w ids.txt -mc 200"
+    - "ffuf -u 'http://target/admin/FUZZ' -w admin-paths.txt -mc 200,301,302"
+
+hydra:
+  description: "Network login brute-forcer for web forms and services"
+  category: "brute_force"
+  install_cmd: "apt-get install -y hydra"
+  verify_cmd: "hydra -h | head -n 3"
+  examples:
+    - "hydra -l admin -P passwords.txt target http-post-form '/login:user=^USER^&pass=^PASS^:Invalid'"
+    - "hydra -L users.txt -P passwords.txt target http-post-form '/login:user=^USER^&pass=^PASS^:F=incorrect'"
+
+curl:
+  description: "HTTP client for testing auth endpoints, session manipulation, IDOR probing"
+  category: "exploitation"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s -b 'session=TOKEN' http://target/api/users/1"
+    - "curl -s -H 'Authorization: Bearer JWT_TOKEN' http://target/api/admin"
+    - "curl -s -X POST http://target/reset-password -d 'email=victim@test.com'"
+
+python3:
+  description: "Python scripts for JWT manipulation, IDOR automation, and token analysis"
+  category: "exploitation"
+  install_cmd: "apt-get install -y python3 python3-pip && pip3 install pyjwt"
+  verify_cmd: "python3 -c 'import jwt; print(jwt.__version__)'"
+  examples:
+    - "python3 -c \"import jwt; print(jwt.decode(TOKEN, options={'verify_signature': False}))\""
+    - "python3 -c \"import jwt; print(jwt.encode({'sub':'admin','role':'admin'}, '', algorithm='none'))\""
+
+hashcat:
+  description: "Crack JWT HMAC secrets via brute force"
+  category: "credential_access"
+  install_cmd: "apt-get install -y hashcat"
+  verify_cmd: "hashcat --version"
+  examples:
+    - "hashcat -m 16500 jwt_hash.txt /usr/share/wordlists/rockyou.txt"

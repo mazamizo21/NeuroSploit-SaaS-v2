@@ -237,9 +237,10 @@ class ToolUsageTracker:
             parts.append("OVERUSED (deprioritize): " + ", ".join(sorted(set(overused))[:10]))
         if unused:
             parts.append("RECOMMENDED (try these): " + ", ".join(unused[:8]))
-            parts.append("NEXT command MUST use one of: " + ", ".join(unused[:3]))
+            parts.append("Consider trying: " + ", ".join(unused[:3]))
         elif overused:
-            parts.append("NEXT command MUST NOT repeat the most-overused tool.")
+            parts.append("Consider varying your approach.")
 
-        parts.append("Use a different tool family or write a custom script if needed. Do not repeat failed commands verbatim.")
+        parts.append("Note: Using the same tool on DIFFERENT targets is fine — diversity means different TECHNIQUES, not just different tool names.")
+        parts.append("Do not repeat failed commands verbatim.")
         return "\n".join(parts).strip()

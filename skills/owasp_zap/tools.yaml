@@ -1,0 +1,54 @@
+zaproxy:
+  description: "OWASP ZAP — open-source web application security scanner with full REST API"
+  category: "vuln_scanning"
+  install_cmd: "apt-get install -y zaproxy"
+  verify_cmd: "zap.sh -version 2>&1 | head -n 1"
+  examples:
+    - "zap.sh -daemon -port 8090 -config api.key=zapkey"
+    - "zap.sh -cmd -quickurl http://target -quickout /tmp/zap_report.html"
+
+curl:
+  description: "Interact with ZAP REST API for spidering, scanning, and reporting"
+  category: "vuln_scanning"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s 'http://zap:8090/JSON/spider/action/scan?apikey=zapkey&url=http://target'"
+    - "curl -s 'http://zap:8090/JSON/ascan/action/scan?apikey=zapkey&url=http://target&recurse=true'"
+    - "curl -s 'http://zap:8090/JSON/alert/view/alerts?apikey=zapkey&baseurl=http://target'"
+    - "curl -s 'http://zap:8090/OTHER/core/other/htmlreport?apikey=zapkey' > report.html"
+
+zap-cli:
+  description: "Command-line client for OWASP ZAP that wraps the REST API"
+  category: "vuln_scanning"
+  install_cmd: "pip3 install zapcli"
+  verify_cmd: "zap-cli --version"
+  examples:
+    - "zap-cli quick-scan http://target"
+    - "zap-cli spider http://target"
+    - "zap-cli active-scan http://target"
+    - "zap-cli alerts"
+
+python-owasp-zap:
+  description: "Official Python client library for the ZAP API"
+  category: "vuln_scanning"
+  install_cmd: "pip3 install python-owasp-zap-v2.4"
+  verify_cmd: "python3 -c 'from zapv2 import ZAPv2; print(\"ZAP API client loaded\")'"
+  examples:
+    - "python3 -c \"from zapv2 import ZAPv2; zap=ZAPv2(apikey='zapkey',proxies={'http':'http://zap:8090'}); print(zap.core.version)\""
+
+nuclei:
+  description: "Template-based scanner to augment ZAP findings"
+  category: "vuln_scanning"
+  install_cmd: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
+  verify_cmd: "nuclei -version"
+  examples:
+    - "nuclei -u http://target -severity critical,high"
+
+selenium:
+  description: "Browser automation for ZAP authenticated scanning"
+  category: "utility"
+  install_cmd: "pip3 install selenium"
+  verify_cmd: "python3 -c 'import selenium; print(selenium.__version__)'"
+  examples:
+    - "python3 zap_auth_selenium.py --target http://target --username admin --password pass"

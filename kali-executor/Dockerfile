@@ -128,6 +128,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Networking
     netcat-traditional ncat socat proxychains4 tor \
+    # Fonts for PDF report generation
+    fonts-dejavu-core \
     # Scripting
     ruby perl \
     # File Transfer
@@ -160,7 +162,11 @@ RUN pip3 install --break-system-packages --ignore-installed --no-cache-dir \
     # LLM Integration
     litellm openai "anthropic>=0.45.0" \
     # Skills metadata parsing
-    pyyaml
+    pyyaml \
+    # TOON compact serialization (~40% token savings)
+    toon-format \
+    # Professional PDF report generation
+    fpdf2
 
 # =============================================================================
 # ADDITIONAL TOOLS FROM GITHUB
@@ -196,6 +202,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends wordlists 2>/de
 # =============================================================================
 # TAZOSPLOIT AI AGENT
 # =============================================================================
+
+# Copy default credential wordlists (small, fast — no brute-force)
+COPY wordlists/ /opt/tazosploit/wordlists/
 
 # Copy ALL files from open-interpreter/ into the image
 COPY open-interpreter/ /opt/tazosploit/
@@ -322,7 +331,11 @@ RUN mkdir -p /opt/tazosploit/evasion && \
 
 COPY scripts/verify-tools.sh /opt/tazosploit/scripts/verify-tools.sh
 COPY scripts/tools-update.sh /opt/tazosploit/scripts/tools-update.sh
-RUN chmod +x /opt/tazosploit/scripts/*.sh
+
+# C2 helper scripts (referenced by C2PhaseGate + DynamicAgent policy prompts)
+COPY scripts/*.py /opt/tazosploit/scripts/
+
+RUN chmod +x /opt/tazosploit/scripts/*.sh /opt/tazosploit/scripts/*.py
 
 # =============================================================================
 # SLIVER + EVASION TOOLCHAIN VERIFICATION (build fails if anything missing)

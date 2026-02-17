@@ -87,7 +87,28 @@ DEFAULT_AGENT_SETTINGS: Dict[str, Any] = {
 }
 
 
-ALLOWED_JOB_SETTING_KEYS = set(DEFAULT_AGENT_SETTINGS.keys())
+# Safe allowlist for Redis per-job overrides.
+# Keep this aligned with the control-plane sanitizer (api.utils.job_settings)
+# so direct Redis writes cannot toggle sensitive fields (passwords, network
+# callback coords, etc.).
+ALLOWED_JOB_SETTING_KEYS = {
+    # Feature flags
+    "USE_STRUCTURED_OUTPUT",
+    "TOOL_USAGE_TRACKER_ENABLED",
+    "EXPLOITATION_INJECTOR_ENABLED",
+    "TOOL_PHASE_GATE_ENABLED",
+    # Approval gates
+    "REQUIRE_APPROVAL_FOR_EXPLOITATION",
+    "REQUIRE_APPROVAL_FOR_POST_EXPLOITATION",
+    # KG toggles
+    "KNOWLEDGE_GRAPH_ENABLED",
+    "KG_INJECT_EVERY",
+    "KG_SUMMARY_MAX_CHARS",
+    # Safe runtime knobs
+    "AUTO_COMPLETE_IDLE_ITERATIONS",
+    "AUTO_COMPLETE_MIN_ITERATIONS",
+    "LLM_THINKING_ENABLED",
+}
 
 _settings: Optional[Dict[str, Any]] = None
 _overrides: Optional[Dict[str, Any]] = None

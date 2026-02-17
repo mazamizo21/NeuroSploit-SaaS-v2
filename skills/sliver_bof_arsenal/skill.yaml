@@ -1,0 +1,61 @@
+id: sliver_bof_arsenal
+name: Sliver BOF Arsenal
+category: post_exploitation
+phase: POST_EXPLOIT
+priority: 82
+target_types:
+  - lab
+  - external
+description: >
+  Beacon Object File (BOF) execution through Sliver C2 sessions. BOFs run
+  in-process with no file drop and minimal forensic footprint. Covers
+  credential harvesting, AD enumeration, lateral movement, evasion patches,
+  and privilege escalation — all through inline-execute and execute-assembly.
+tags:
+  - c2
+  - sliver
+  - bof
+  - inline-execute
+  - execute-assembly
+  - credential-access
+  - evasion
+  - lateral-movement
+mitre_techniques:
+  - T1003       # OS Credential Dumping
+  - T1003.001   # LSASS Memory
+  - T1003.002   # SAM
+  - T1003.004   # LSA Secrets
+  - T1003.006   # DCSync
+  - T1558.003   # Kerberoasting
+  - T1558.004   # AS-REP Roasting
+  - T1055       # Process Injection
+  - T1562.001   # Disable or Modify Tools (AMSI/ETW)
+  - T1087       # Account Discovery
+  - T1069       # Permission Groups Discovery
+  - T1482       # Domain Trust Discovery
+  - T1021.002   # SMB/Windows Admin Shares
+inputs:
+  - c2_session.json
+outputs:
+  - creds.json
+  - evidence.json
+  - findings.json
+prerequisites:
+  - c2_session
+tools:
+  - sliver
+  - sliver-client
+evidence_collection:
+  - BOF execution output
+  - Credential material extracted
+  - AD enumeration data
+  - Lateral movement proof
+success_criteria:
+  - BOFs execute without crash
+  - Credentials extracted via in-memory techniques
+  - AD attack paths identified
+  - Lateral movement validated
+safety_notes:
+  - BOFs can crash the implant process if buggy — test in lab first
+  - Credential material must be stored encrypted at rest
+  - Only execute against in-scope targets

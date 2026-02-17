@@ -1,0 +1,45 @@
+id: auth_bypass
+name: Authentication & Authorization Bypass
+category: exploitation
+phase: EXPLOIT
+priority: 90
+target_types:
+  - lab
+  - external
+description: >
+  Detect and exploit authentication and authorization flaws including IDOR,
+  JWT attacks (none algorithm, key confusion, brute-force), session fixation,
+  password reset flaws, 2FA bypass, forced browsing, privilege escalation,
+  and broken access control patterns.
+mitre_techniques:
+  - T1078  # Valid Accounts
+  - T1556  # Modify Authentication Process
+  - T1548  # Abuse Elevation Control Mechanism
+  - T1110  # Brute Force
+inputs:
+  - services.json
+  - vulns.json
+outputs:
+  - evidence.json
+  - findings.json
+  - creds.json
+prerequisites:
+  - vulns
+success_criteria:
+  - Authentication or authorization bypass confirmed
+  - Unauthorized access to data or functionality demonstrated
+  - All bypass vectors and responses documented
+safety_notes:
+  - Never modify other users' data — read-only proof of access
+  - Use test accounts where possible
+  - Do not lock out real user accounts via brute force
+  - Document all accounts accessed and actions taken
+tags:
+  - web
+  - auth
+  - idor
+  - jwt
+  - session
+  - 2fa
+  - privilege-escalation
+  - access-control

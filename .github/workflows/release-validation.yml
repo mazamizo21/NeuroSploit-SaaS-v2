@@ -28,6 +28,11 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Lint — no target-specific references in production code
+        run: |
+          chmod +x scripts/lint_no_target_specific.sh
+          bash scripts/lint_no_target_specific.sh
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
