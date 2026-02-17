@@ -20,6 +20,7 @@ const links = [
   { href: "/agents", label: "Agents", icon: Network },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
+  // Note: Attack Graph is accessed per-job at /graph/[jobId]
 ];
 
 export default function Sidebar() {

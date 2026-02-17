@@ -458,3 +458,74 @@ body {
   z-index: 50;
   animation: bg-pulse-success 1s ease-out forwards;
 }
+
+/* ─── Attack Graph ─── */
+
+/* Force-graph container: dark background, no overflow */
+.force-graph-container canvas {
+  background: #0a0a0a !important;
+}
+
+/* Tooltip styling for force-graph */
+.graph-tooltip,
+.scene-tooltip {
+  background: rgba(10, 10, 15, 0.95) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 11px !important;
+  color: var(--text) !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  max-width: 250px !important;
+  pointer-events: none !important;
+  z-index: 999 !important;
+}
+
+/* Node glow animation */
+@keyframes node-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px currentColor);
+  }
+}
+
+.node-glow {
+  animation: node-glow 2s ease-in-out infinite;
+}
+
+/* New node entrance animation */
+@keyframes node-enter {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.node-enter {
+  animation: node-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Edge draw animation */
+@keyframes edge-draw {
+  from {
+    stroke-dashoffset: 100%;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.edge-draw {
+  animation: edge-draw 0.8s ease-out forwards;
+}
