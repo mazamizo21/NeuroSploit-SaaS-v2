@@ -1,0 +1,12 @@
+[host] python3
+Python 3.14.2
+
+[kali] python3
+Python 3.13.11
+
+[kali] pytest import
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import pytest; print(pytest.__version__)
+    ^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'pytest'

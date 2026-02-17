@@ -1,0 +1,16 @@
+# Validation Log — compileall jobs.py (Copilot evidence/citation prompt)
+
+Date: 2026-02-17T06:37:00Z
+
+Command:
+```bash
+python3 -m compileall control-plane/api/routers/jobs.py
+```
+
+Result:
+- Exit code: 0
+
+Output:
+```
+Compiling 'control-plane/api/routers/jobs.py'...
+```

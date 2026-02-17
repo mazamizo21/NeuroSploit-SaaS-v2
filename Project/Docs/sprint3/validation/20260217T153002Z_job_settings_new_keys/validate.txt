@@ -1,0 +1,42 @@
+[compileall]
+compileall_exit=0
+[unittest]
+======================================================================
+ERROR: test_sanitize_job_settings_allowlists_and_bounds (tests.unit.test_sprint3_job_settings.TestControlPlaneJobSettingsSanitization.test_sanitize_job_settings_allowlists_and_bounds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_sprint3_job_settings.py", line 119, in setUp
+    self.jobs_router = _import_control_plane_jobs_router()
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_sprint3_job_settings.py", line 37, in _import_control_plane_jobs_router
+    from api.routers import jobs  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/control-plane/api/routers/__init__.py", line 2, in <module>
+    from . import tenants, scopes, jobs, policies, audit, mitre, scheduled_jobs, workspaces, reports, attack_graphs, websocket, simulations
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/control-plane/api/routers/tenants.py", line 6, in <module>
+    from fastapi import APIRouter, HTTPException, Depends
+ModuleNotFoundError: No module named 'fastapi'
+
+======================================================================
+ERROR: test_dynamic_agent_applies_redis_job_settings_before_flag_reads (tests.unit.test_sprint3_job_settings.TestDynamicAgentJobSettingsIntegration.test_dynamic_agent_applies_redis_job_settings_before_flag_reads)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_sprint3_job_settings.py", line 111, in test_dynamic_agent_applies_redis_job_settings_before_flag_reads
+    with patch.object(self.da.redis_sync, "from_url", return_value=fake_redis):
+         ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.2/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/mock.py", line 1503, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.2/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/mock.py", line 1473, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: None does not have the attribute 'from_url'
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.088s
+
+FAILED (errors=2)
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+unittest_exit=1

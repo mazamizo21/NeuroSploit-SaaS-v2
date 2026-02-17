@@ -1,0 +1,5 @@
+[compileall] dynamic_agent
+Compiling 'kali-executor/open-interpreter/dynamic_agent.py'...
+
+[pytest] unit
+zsh: command not found: pytest

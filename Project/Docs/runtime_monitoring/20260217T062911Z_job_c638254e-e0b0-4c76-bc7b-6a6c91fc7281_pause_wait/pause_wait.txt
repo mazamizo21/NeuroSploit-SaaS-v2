@@ -1,0 +1,93 @@
+Polling for agent stop + worker paused status (max 120s)
+t+1s pid=15471 terminal=completed stop_signal=1
+t+2s pid=15486 terminal=completed stop_signal=1
+t+3s pid=15501 terminal=completed stop_signal=1
+t+4s pid=15516 terminal=completed stop_signal=1
+t+5s pid=15531 terminal=completed stop_signal=1
+t+6s pid=15546 terminal=completed stop_signal=1
+t+7s pid=15561 terminal=completed stop_signal=1
+t+8s pid=15576 terminal=completed stop_signal=1
+t+9s pid=15591 terminal=completed stop_signal=1
+t+10s pid=15606 terminal=completed stop_signal=1
+t+11s pid=15621 terminal=completed stop_signal=1
+t+12s pid=15636 terminal=completed stop_signal=1
+t+13s pid=15651 terminal=completed stop_signal=1
+t+14s pid=15666 terminal=completed stop_signal=1
+t+15s pid=15681 terminal=completed stop_signal=1
+t+16s pid=15696 terminal=completed stop_signal=1
+t+17s pid=15711 terminal=completed stop_signal=1
+t+18s pid=15726 terminal=completed stop_signal=1
+t+19s pid=15741 terminal=completed stop_signal=1
+t+20s pid=15756 terminal=completed stop_signal=1
+t+21s pid=15771 terminal=completed stop_signal=1
+t+22s pid=15786 terminal=completed stop_signal=1
+t+23s pid=15801 terminal=completed stop_signal=1
+t+24s pid=15816 terminal=completed stop_signal=1
+t+25s pid=15831 terminal=completed stop_signal=1
+t+26s pid=15846 terminal=completed stop_signal=1
+t+27s pid=15862 terminal=completed stop_signal=1
+t+28s pid=15877 terminal=completed stop_signal=1
+t+29s pid=15892 terminal=completed stop_signal=1
+t+30s pid=15907 terminal=completed stop_signal=1
+t+31s pid=15922 terminal=completed stop_signal=1
+t+32s pid=15937 terminal=completed stop_signal=1
+t+33s pid=15952 terminal=completed stop_signal=1
+t+34s pid=15967 terminal=completed stop_signal=1
+t+35s pid=15982 terminal=completed stop_signal=1
+t+36s pid=15997 terminal=completed stop_signal=1
+t+37s pid=16012 terminal=completed stop_signal=1
+t+38s pid=16027 terminal=completed stop_signal=1
+t+39s pid=16042 terminal=completed stop_signal=1
+t+40s pid=16057 terminal=completed stop_signal=1
+t+41s pid=16072 terminal=completed stop_signal=1
+t+42s pid=16087 terminal=completed stop_signal=1
+t+43s pid=16102 terminal=completed stop_signal=1
+t+44s pid=16117 terminal=completed stop_signal=1
+t+45s pid=16132 terminal=completed stop_signal=1
+t+46s pid=16147 terminal=completed stop_signal=1
+t+47s pid=16162 terminal=completed stop_signal=1
+t+48s pid=16177 terminal=completed stop_signal=1
+t+49s pid=16192 terminal=completed stop_signal=1
+t+50s pid=16207 terminal=completed stop_signal=1
+t+51s pid=16222 terminal=completed stop_signal=1
+t+52s pid=16237 terminal=completed stop_signal=1
+t+53s pid=16252 terminal=completed stop_signal=1
+t+54s pid=16267 terminal=completed stop_signal=1
+t+55s pid=16282 terminal=completed stop_signal=1
+t+56s pid=16297 terminal=completed stop_signal=1
+t+57s pid=16312 terminal=completed stop_signal=1
+t+58s pid=16327 terminal=completed stop_signal=1
+t+59s pid=16342 terminal=completed stop_signal=1
+t+60s pid=16357 terminal=completed stop_signal=1
+
+[tail] dynamic_agent.log
+[2026-02-17T06:27:39.468665+00:00] [INFO] Executing [bash]: echo "[CRACKED CREDENTIALS]" > /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/findings.json
+ec...
+[2026-02-17T06:27:39.566056+00:00] [INFO]   echo: exit=0
+[2026-02-17T06:27:39.566155+00:00] [INFO] === Iteration 150/2000 ===
+[2026-02-17T06:27:39.566903+00:00] [INFO] Self-check injected at iteration 150: 2/2 exploited
+[2026-02-17T06:27:39.566962+00:00] [INFO] Context chars trimmed to 17089.
+[2026-02-17T06:28:08.812019+00:00] [INFO] AI response: 2414 chars
+[2026-02-17T06:28:08.824757+00:00] [INFO] Session saved: /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/session_session_20260217_051001.json
+[2026-02-17T06:28:08.826772+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import requests, json, os
+s = requests.Session()
+base_url = 'http://juiceshop...
+[2026-02-17T06:28:09.017511+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:28:09.017573+00:00] [INFO] === Iteration 151/2000 ===
+[2026-02-17T06:28:09.017840+00:00] [INFO] Context chars trimmed to 17477.
+[2026-02-17T06:28:31.253908+00:00] [INFO] AI response: 2062 chars
+[2026-02-17T06:28:31.256254+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import json, os
+out_dir = '/pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc72...
+[2026-02-17T06:28:31.279331+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:28:31.279410+00:00] [INFO] === Iteration 152/2000 ===
+[2026-02-17T06:28:31.279720+00:00] [INFO] Context chars trimmed to 16790.
+[2026-02-17T06:29:00.250957+00:00] [INFO] AI response: 2296 chars
+[2026-02-17T06:29:00.253146+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import requests, json, time
+s = requests.Session()
+base = 'http://juiceshop:3...
+[2026-02-17T06:29:00.442608+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:29:00.442681+00:00] [INFO] === Iteration 153/2000 ===
+[2026-02-17T06:29:00.443161+00:00] [WARN] Agent stopped by user signal

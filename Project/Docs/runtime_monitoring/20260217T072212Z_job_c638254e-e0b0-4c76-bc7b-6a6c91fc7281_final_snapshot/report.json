@@ -1,0 +1,41 @@
+{
+  "status": "paused",
+  "paused": true,
+  "iterations": 153,
+  "total_executions": 141,
+  "successful_executions": 108,
+  "tools_used": [
+    "#",
+    "-c",
+    "apt-get",
+    "cat",
+    "cd",
+    "creds.json",
+    "curl",
+    "echo",
+    "ffuf",
+    "file",
+    "gobuster",
+    "hashcat",
+    "head",
+    "john",
+    "jq",
+    "keepass2john",
+    "mkdir",
+    "nikto",
+    "nmap",
+    "nuclei",
+    "pip3",
+    "python3",
+    "rm",
+    "sqlmap",
+    "wfuzz",
+    "wget",
+    "which"
+  ],
+  "findings": [],
+  "llm_stats": {
+    "total_tokens": 896827,
+    "total_cost_usd": 0.0
+  }
+}

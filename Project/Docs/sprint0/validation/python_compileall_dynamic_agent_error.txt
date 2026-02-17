@@ -1,0 +1,7 @@
+usage: python3.14 -m compileall [-h] [-l] [-r RECURSION] [-f] [-q] [-b]
+                                [-d DESTDIR] [-s STRIPDIR] [-p PREPENDDIR]
+                                [-x REGEXP] [-i FILE] [-j WORKERS]
+                                [--invalidation-mode {checked-hash,timestamp,unchecked-hash}]
+                                [-o OPT_LEVELS] [-e DIR] [--hardlink-dupes]
+                                [FILE|DIR ...]
+python3.14 -m compileall: error: unrecognized arguments: -v

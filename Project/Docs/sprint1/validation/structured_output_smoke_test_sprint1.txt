@@ -1,0 +1,5 @@
+parsed= True
+action= execute_command
+command= echo hello
+todo_len= 1
+executables= [('bash', 'echo hello')]

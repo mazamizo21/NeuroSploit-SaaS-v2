@@ -1,0 +1,2 @@
+[compileall] dynamic_agent + worker + new unit tests
+compileall_exit=0

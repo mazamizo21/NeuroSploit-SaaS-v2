@@ -1,0 +1,33 @@
+# Sprint 1 — Core Agent Loop Fixes (Tracking)
+
+Status legend: `[ ]` todo, `[x]` done, `[~]` in progress.
+
+## §3A — Phase State Machine (hard gates)
+- [x] Create `kali-executor/open-interpreter/phase_machine.py` (Phase enum + PhaseState, transition rules, budgets).
+- [x] Integrate phase machine into `dynamic_agent.py`:
+  - [x] Initialize runtime phase from `JOB_PHASE` / `EFFECTIVE_PHASE` (not just `PHASE_GATE_START`).
+  - [x] Emit `phase_update` events on every phase transition.
+  - [x] Ensure stop/resume checkpoint restores phase state.
+
+## §3D — Tool Phase Restrictions
+- [x] Create `kali-executor/open-interpreter/tool_phase_map.py`:
+  - [x] Build default tool->allowed-phases map from skills metadata.
+  - [x] Provide `is_tool_allowed()` + `get_blocked_reason()`.
+- [x] Integrate tool gating into command execution path in `dynamic_agent.py` (block mapped tools outside phase).
+
+## §3B — Structured ReAct Output
+- [ ] Create `kali-executor/open-interpreter/structured_output.py` (Pydantic model + parse/retry).
+- [ ] Update `dynamic_agent.py` to optionally use structured output mode behind a feature flag.
+
+## §4A — Tool Usage Tracker + Comfort Zone Breaker
+- [ ] Create `kali-executor/open-interpreter/tool_usage_tracker.py`.
+- [ ] Integrate into `dynamic_agent.py` (record tools; inject diversity prompt when stuck).
+
+## §4B — Proactive Command Injection
+- [ ] Create `kali-executor/open-interpreter/exploitation_injector.py`.
+- [ ] Integrate into `dynamic_agent.py` (inject next-best exploit commands when agent stalls).
+
+## Validation (archive logs under `Project/Docs/sprint1/validation/`)
+- [x] `python -m compileall` updated Python modules.
+- [ ] Control-plane smoke tests (if applicable).
+- [ ] Frontend build (if UI touched).

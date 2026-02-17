@@ -1,0 +1,88 @@
+[0] platform: restart worker to pick up pause parsing fix
+ Container tazosploit-worker-2 Restarting 
+ Container tazosploit-worker-1 Restarting 
+ Container tazosploit-worker-1 Started 
+ Container tazosploit-worker-2 Started 
+
+[1] determine tenant_id
+tenant_id=a0000000-0000-0000-0000-000000000001
+
+[2] reset job to pending (simulate resume endpoint)
+UPDATE 1
+
+[3] clear redis terminal/stop and set resume flag + enqueue
+2
+OK
+1
+
+[4] wait for worker dispatch + kali agent start (max 90s)
+t+1s db_status=pending terminal=none pid=16458
+t+2s db_status=running terminal=none pid=16485
+
+[5] request stop_signal now
+OK
+1
+
+[6] wait for paused terminal/db (max 120s)
+t+1s db_status=running terminal=none
+t+2s db_status=running terminal=none
+t+3s db_status=running terminal=none
+t+4s db_status=running terminal=none
+t+5s db_status=running terminal=none
+t+6s db_status=running terminal=none
+t+7s db_status=running terminal=none
+t+8s db_status=running terminal=none
+t+9s db_status=running terminal=none
+t+10s db_status=running terminal=none
+t+11s db_status=running terminal=none
+t+12s db_status=running terminal=none
+t+13s db_status=running terminal=none
+t+14s db_status=paused terminal=paused
+PAUSE_OK
+
+[7] tail dynamic_agent.log
+[2026-02-17T06:28:09.017573+00:00] [INFO] === Iteration 151/2000 ===
+[2026-02-17T06:28:09.017840+00:00] [INFO] Context chars trimmed to 17477.
+[2026-02-17T06:28:31.253908+00:00] [INFO] AI response: 2062 chars
+[2026-02-17T06:28:31.256254+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import json, os
+out_dir = '/pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc72...
+[2026-02-17T06:28:31.279331+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:28:31.279410+00:00] [INFO] === Iteration 152/2000 ===
+[2026-02-17T06:28:31.279720+00:00] [INFO] Context chars trimmed to 16790.
+[2026-02-17T06:29:00.250957+00:00] [INFO] AI response: 2296 chars
+[2026-02-17T06:29:00.253146+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import requests, json, time
+s = requests.Session()
+base = 'http://juiceshop:3...
+[2026-02-17T06:29:00.442608+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:29:00.442681+00:00] [INFO] === Iteration 153/2000 ===
+[2026-02-17T06:29:00.443161+00:00] [WARN] Agent stopped by user signal
+[2026-02-17T07:26:28.651863+00:00] [INFO] Job settings overrides applied from Redis: []
+[2026-02-17T07:26:28.829867+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:26:28.829938+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:26:28.829958+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:26:29.053440+00:00] [INFO] Knowledge graph enabled
+[2026-02-17T07:26:29.054076+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:26:29.064538+00:00] [INFO] Session loaded: /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/session_session_20260217_051001.json
+[2026-02-17T07:26:29.065078+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T07:26:29.067205+00:00] [INFO] Memory store initialized: 694 memories loaded
+[2026-02-17T07:26:29.067296+00:00] [INFO] RESUMING engagement: juiceshop from iteration 150/2000
+[2026-02-17T07:26:29.067320+00:00] [INFO] Conversation history: 14 messages
+[2026-02-17T07:26:29.067886+00:00] [INFO] Checkpoint restored: iteration=153, phase=POST_EXPLOIT
+[2026-02-17T07:26:29.067979+00:00] [INFO] === Iteration 154/2000 ===
+[2026-02-17T07:26:29.068619+00:00] [INFO] ALL VULNS RESOLVED (periodic check): allowing targeted recon/vuln discovery
+[2026-02-17T07:26:29.068685+00:00] [INFO] Context chars trimmed to 16912.
+[2026-02-17T07:26:54.016457+00:00] [INFO] AI response: 2808 chars
+[2026-02-17T07:26:54.019096+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import requests, json, re, urllib.parse
+base = 'http://juiceshop:3000'
+s = re...
+[2026-02-17T07:26:54.170206+00:00] [INFO]   python3: exit=0
+[2026-02-17T07:26:54.170271+00:00] [INFO] === Iteration 155/2000 ===
+[2026-02-17T07:26:54.170868+00:00] [WARN] Agent stopped by user signal
+
+[8] report.json pause fields
+status paused
+paused True
+iterations 155

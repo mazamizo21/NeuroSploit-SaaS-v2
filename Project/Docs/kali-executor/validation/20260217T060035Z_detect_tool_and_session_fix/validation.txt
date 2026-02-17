@@ -1,0 +1,4 @@
+[compileall] dynamic_agent
+
+[python -m pytest] unit
+/opt/homebrew/opt/python@3.14/bin/python3.14: No module named pytest

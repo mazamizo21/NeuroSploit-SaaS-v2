@@ -1,0 +1,6 @@
+total 16
+drwxr-xr-x@   5 tazjack  wheel   160 Feb 15 23:42 .
+drwxrwxrwt  164 root     wheel  5248 Feb 15 23:42 ..
+-rw-r--r--@   1 tazjack  wheel   330 Feb 15 23:42 dynamic_agent.log
+drwxr-xr-x@   2 tazjack  wheel    64 Feb 15 23:42 evidence
+-rw-r--r--@   1 tazjack  wheel     2 Feb 15 23:42 structured_findings.json

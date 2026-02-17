@@ -1,0 +1,523 @@
+name: tazosploit
+networks:
+  control-net:
+    driver: bridge
+    name: tazosploit-control
+  exec-net:
+    driver: bridge
+    name: tazosploit-execution
+  kali-net:
+    driver: bridge
+    name: tazosploit-kali
+  lab-net:
+    external: true
+    name: tazosploit-lab
+services:
+  api:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/control-plane
+      dockerfile: Dockerfile
+    command:
+      - uvicorn
+      - main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --no-access-log
+    container_name: tazosploit-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    environment:
+      - DATABASE_URL=postgresql://tazosploit:${DB_PASSWORD:-tazosploit_dev}@postgres:5432/tazosploit
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - ENABLE_FULL_LOGGING=true
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - LLM_PROXY_TIMEOUT_SECONDS=${LLM_PROXY_TIMEOUT_SECONDS:-240}
+      - LLM_PROXY_RETRY_MAX=${LLM_PROXY_RETRY_MAX:-5}
+      - LLM_PROXY_RETRY_BASE_SECONDS=${LLM_PROXY_RETRY_BASE_SECONDS:-2}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+    group_add:
+      - "1"
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8000/health
+      timeout: 10s
+    networks:
+      control-net: null
+      kali-net: null
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: "8000"
+        target: 8000
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/control-plane
+        target: /app
+        type: bind
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/data
+        target: /data
+        type: bind
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/logs
+        target: /app/logs
+        type: bind
+      - bind:
+          create_host_path: true
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        type: bind
+      - read_only: true
+        source: kali-output
+        target: /pentest/output
+        type: volume
+        volume: {}
+  dom-renderer:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/dom-renderer
+      dockerfile: Dockerfile
+    container_name: tazosploit-dom-renderer
+    networks:
+      kali-net: null
+      lab-net: null
+    restart: unless-stopped
+  frontend:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/frontend
+      dockerfile: Dockerfile
+    container_name: tazosploit-frontend
+    depends_on:
+      api:
+        condition: service_healthy
+        required: true
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+    networks:
+      control-net: null
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: "3000"
+        target: 3000
+    restart: unless-stopped
+  kali:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor
+      dockerfile: Dockerfile
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    cap_drop:
+      - ALL
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    environment:
+      - LLM_PROXY_URL=${LLM_PROXY_URL:-http://api:8000/api/internal/llm/chat}
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - LLM_API_BASE=${LLM_API_BASE:-https://api.anthropic.com}
+      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-5-20250514}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
+      - CLAUDE_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - ALLOW_SELF_REGISTRATION=${ALLOW_SELF_REGISTRATION:-false}
+      - DOM_RENDERER_URL=http://dom-renderer:8080/render
+      - KNOWLEDGE_GRAPH_ENABLED=${KNOWLEDGE_GRAPH_ENABLED:-true}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-changeme123}
+      - KG_INJECT_EVERY=${KG_INJECT_EVERY:-5}
+      - KG_SUMMARY_MAX_CHARS=${KG_SUMMARY_MAX_CHARS:-1800}
+    networks:
+      kali-net: null
+      lab-net: null
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=1G
+      - /run:size=100M
+    volumes:
+      - source: kali-output
+        target: /pentest/output
+        type: volume
+        volume: {}
+      - source: kali-memory
+        target: /pentest/memory
+        type: volume
+        volume: {}
+      - bind:
+          create_host_path: true
+        read_only: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/skills
+        target: /opt/tazosploit/skills
+        type: bind
+  minio:
+    command: server /data --console-address ":9001"
+    container_name: tazosploit-minio
+    environment:
+      MINIO_ROOT_PASSWORD: ${DB_PASSWORD:-tazosploit_dev}
+      MINIO_ROOT_USER: tazosploit
+    healthcheck:
+      interval: 10s
+      retries: 5
+      test:
+        - CMD
+        - mc
+        - ready
+        - local
+      timeout: 5s
+    image: minio/minio
+    networks:
+      control-net: null
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: "9000"
+        target: 9000
+      - mode: ingress
+        protocol: tcp
+        published: "9001"
+        target: 9001
+    restart: unless-stopped
+    volumes:
+      - source: minio-data
+        target: /data
+        type: volume
+        volume: {}
+  neo4j:
+    container_name: tazosploit-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-changeme123}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*
+    healthcheck:
+      interval: 10s
+      retries: 5
+      test:
+        - CMD-SHELL
+        - bash -lc 'echo > /dev/tcp/127.0.0.1/7474'
+      timeout: 5s
+    image: neo4j:5.26-community
+    networks:
+      control-net: null
+      exec-net: null
+      kali-net: null
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: "7474"
+        target: 7474
+      - mode: ingress
+        protocol: tcp
+        published: "7687"
+        target: 7687
+    restart: unless-stopped
+    volumes:
+      - source: neo4j-data
+        target: /data
+        type: volume
+        volume: {}
+  postgres:
+    container_name: tazosploit-postgres
+    environment:
+      POSTGRES_DB: tazosploit
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tazosploit_dev}
+      POSTGRES_USER: tazosploit
+    healthcheck:
+      interval: 5s
+      retries: 5
+      test:
+        - CMD-SHELL
+        - pg_isready -U tazosploit
+      timeout: 5s
+    image: postgres:15-alpine
+    networks:
+      control-net: null
+    restart: unless-stopped
+    volumes:
+      - source: postgres-data
+        target: /var/lib/postgresql/data
+        type: volume
+        volume: {}
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/control-plane/db/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+        type: bind
+  redis:
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    container_name: tazosploit-redis
+    healthcheck:
+      interval: 5s
+      retries: 5
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      timeout: 5s
+    image: redis:7-alpine
+    networks:
+      control-net: null
+      exec-net: null
+    restart: unless-stopped
+    volumes:
+      - source: redis-data
+        target: /data
+        type: volume
+        volume: {}
+  scheduler:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/execution-plane
+      dockerfile: Dockerfile.scheduler
+    container_name: tazosploit-scheduler
+    depends_on:
+      api:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CONTROL_PLANE_URL=http://api:8000
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-10}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:9001/health
+      timeout: 10s
+    networks:
+      control-net: null
+      exec-net: null
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/execution-plane
+        target: /app
+        type: bind
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/logs
+        target: /app/logs
+        type: bind
+  supervisor:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/execution-plane
+      dockerfile: Dockerfile.supervisor
+    container_name: tazosploit-supervisor
+    depends_on:
+      redis:
+        condition: service_healthy
+        required: true
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SUPERVISOR_EVENT_LIST_MAX=${SUPERVISOR_EVENT_LIST_MAX:-1000}
+      - SUPERVISOR_EVENT_TTL_SECONDS=${SUPERVISOR_EVENT_TTL_SECONDS:-86400}
+      - SUPERVISOR_ALERT_STALL_SECONDS=${SUPERVISOR_ALERT_STALL_SECONDS:-300}
+      - SUPERVISOR_ALERT_NOOP_THRESHOLD=${SUPERVISOR_ALERT_NOOP_THRESHOLD:-3}
+      - SUPERVISOR_ALERT_REPEAT_THRESHOLD=${SUPERVISOR_ALERT_REPEAT_THRESHOLD:-2}
+      - SUPERVISOR_ALERT_COOLDOWN_SECONDS=${SUPERVISOR_ALERT_COOLDOWN_SECONDS:-120}
+      - SUPERVISOR_FINDINGS_STALL_SECONDS=${SUPERVISOR_FINDINGS_STALL_SECONDS:-900}
+      - SUPERVISOR_STATS_POLL_SECONDS=${SUPERVISOR_STATS_POLL_SECONDS:-20}
+      - SUPERVISOR_ACTIVE_WINDOW_SECONDS=${SUPERVISOR_ACTIVE_WINDOW_SECONDS:-3600}
+      - SUPERVISOR_HEALTH_PORT=${SUPERVISOR_HEALTH_PORT:-9012}
+      - SUPERVISOR_LLM_MODE=${SUPERVISOR_LLM_MODE:-live}
+      - SUPERVISOR_LLM_PROVIDER=${SUPERVISOR_LLM_PROVIDER:-internal_proxy}
+      - SUPERVISOR_LLM_API_BASE=${SUPERVISOR_LLM_API_BASE:-http://api:8000/api/internal/llm/chat}
+      - SUPERVISOR_LLM_API_KEY=${SUPERVISOR_LLM_API_KEY:-}
+      - SUPERVISOR_ANTHROPIC_VERSION=${SUPERVISOR_ANTHROPIC_VERSION:-2023-06-01}
+      - SUPERVISOR_TRIAGE_MODEL=${SUPERVISOR_TRIAGE_MODEL:-}
+      - SUPERVISOR_ESCALATION_MODEL=${SUPERVISOR_ESCALATION_MODEL:-}
+      - SUPERVISOR_LLM_TIMEOUT_SECONDS=${SUPERVISOR_LLM_TIMEOUT_SECONDS:-90}
+      - SUPERVISOR_LLM_MAX_TOKENS=${SUPERVISOR_LLM_MAX_TOKENS:-800}
+      - SUPERVISOR_LLM_PROXY_TOKEN=${SUPERVISOR_LLM_PROXY_TOKEN:-}
+      - LLM_PROXY_TOKEN=${LLM_PROXY_TOKEN:-}
+      - LLM_THINKING_ENABLED=${LLM_THINKING_ENABLED:-}
+      - SUPERVISOR_LLM_PROVIDER_OVERRIDE=${SUPERVISOR_LLM_PROVIDER_OVERRIDE:-}
+      - SUPERVISOR_AUDIT_ALERT_TYPES=${SUPERVISOR_AUDIT_ALERT_TYPES:-stalled,noop_loop,repeated_command,no_new_findings,stalling,scan_loop}
+      - SUPERVISOR_AUDIT_MAX_PER_JOB=${SUPERVISOR_AUDIT_MAX_PER_JOB:-5}
+      - SUPERVISOR_AUDIT_COOLDOWN_SECONDS=${SUPERVISOR_AUDIT_COOLDOWN_SECONDS:-120}
+      - SUPERVISOR_ACTIONS_ENABLED=${SUPERVISOR_ACTIONS_ENABLED:-true}
+      - SUPERVISOR_ACTIONS_DRY_RUN=${SUPERVISOR_ACTIONS_DRY_RUN:-false}
+      - SUPERVISOR_ACTION_COOLDOWN_SECONDS=${SUPERVISOR_ACTION_COOLDOWN_SECONDS:-120}
+      - SUPERVISOR_ACTION_MAX_PER_JOB=${SUPERVISOR_ACTION_MAX_PER_JOB:-5}
+      - SUPERVISOR_HINT_PATH_TEMPLATE=${SUPERVISOR_HINT_PATH_TEMPLATE:-/pentest/output/{job_id}/supervisor_hints.jsonl}
+      - SUPERVISOR_SCAN_LOOP_WINDOW=${SUPERVISOR_SCAN_LOOP_WINDOW:-20}
+      - SUPERVISOR_SCAN_LOOP_ENUM_RATIO=${SUPERVISOR_SCAN_LOOP_ENUM_RATIO:-0.7}
+      - SUPERVISOR_SCAN_LOOP_MIN_COMMANDS=${SUPERVISOR_SCAN_LOOP_MIN_COMMANDS:-12}
+      - SUPERVISOR_SCAN_LOOP_EXPLOIT_GRACE_SECONDS=${SUPERVISOR_SCAN_LOOP_EXPLOIT_GRACE_SECONDS:-180}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:9012/health
+      timeout: 5s
+    networks:
+      control-net: null
+      exec-net: null
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        type: bind
+  tunnel-gateway:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/tunnel-gateway
+      dockerfile: Dockerfile
+    cap_add:
+      - NET_ADMIN
+    container_name: tazosploit-tunnel
+    environment:
+      - WG_LISTEN_PORT=51820
+      - API_LISTEN_ADDR=:8080
+      - WG_SUBNET=10.100.0.0/16
+      - WG_ENDPOINT=${WG_ENDPOINT:-}
+      - DATA_DIR=/etc/wireguard
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8080/health
+      timeout: 10s
+    networks:
+      control-net: null
+      kali-net: null
+    ports:
+      - mode: ingress
+        protocol: udp
+        published: "51820"
+        target: 51820
+      - mode: ingress
+        protocol: tcp
+        published: "8085"
+        target: 8080
+    restart: unless-stopped
+    sysctls:
+      - net.ipv4.ip_forward=1
+    volumes:
+      - source: tunnel-data
+        target: /etc/wireguard
+        type: volume
+        volume: {}
+  worker:
+    build:
+      context: /Users/tazjack/Documents/PenTest/TazoSploit/execution-plane
+      dockerfile: Dockerfile.worker
+    depends_on:
+      redis:
+        condition: service_healthy
+        required: true
+      scheduler:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 2
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CONTROL_PLANE_URL=http://api:8000
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - LLM_API_BASE=${LLM_API_BASE:-https://api.anthropic.com}
+      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-5-20250514}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN:-}
+      - CLAUDE_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
+      - LLM_THINKING_ENABLED=${LLM_THINKING_ENABLED:-}
+      - ALLOW_SELF_REGISTRATION=${ALLOW_SELF_REGISTRATION:-false}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - ENABLE_FULL_LOGGING=true
+      - MINIO_URL=minio:9000
+      - MINIO_ACCESS_KEY=tazosploit
+      - MINIO_SECRET_KEY=${DB_PASSWORD:-tazosploit_dev}
+      - MINIO_BUCKET=evidence
+    networks:
+      control-net: null
+      exec-net: null
+      kali-net: null
+    restart: unless-stopped
+    volumes:
+      - bind:
+          create_host_path: true
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        type: bind
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/execution-plane
+        target: /app
+        type: bind
+      - bind:
+          create_host_path: true
+        source: /Users/tazjack/Documents/PenTest/TazoSploit/logs
+        target: /app/logs
+        type: bind
+volumes:
+  kali-memory:
+    name: tazosploit_kali-memory
+  kali-output:
+    name: tazosploit_kali-output
+  minio-data:
+    name: tazosploit_minio-data
+  neo4j-data:
+    name: tazosploit_neo4j-data
+  postgres-data:
+    name: tazosploit_postgres-data
+  redis-data:
+    name: tazosploit_redis-data
+  tunnel-data:
+    name: tazosploit_tunnel-data

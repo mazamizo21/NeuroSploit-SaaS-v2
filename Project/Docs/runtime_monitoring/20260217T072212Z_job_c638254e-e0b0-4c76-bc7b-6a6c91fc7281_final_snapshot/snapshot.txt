@@ -1,0 +1,256 @@
+[kali] list output dir
+total 9940
+drwxr-xr-x 7 root root    4096 Feb 17 06:29 .
+drwxr-xr-x 3 root root   12288 Feb 17 05:10 ..
+-rw-r--r-- 1 root root    1032 Feb 17 05:20 README.md
+-rw-r--r-- 1 root root   73385 Feb 17 06:25 _api_Challenges?size=100.json
+-rw-r--r-- 1 root root     289 Feb 17 06:26 _api_Complaints.json
+-rw-r--r-- 1 root root   16186 Feb 17 06:26 _api_Products_size=100.json
+-rw-r--r-- 1 root root    8938 Feb 17 06:25 _api_Quantitys.json
+-rw-r--r-- 1 root root    8144 Feb 17 06:26 _api_Users.json
+-rw-r--r-- 1 root root   10429 Feb 17 06:26 _rest_user_authentication-details.json
+-rw-r--r-- 1 root root     483 Feb 17 06:28 access.json
+-rw-r--r-- 1 root root    1937 Feb 17 05:47 access.log
+-rw-r--r-- 1 root root     909 Feb 17 05:21 acquisitions.md
+-rw-r--r-- 1 root root     732 Feb 17 06:26 admin_token.txt
+-rw-r--r-- 1 root root 2707229 Feb 17 06:29 agent_executions.jsonl
+-rw-r--r-- 1 root root  369237 Feb 17 05:21 announcement_encrypted.md
+-rw-r--r-- 1 root root     385 Feb 17 06:28 api_Addresss.json
+-rw-r--r-- 1 root root    1521 Feb 17 06:28 api_BasketItems.json
+-rw-r--r-- 1 root root     365 Feb 17 06:28 api_Cards.json
+-rw-r--r-- 1 root root   73385 Feb 17 06:28 api_Challenges.json
+-rw-r--r-- 1 root root     428 Feb 17 06:28 api_Deliverys.json
+-rw-r--r-- 1 root root    8938 Feb 17 06:28 api_Quantitys.json
+-rw-r--r-- 1 root root      94 Feb 17 06:28 api_Recycles.json
+-rw-r--r-- 1 root root    2534 Feb 17 06:28 api_SecurityQuestions.json
+-rw-r--r-- 1 root root    7760 Feb 17 05:58 arsenal.json
+-rw-r--r-- 1 root root       0 Feb 17 06:05 basket.json
+-rw-r--r-- 1 root root       0 Feb 17 06:05 complaints.json
+-rw-r--r-- 1 root root       0 Feb 17 05:54 config.txt
+-rw-r--r-- 1 root root    1044 Feb 17 05:47 coupons_2013.md
+-rw-r--r-- 1 root root      54 Feb 17 06:27 cracked_creds.txt
+-rw-r--r-- 1 root root      28 Feb 17 06:19 cracked_final.txt
+-rw-r--r-- 1 root root    1943 Feb 17 06:26 creds.json
+-rw-r--r-- 1 root root       0 Feb 17 06:05 creds.txt
+-rw-r--r-- 1 root root    1056 Feb 17 05:20 default.md
+-rw-r--r-- 1 root root   80072 Feb 17 06:29 dynamic_agent.log
+-rw-r--r-- 1 root root       0 Feb 17 06:13 eastere.gg
+-rw-r--r-- 1 root root    1936 Feb 17 05:47 encrypt.pyc
+-rw-r--r-- 1 root root   75055 Feb 17 05:47 env_file.txt
+drwxr-xr-x 2 root root    4096 Feb 17 05:19 evidence
+-rw-r--r-- 1 root root    9279 Feb 17 05:58 evidence.json
+-rw-r--r-- 1 root root      86 Feb 17 05:37 exploitation.log
+-rw-r--r-- 1 root root    4683 Feb 17 05:57 extracted_creds.txt
+-rw-r--r-- 1 root root    1734 Feb 17 05:12 feedback.json
+-rw-r--r-- 1 root root  114358 Feb 17 05:54 ffuf_admin.txt
+-rw-r--r-- 1 root root   20882 Feb 17 05:53 ffuf_api.txt
+-rw-r--r-- 1 root root      17 Feb 17 05:37 ffuf_rest.txt
+-rw-r--r-- 1 root root    4730 Feb 17 05:49 ffuf_sqli.txt
+-rw-r--r-- 1 root root     498 Feb 17 05:37 ffuf_user.txt
+-rw-r--r-- 1 root root     938 Feb 17 05:42 files.txt
+-rw-r--r-- 1 root root     385 Feb 17 06:29 findings.json
+drwxr-xr-x 2 root root    4096 Feb 17 06:12 ftp_dump
+-rw-r--r-- 1 root root    4377 Feb 17 06:08 ftp_enum.txt
+-rw-r--r-- 1 root root    1841 Feb 17 06:13 ftp_extract.txt
+drwxr-xr-x 2 root root    4096 Feb 17 05:31 ftp_files
+-rw-r--r-- 1 root root   75055 Feb 17 05:47 git_config.txt
+-rw-r--r-- 1 root root   75055 Feb 17 05:47 git_head.txt
+-rw-r--r-- 1 root root       0 Feb 17 05:47 gobuster_api.txt
+-rw-r--r-- 1 root root       0 Feb 17 05:36 gobuster_common.txt
+-rw-r--r-- 1 root root       0 Feb 17 05:53 gobuster_dirs.txt
+-rw-r--r-- 1 root root       0 Feb 17 05:47 gobuster_ftp.txt
+-rw-r--r-- 1 root root       0 Feb 17 05:48 gobuster_ftp_files.txt
+-rw-r--r-- 1 root root       0 Feb 17 05:47 gobuster_rest.txt
+drwxr-xr-x 2 root root    4096 Feb 17 05:19 guides
+-rw-r--r-- 1 root root    1006 Feb 17 05:27 handoff.json
+-rw-r--r-- 1 root root      33 Feb 17 05:56 hashes.txt
+-rw-r--r-- 1 root root    3246 Jan  5 09:22 incident-support.kdbx
+-rw-r--r-- 1 root root    3246 Feb 17 05:20 incident.kdbx
+-rw-r--r-- 1 root root     743 Feb 17 05:38 jwt_token.txt
+-rw-r--r-- 1 root root     326 Feb 17 05:32 kp_hash.txt
+-rw-r--r-- 1 root root    3047 Feb 17 05:21 legal.md
+-rw-r--r-- 1 root root 3230557 Feb 17 06:29 llm_interactions.jsonl
+-rw-r--r-- 1 root root     103 Feb 17 06:23 mitre_coverage.json
+-rw-r--r-- 1 root root   20898 Feb 17 05:36 nikto.txt
+-rw-r--r-- 1 root root   30152 Feb 17 06:08 nikto_scan.json
+-rw-r--r-- 1 root root   20785 Feb 17 05:49 nikto_scan.txt
+-rw-r--r-- 1 root root    3031 Feb 17 05:11 orders.json
+-rw-r--r-- 1 root root    4355 Feb 17 05:18 ports.json
+-rw-r--r-- 1 root root   13212 Feb 17 05:11 products.json
+-rw-r--r-- 1 root root     585 Feb 17 06:29 report.json
+-rw-r--r-- 1 root root       0 Feb 17 06:05 reviews.json
+-rw-r--r-- 1 root root       0 Feb 17 06:05 security_questions.json
+-rw-r--r-- 1 root root 2730834 Feb 17 06:28 session_session_20260217_051001.json
+-rw-r--r-- 1 root root    1493 Feb 17 05:34 sqli_dump.txt
+-rw-r--r-- 1 root root    1500 Feb 17 05:53 sqli_extract.py
+-rw-r--r-- 1 root root     799 Feb 17 05:10 sqli_proof.json
+drwxr-xr-x 3 root root    4096 Feb 17 06:06 sqlmap
+-rw-r--r-- 1 root root    3730 Feb 17 05:49 sqlmap_dbs.txt
+-rw-r--r-- 1 root root    1731 Feb 17 06:06 sqlmap_output.txt
+-rw-r--r-- 1 root root    1853 Feb 17 05:49 sqlmap_tables.txt
+-rw-r--r-- 1 root root   53494 Feb 17 05:56 sqlmap_users.txt
+-rw-r--r-- 1 root root     802 Feb 17 06:28 structured_findings.json
+-rw-r--r-- 1 root root    1936 Feb 17 05:47 suspicious_errors.yml
+-rw-r--r-- 1 root root    1209 Feb 17 06:20 temp_script.py
+-rw-r--r-- 1 root root    6903 Feb 17 05:29 users_dump.json
+-rw-r--r-- 1 root root    6903 Feb 17 05:11 users_full.json
+-rw-r--r-- 1 root root       0 Feb 17 05:54 version.txt
+-rw-r--r-- 1 root root    6015 Feb 17 05:19 vuln_tracker.json
+-rw-r--r-- 1 root root     857 Feb 17 05:15 vulns.json
+-rw-r--r-- 1 root root       0 Feb 17 05:54 whoami.txt
+
+[kali] dynamic_agent.log tail
+[2026-02-17T06:23:35.747565+00:00] [INFO] AI response: 799 chars
+[2026-02-17T06:23:35.749614+00:00] [INFO] Executing [bash]: python3 -c "
+import requests, json
+t = json.load(open('/pentest/output/c638254e-e0b0-4c76-bc7b-6a6c9...
+[2026-02-17T06:23:35.876995+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:23:35.877054+00:00] [INFO] === Iteration 138/2000 ===
+[2026-02-17T06:23:35.877275+00:00] [INFO] Context chars trimmed to 17066.
+[2026-02-17T06:23:53.759697+00:00] [INFO] AI response: 1224 chars
+[2026-02-17T06:23:53.760680+00:00] [INFO] Executing [bash]: cat > /tmp/dump_users.py << 'ENDSCRIPT'
+import requests, json, urllib.parse, sys
+s = requests.Sessio...
+[2026-02-17T06:23:53.850356+00:00] [INFO]   cat: exit=0
+[2026-02-17T06:23:53.850422+00:00] [INFO] === Iteration 139/2000 ===
+[2026-02-17T06:23:53.850665+00:00] [INFO] Context chars trimmed to 17843.
+[2026-02-17T06:24:20.342597+00:00] [INFO] AI response: 1314 chars
+[2026-02-17T06:24:20.343397+00:00] [INFO] Executing [bash]: python3 << 'EOF'
+import requests, json, urllib.parse
+s = requests.Session()
+base = 'http://juiceshop...
+[2026-02-17T06:24:20.454182+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:24:20.454346+00:00] [INFO] === Iteration 140/2000 ===
+[2026-02-17T06:24:20.455007+00:00] [INFO] Context chars trimmed to 17107.
+[2026-02-17T06:24:35.317742+00:00] [INFO] AI response: 663 chars
+[2026-02-17T06:24:35.325851+00:00] [INFO] Session saved: /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/session_session_20260217_051001.json
+[2026-02-17T06:24:35.326499+00:00] [INFO] Executing [bash]: TOKEN=$(cat /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/creds.json 2>/dev/null | python3 -c...
+[2026-02-17T06:24:35.363399+00:00] [INFO]   creds.json: exit=0
+[2026-02-17T06:24:35.363494+00:00] [INFO] === Iteration 141/2000 ===
+[2026-02-17T06:24:35.363811+00:00] [INFO] Context chars trimmed to 17124.
+[2026-02-17T06:24:57.380152+00:00] [INFO] AI response: 1137 chars
+[2026-02-17T06:24:57.381942+00:00] [INFO] Executing [bash]: python3 << 'EOF'
+import requests, json, base64
+s = requests.Session()
+base = 'http://juiceshop:3000'...
+[2026-02-17T06:24:57.465188+00:00] [INFO]   python3: exit=1
+[2026-02-17T06:24:57.465256+00:00] [INFO] === Iteration 142/2000 ===
+[2026-02-17T06:24:57.465484+00:00] [INFO] Context chars trimmed to 17475.
+[2026-02-17T06:25:23.184767+00:00] [INFO] AI response: 1594 chars
+[2026-02-17T06:25:23.185696+00:00] [INFO] Executing [bash]: cat > /tmp/jwt_exploit.py << 'ENDSCRIPT'
+import requests, json, base64, sys, urllib.parse
+s = reques...
+[2026-02-17T06:25:23.308423+00:00] [INFO]   cat: exit=0
+[2026-02-17T06:25:23.308511+00:00] [INFO] === Iteration 143/2000 ===
+[2026-02-17T06:25:23.308808+00:00] [INFO] Context chars trimmed to 17507.
+[2026-02-17T06:25:39.361567+00:00] [INFO] AI response: 702 chars
+[2026-02-17T06:25:39.362665+00:00] [INFO] Executing [bash]: cat /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/creds.json | head -c 300
+wget -qO- --header...
+[2026-02-17T06:25:39.409912+00:00] [INFO] 🎯 EXPLOITATION EVIDENCE DETECTED: jwt_found
+[2026-02-17T06:25:39.409999+00:00] [INFO]   cat: exit=6
+[2026-02-17T06:25:39.410040+00:00] [INFO] === Iteration 144/2000 ===
+[2026-02-17T06:25:39.410319+00:00] [INFO] Context chars trimmed to 16867.
+[2026-02-17T06:26:06.026620+00:00] [INFO] AI response: 1470 chars
+[2026-02-17T06:26:06.028027+00:00] [INFO] Executing [bash]: cat > /tmp/auth_exploit.py << 'ENDSCRIPT'
+import requests, json, re
+s = requests.Session()
+base = 'h...
+[2026-02-17T06:26:06.121181+00:00] [INFO]   cat: exit=0
+[2026-02-17T06:26:06.121278+00:00] [INFO] === Iteration 145/2000 ===
+[2026-02-17T06:26:06.122068+00:00] [INFO] Context chars trimmed to 16914.
+[2026-02-17T06:26:25.904188+00:00] [INFO] AI response: 1657 chars
+[2026-02-17T06:26:25.914273+00:00] [INFO] Session saved: /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/session_session_20260217_051001.json
+[2026-02-17T06:26:25.915595+00:00] [INFO] Executing [bash]: cat > /tmp/db_dump.py << 'ENDSCRIPT'
+import requests, json, base64
+token = open('/pentest/output/c63...
+[2026-02-17T06:26:26.082373+00:00] [INFO]   cat: exit=0
+[2026-02-17T06:26:26.082452+00:00] [INFO] === Iteration 146/2000 ===
+[2026-02-17T06:26:26.082996+00:00] [INFO] Context chars trimmed to 17343.
+[2026-02-17T06:26:42.449751+00:00] [INFO] AI response: 1270 chars
+[2026-02-17T06:26:42.451853+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import json, hashlib
+base = '/pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc...
+[2026-02-17T06:26:42.484483+00:00] [INFO] 🎯 EXPLOITATION EVIDENCE DETECTED: password_found
+[2026-02-17T06:26:42.484605+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:26:42.484650+00:00] [INFO] === Iteration 147/2000 ===
+[2026-02-17T06:26:42.485234+00:00] [INFO] Context chars trimmed to 16481.
+[2026-02-17T06:26:53.380130+00:00] [INFO] AI response: 490 chars
+[2026-02-17T06:26:53.381181+00:00] [INFO] Executing [bash]: jq '.data[0:3]' /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/_api_Users.json
+jq '[.data[].pa...
+[2026-02-17T06:26:53.396302+00:00] [INFO]   jq: exit=0
+[2026-02-17T06:26:53.396495+00:00] [INFO] === Iteration 148/2000 ===
+[2026-02-17T06:26:53.396949+00:00] [INFO] Context chars trimmed to 17519.
+[2026-02-17T06:27:17.862091+00:00] [INFO] AI response: 1453 chars
+[2026-02-17T06:27:17.863741+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import hashlib, json
+# Check authentication-details file (might have hashes)
+...
+[2026-02-17T06:27:17.896523+00:00] [INFO] 🎯 EXPLOITATION EVIDENCE DETECTED: password_found
+[2026-02-17T06:27:17.896641+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:27:17.896697+00:00] [INFO] === Iteration 149/2000 ===
+[2026-02-17T06:27:17.897170+00:00] [INFO] Context chars trimmed to 17478.
+[2026-02-17T06:27:39.465132+00:00] [INFO] AI response: 2087 chars
+[2026-02-17T06:27:39.468665+00:00] [INFO] Executing [bash]: echo "[CRACKED CREDENTIALS]" > /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/findings.json
+ec...
+[2026-02-17T06:27:39.566056+00:00] [INFO]   echo: exit=0
+[2026-02-17T06:27:39.566155+00:00] [INFO] === Iteration 150/2000 ===
+[2026-02-17T06:27:39.566903+00:00] [INFO] Self-check injected at iteration 150: 2/2 exploited
+[2026-02-17T06:27:39.566962+00:00] [INFO] Context chars trimmed to 17089.
+[2026-02-17T06:28:08.812019+00:00] [INFO] AI response: 2414 chars
+[2026-02-17T06:28:08.824757+00:00] [INFO] Session saved: /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/session_session_20260217_051001.json
+[2026-02-17T06:28:08.826772+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import requests, json, os
+s = requests.Session()
+base_url = 'http://juiceshop...
+[2026-02-17T06:28:09.017511+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:28:09.017573+00:00] [INFO] === Iteration 151/2000 ===
+[2026-02-17T06:28:09.017840+00:00] [INFO] Context chars trimmed to 17477.
+[2026-02-17T06:28:31.253908+00:00] [INFO] AI response: 2062 chars
+[2026-02-17T06:28:31.256254+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import json, os
+out_dir = '/pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc72...
+[2026-02-17T06:28:31.279331+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:28:31.279410+00:00] [INFO] === Iteration 152/2000 ===
+[2026-02-17T06:28:31.279720+00:00] [INFO] Context chars trimmed to 16790.
+[2026-02-17T06:29:00.250957+00:00] [INFO] AI response: 2296 chars
+[2026-02-17T06:29:00.253146+00:00] [INFO] Executing [bash]: python3 << 'ENDSCRIPT'
+import requests, json, time
+s = requests.Session()
+base = 'http://juiceshop:3...
+[2026-02-17T06:29:00.442608+00:00] [INFO]   python3: exit=0
+[2026-02-17T06:29:00.442681+00:00] [INFO] === Iteration 153/2000 ===
+[2026-02-17T06:29:00.443161+00:00] [WARN] Agent stopped by user signal
+
+[redis] keys
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:stop_signal =>
+1
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:terminal =>
+completed
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:resume =>
+
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:live_stats =>
+WRONGTYPE Operation against a key holding the wrong kind of value
+
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_container_name =>
+tazosploit-kali-1
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_container =>
+de3ba881adadd56afe9cd2a276128b22fe54335577c0a80aa42ea0d6a2b247a5
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_log_dir =>
+/pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:supervisor_enabled =>
+false
+
+[postgres] job row
+-[ RECORD 1 ]---------+-------------------------------------
+id                    | c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+status                | completed
+phase                 | FULL
+findings_count        | 3
+started_at            | 2026-02-17 05:10:01.453192
+completed_at          | 2026-02-17 06:29:03.246589
+error_message         | 
+allow_persistence     | f
+allow_scope_expansion | t
+allow_defense_evasion | f
+supervisor_enabled    | f
+

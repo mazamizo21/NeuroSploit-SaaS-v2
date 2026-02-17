@@ -1,0 +1,51 @@
+[redis] kali container pointers
+-- job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_container_name --
+string
+tazosploit-kali-1
+
+-- job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_container --
+string
+de3ba881adadd56afe9cd2a276128b22fe54335577c0a80aa42ea0d6a2b247a5
+
+-- job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_log_dir --
+string
+/pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+
+-- job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:supervisor_enabled --
+string
+false
+
+[redis] live_stats
+WRONGTYPE Operation against a key holding the wrong kind of value
+
+
+[redis] tool_usage
+type=hash
+nmap
+1
+curl
+6
+pip3
+1
+apt-get
+1
+file
+1
+#
+33
+cd
+4
+
+[kali] phase + findings quick parse
+structured_findings: {'total': 2, 'exploited': 2, 'unexploited': 0}
+structured_findings_ids: ['path_traversal_juiceshop', 'sql_injection_juiceshop']
+session_file: session_session_20260217_051001.json
+phase_state.current_phase: None
+phase_state.subphase: None
+phase_state.approval_mode: None
+recon_phase_complete: None
+iteration: 70
+
+[kali] reject scan-with-unexploited-findings (last 50)
+
+[kali] recon-complete blocked post-recon scan (last 50)

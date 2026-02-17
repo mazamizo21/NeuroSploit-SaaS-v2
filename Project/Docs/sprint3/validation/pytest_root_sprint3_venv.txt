@@ -1,0 +1,214 @@
+EEEE.EEE................................................................ [ 73%]
+..........................                                               [100%]
+==================================== ERRORS ====================================
+______________________ ERROR at setup of test_threatcheck ______________________
+file /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py, line 59
+  def test_threatcheck(payload_path: str) -> dict:
+E       fixture 'payload_path' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, fastsession, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py:59
+________________________ ERROR at setup of test_entropy ________________________
+file /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py, line 107
+  def test_entropy(payload_path: str) -> dict:
+E       fixture 'payload_path' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, fastsession, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py:107
+____________________ ERROR at setup of test_file_signature _____________________
+file /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py, line 147
+  def test_file_signature(payload_path: str) -> dict:
+E       fixture 'payload_path' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, fastsession, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py:147
+________________________ ERROR at setup of test_payload ________________________
+file /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py, line 192
+  def test_payload(
+E       fixture 'payload_path' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, fastsession, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/scripts/pre_flight_test.py:192
+_____________________ ERROR at setup of test_path_finding ______________________
+file /Users/tazjack/Documents/PenTest/TazoSploit/tests/e2e/test_attack_graph_integration.py, line 96
+  def test_path_finding(graph):
+E       fixture 'graph' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, fastsession, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/tazjack/Documents/PenTest/TazoSploit/tests/e2e/test_attack_graph_integration.py:96
+________________ ERROR at setup of test_simulation_on_findings _________________
+file /Users/tazjack/Documents/PenTest/TazoSploit/tests/e2e/test_attack_graph_integration.py, line 118
+  def test_simulation_on_findings(graph):
+E       fixture 'graph' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, fastsession, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/tazjack/Documents/PenTest/TazoSploit/tests/e2e/test_attack_graph_integration.py:118
+_____________________ ERROR at setup of test_ml_prediction _____________________
+file /Users/tazjack/Documents/PenTest/TazoSploit/tests/e2e/test_attack_graph_integration.py, line 150
+  def test_ml_prediction(graph):
+E       fixture 'graph' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, fastsession, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/tazjack/Documents/PenTest/TazoSploit/tests/e2e/test_attack_graph_integration.py:150
+=============================== warnings summary ===============================
+control-plane/services/risk_scoring_service.py:72
+  /Users/tazjack/Documents/PenTest/TazoSploit/control-plane/services/risk_scoring_service.py:72: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "calculated_at": datetime.utcnow().isoformat()
+
+tests/test_phase1_integration.py:187
+  /Users/tazjack/Documents/PenTest/TazoSploit/tests/test_phase1_integration.py:187: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "created_at": datetime.utcnow(),
+
+tests/test_phase1_integration.py:188
+  /Users/tazjack/Documents/PenTest/TazoSploit/tests/test_phase1_integration.py:188: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "started_at": datetime.utcnow(),
+
+tests/test_phase1_integration.py:189
+  /Users/tazjack/Documents/PenTest/TazoSploit/tests/test_phase1_integration.py:189: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "completed_at": datetime.utcnow()
+
+control-plane/services/report_generator.py:32
+  /Users/tazjack/Documents/PenTest/TazoSploit/control-plane/services/report_generator.py:32: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    **Assessment Date:** {job.get('created_at', datetime.utcnow()).strftime('%B %d, %Y')}
+
+control-plane/services/report_generator.py:99
+  /Users/tazjack/Documents/PenTest/TazoSploit/control-plane/services/report_generator.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    *Report generated by TazoSploit SaaS v2 on {datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')}*
+
+control-plane/services/report_generator.py:227
+  /Users/tazjack/Documents/PenTest/TazoSploit/control-plane/services/report_generator.py:227: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    *Generated on: {datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')}*
+
+control-plane/services/report_generator.py:372
+  /Users/tazjack/Documents/PenTest/TazoSploit/control-plane/services/report_generator.py:372: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    <p><strong>Generated:</strong> {datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')}</p>
+
+control-plane/services/report_generator.py:393
+  /Users/tazjack/Documents/PenTest/TazoSploit/control-plane/services/report_generator.py:393: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    <p>© {datetime.utcnow().year} - Confidential Security Assessment</p>
+
+tests/e2e/test_attack_graph_integration.py::test_attack_graph_builder
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/e2e/test_attack_graph_integration.py::test_attack_graph_builder returned <class 'dict'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_attack_graphs.py::test_graph_builder
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_attack_graphs.py::test_graph_builder returned <class 'dict'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_attack_graphs.py::test_path_finding
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_attack_graphs.py::test_path_finding returned <class 'list'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_attack_graphs.py::test_risk_calculation
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_attack_graphs.py::test_risk_calculation returned <class 'int'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_attack_graphs.py::test_critical_paths
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_attack_graphs.py::test_critical_paths returned <class 'list'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_attack_graphs.py::test_recommendations
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_attack_graphs.py::test_recommendations returned <class 'list'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_new_features.py::test_authorization_framework
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_new_features.py::test_authorization_framework returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_new_features.py::test_prohibited_behaviors
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_new_features.py::test_prohibited_behaviors returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_new_features.py::test_failure_recovery
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_new_features.py::test_failure_recovery returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_new_features.py::test_cve_lookup
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_new_features.py::test_cve_lookup returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_new_features.py::test_session_persistence
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_new_features.py::test_session_persistence returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_new_features.py::test_multi_model_support
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_new_features.py::test_multi_model_support returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_new_features.py::test_integration
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_new_features.py::test_integration returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_phase3_features.py::test_event_service
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_phase3_features.py::test_event_service returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_phase3_features.py::test_simulation_service
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_phase3_features.py::test_simulation_service returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_phase3_features.py::test_ml_prediction_service
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_phase3_features.py::test_ml_prediction_service returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_phase3_features.py::test_websocket_manager
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_phase3_features.py::test_websocket_manager returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_phase3_features.py::test_control_types
+  /Users/tazjack/Documents/PenTest/TazoSploit/venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_phase3_features.py::test_control_types returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR kali-executor/scripts/pre_flight_test.py::test_threatcheck
+ERROR kali-executor/scripts/pre_flight_test.py::test_entropy
+ERROR kali-executor/scripts/pre_flight_test.py::test_file_signature
+ERROR kali-executor/scripts/pre_flight_test.py::test_payload
+ERROR tests/e2e/test_attack_graph_integration.py::test_path_finding
+ERROR tests/e2e/test_attack_graph_integration.py::test_simulation_on_findings
+ERROR tests/e2e/test_attack_graph_integration.py::test_ml_prediction
+91 passed, 2 skipped, 27 warnings, 7 errors in 22.42s

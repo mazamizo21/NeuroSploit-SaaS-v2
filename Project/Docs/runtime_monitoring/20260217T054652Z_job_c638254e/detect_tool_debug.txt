@@ -1,0 +1,41 @@
+records_total= 68
+
+--- iter 66 existing_tool_used= #
+first_80= # Read admin token and use FFUF to find admin-only endpoints\nadmin_token=$(cat /
+tool_re_first_match= None
+tool_re_all_matches_first10= []
+
+--- iter 67 existing_tool_used= #
+first_80= # Re-perform SQLi bypass to get admin token\necho "=== SQLi AUTH BYPASS FOR ADMIN
+tool_re_first_match= None
+tool_re_all_matches_first10= []
+
+--- iter 68 existing_tool_used= #
+first_80= # Use FFUF to discover API endpoints first\necho "=== FFUF API ENDPOINT DISCOVERY
+tool_re_first_match= None
+tool_re_all_matches_first10= []
+
+--- iter 69 existing_tool_used= #
+first_80= # Use FFUF with admin token to find all protected API endpoints\necho "=== FFUF D
+tool_re_first_match= None
+tool_re_all_matches_first10= []
+
+--- iter 70 existing_tool_used= #
+first_80= # Download the KeePass database and scan for more sensitive files\necho "=== DOWN
+tool_re_first_match= None
+tool_re_all_matches_first10= []
+
+--- iter 71 existing_tool_used= #
+first_80= # Install keepass2john and crack the database\necho "=== CRACKING KEEPASS DATABAS
+tool_re_first_match= None
+tool_re_all_matches_first10= []
+
+--- iter 72 existing_tool_used= #
+first_80= # Quick gobuster scan for sensitive files in /ftp\necho "=== GOBUSTER FTP SCAN ==
+tool_re_first_match= None
+tool_re_all_matches_first10= []
+
+--- iter 73 existing_tool_used= #
+first_80= # Check what's in the files with content\necho "=== EXTRACTING FILE CONTENTS ==="
+tool_re_first_match= None
+tool_re_all_matches_first10= []

@@ -1,0 +1,7 @@
+iteration= 76
+snippet_repr= 'ffuf -u "http://172.21.0.5:300'
+before_char= '\n' ord= 10
+token= 'ffuf' ords= [102, 102, 117, 102]
+after_char= ' ' ord= 32
+window_repr= '==="\nffuf -u "h'
+window_ords= [61, 61, 61, 34, 10, 102, 102, 117, 102, 32, 45, 117, 32, 34, 104]

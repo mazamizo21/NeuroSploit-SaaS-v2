@@ -1,0 +1,9 @@
+[redis] stop_signal
+1
+[redis] terminal
+paused
+[redis] resume
+
+
+[postgres] status
+paused

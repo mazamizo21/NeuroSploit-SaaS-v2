@@ -1,0 +1,69 @@
+                                                Table "public.jobs"
+         Column          |            Type             | Collation | Nullable |              Default               
+-------------------------+-----------------------------+-----------+----------+------------------------------------
+ id                      | uuid                        |           | not null | uuid_generate_v4()
+ tenant_id               | uuid                        |           | not null | 
+ scope_id                | uuid                        |           |          | 
+ created_by              | uuid                        |           |          | 
+ name                    | character varying(255)      |           | not null | 
+ description             | text                        |           |          | 
+ phase                   | character varying(50)       |           | not null | 
+ targets                 | jsonb                       |           | not null | 
+ intensity               | character varying(20)       |           |          | 'medium'::character varying
+ timeout_seconds         | integer                     |           |          | 3600
+ auto_run                | boolean                     |           |          | false
+ status                  | job_status                  |           |          | 'pending'::job_status
+ progress                | integer                     |           |          | 0
+ worker_id               | character varying(100)      |           |          | 
+ container_id            | character varying(100)      |           |          | 
+ findings_count          | integer                     |           |          | 0
+ critical_count          | integer                     |           |          | 0
+ high_count              | integer                     |           |          | 0
+ tokens_used             | integer                     |           |          | 0
+ cost_usd                | integer                     |           |          | 0
+ created_at              | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ started_at              | timestamp without time zone |           |          | 
+ completed_at            | timestamp without time zone |           |          | 
+ error_message           | text                        |           |          | 
+ retry_count             | integer                     |           |          | 0
+ result                  | jsonb                       |           |          | '{}'::jsonb
+ target_type             | character varying(20)       |           |          | 'lab'::character varying
+ max_iterations          | integer                     |           |          | 30
+ authorization_confirmed | boolean                     |           |          | false
+ exploit_mode            | character varying(20)       |           |          | 'explicit_only'::character varying
+ llm_provider            | character varying(100)      |           |          | 
+ allow_persistence       | boolean                     |           |          | false
+ allow_defense_evasion   | boolean                     |           |          | false
+ allow_scope_expansion   | boolean                     |           |          | false
+ enable_session_handoff  | boolean                     |           |          | false
+ enable_target_rotation  | boolean                     |           |          | true
+ target_focus_window     | integer                     |           |          | 6
+ target_focus_limit      | integer                     |           |          | 30
+ target_min_commands     | integer                     |           |          | 8
+ supervisor_enabled      | boolean                     |           |          | 
+ supervisor_provider     | character varying(100)      |           |          | 
+ llm_profile             | character varying(20)       |           |          | 
+ agent_freedom           | integer                     |           |          | 
+ llm_model               | character varying(255)      |           |          | 
+Indexes:
+    "jobs_pkey" PRIMARY KEY, btree (id)
+    "idx_jobs_created" btree (created_at DESC)
+    "idx_jobs_status" btree (status)
+    "idx_jobs_tenant" btree (tenant_id)
+Foreign-key constraints:
+    "jobs_created_by_fkey" FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    "jobs_scope_id_fkey" FOREIGN KEY (scope_id) REFERENCES scopes(id) ON DELETE SET NULL
+    "jobs_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "active_sessions" CONSTRAINT "active_sessions_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL
+    TABLE "attack_edges" CONSTRAINT "attack_edges_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "attack_nodes" CONSTRAINT "attack_nodes_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "attack_paths" CONSTRAINT "attack_paths_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "command_logs" CONSTRAINT "command_logs_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "evidence_files" CONSTRAINT "evidence_files_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "findings" CONSTRAINT "findings_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "llm_logs" CONSTRAINT "llm_logs_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "loot" CONSTRAINT "loot_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "mitre_technique_hits" CONSTRAINT "mitre_technique_hits_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "risk_scores" CONSTRAINT "risk_scores_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+

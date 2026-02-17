@@ -1,0 +1,17 @@
+[kali] /pentest/memory listing
+total 816
+drwxr-xr-x 4 root root   4096 Feb 13 15:47 .
+drwxr-xr-x 1 root root   4096 Feb 17 06:17 ..
+drwxr-xr-x 2 root root   4096 Feb 17 03:07 DAILY
+drwxr-xr-x 2 root root   4096 Feb 17 03:19 SESSION_HISTORY
+-rw-r--r-- 1 root root   2649 Feb  6 00:38 _0b23bc3bde02_memories.json
+-rw-r--r-- 1 root root  17521 Feb  5 02:07 _1784f662e337_memories.json
+-rw-r--r-- 1 root root   4534 Feb 12 02:14 _1941f6e4357f_memories.json
+-rw-r--r-- 1 root root 556455 Feb 17 06:23 _2037448062ed_memories.json
+-rw-r--r-- 1 root root  33551 Feb  4 17:40 _7faf0e3dd929_memories.json
+-rw-r--r-- 1 root root  56291 Feb 14 13:54 _98dd4e762e03_memories.json
+-rw-r--r-- 1 root root  24311 Feb 11 13:57 _c2e51f295ba2_memories.json
+-rw-r--r-- 1 root root  58899 Feb 15 16:11 _f36e756ba16c_memories.json
+-rw-r--r-- 1 root root  21943 Feb 13 00:17 _f36e756ba16c_memories.json.bak
+-rw-r--r-- 1 root root  13029 Feb 17 03:19 _tool_stats.json
+-rw-r--r-- 1 root root   1230 Feb 13 16:49 default_tool_stats.json

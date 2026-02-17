@@ -1,0 +1,30 @@
+NAMESIMAGESTATUSPORTS
+tazosploit-kali-2tazosploit-kaliUp 41 minutes
+tazosploit-kali-1tazosploit-kaliUp 41 minutes
+tazosploit-worker-1tazosploit-workerUp 41 minutes9000/tcp
+tazosploit-worker-2tazosploit-workerUp 41 minutes9000/tcp
+tazosploit-frontendtazosploit-frontendUp 2 hours0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+tazosploit-apitazosploit-apiUp 2 hours (healthy)0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+tazosploit-schedulertazosploit-schedulerUp 3 hours (healthy)9001/tcp
+tazosploit-supervisortazosploit-supervisorUp 3 hours (healthy)9012/tcp
+tazosploit-tunneltazosploit-tunnel-gatewayUp 3 hours (healthy)0.0.0.0:51820->51820/udp, [::]:51820->51820/udp, 0.0.0.0:8085->8080/tcp, [::]:8085->8080/tcp
+tazosploit-postgrespostgres:15-alpineUp 3 hours (healthy)5432/tcp
+tazosploit-neo4jneo4j:5.26-communityUp 3 hours (healthy)0.0.0.0:7474->7474/tcp, [::]:7474->7474/tcp, 0.0.0.0:7687->7687/tcp, [::]:7687->7687/tcp
+tazosploit-redisredis:7-alpineUp 3 hours (healthy)6379/tcp
+tazosploit-miniominio/minioUp 3 hours (healthy)0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+tazosploit-dom-renderertazosploit-dom-rendererUp 3 hours8080/tcp
+k8s_cyren-middleware_cyren-middleware-9cfbc88bb-5hjhz_cyren_aadffffa-890c-4d53-b8d7-7079e937ff03_3a16c64969857Up 5 hours
+cyren-middlewarecyren-middleware-cyren-middlewareUp 5 hours (healthy)0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+lab-dvnaappsecco/dvna:sqliteUp 5 hours0.0.0.0:9091->9090/tcp, [::]:9091->9090/tcp
+lab-webgoatwebgoat/webgoat:latestUp 5 hours (healthy)0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+lab-vuln-apipython:3.11-slimUp 5 hours0.0.0.0:5001->5000/tcp, [::]:5001->5000/tcp
+lab-admin-panelphp:8.2-apacheUp 5 hours0.0.0.0:8888->80/tcp, [::]:8888->80/tcp
+lab-postgrespostgres:15Up 5 hours0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+lab-redisredis:7Up 5 hours0.0.0.0:6380->6379/tcp, [::]:6380->6379/tcp
+lab-juiceshopbkimminich/juice-shop:latestUp 3 minutes0.0.0.0:3080->3000/tcp, [::]:3080->3000/tcp
+lab-mysqlmysql:8.0Up 5 hours0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp
+lab-jumphostlinuxserver/openssh-server:latestUp 5 hours0.0.0.0:2222->2222/tcp, [::]:2222->2222/tcp
+lab-mongodbmongo:6Up 5 hours0.0.0.0:27017->27017/tcp, [::]:27017->27017/tcp
+lab-elasticsearchelasticsearch:7.17.10Up 5 hours0.0.0.0:9200->9200/tcp, [::]:9200->9200/tcp
+lab-sambadperson/samba:latestUp 5 hours (healthy)0.0.0.0:139->139/tcp, [::]:139->139/tcp, 0.0.0.0:445->445/tcp, [::]:445->445/tcp
+lab-dvwavulnerables/web-dvwa:latestUp 5 hours0.0.0.0:8081->80/tcp, [::]:8081->80/tcp

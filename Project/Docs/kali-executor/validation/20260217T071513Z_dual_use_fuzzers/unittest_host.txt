@@ -1,0 +1,100 @@
+[host] python -m unittest new test
+2026-02-17 02:15:13,748 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:15:13,899 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:15:13,900 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:15:14,057 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:15:14,058 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:15:14,214 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:15:14,215 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:15:14,369 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:15:14,371 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:15:14,524 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:15:14,526 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:15:14,678 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+======================================================================
+ERROR: test_recon_complete_gate_allows_exploit_intent_ffuf_wfuzz (tests.unit.test_dynamic_agent_dual_use_fuzzers.TestDynamicAgentDualUseFuzzers.test_recon_complete_gate_allows_exploit_intent_ffuf_wfuzz)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_dynamic_agent_dual_use_fuzzers.py", line 115, in test_recon_complete_gate_allows_exploit_intent_ffuf_wfuzz
+    agent.run(target="juiceshop", objective="test", resume=False)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/dynamic_agent.py", line 5860, in run
+    self.memory_store = MemoryStore(tenant_id=tenant_id, target=target)
+                        ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/memory.py", line 58, in __init__
+    self._ensure_dir()
+    ~~~~~~~~~~~~~~~~^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/memory.py", line 63, in _ensure_dir
+    os.makedirs(MEMORY_DIR, exist_ok=True)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 226, in makedirs
+  File "<frozen os>", line 236, in makedirs
+OSError: [Errno 30] Read-only file system: '/pentest'
+
+======================================================================
+ERROR: test_recon_complete_gate_blocks_enum_intent_ffuf_wfuzz (tests.unit.test_dynamic_agent_dual_use_fuzzers.TestDynamicAgentDualUseFuzzers.test_recon_complete_gate_blocks_enum_intent_ffuf_wfuzz)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_dynamic_agent_dual_use_fuzzers.py", line 147, in test_recon_complete_gate_blocks_enum_intent_ffuf_wfuzz
+    agent.run(target="juiceshop", objective="test", resume=False)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/dynamic_agent.py", line 5860, in run
+    self.memory_store = MemoryStore(tenant_id=tenant_id, target=target)
+                        ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/memory.py", line 58, in __init__
+    self._ensure_dir()
+    ~~~~~~~~~~~~~~~~^^
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/memory.py", line 63, in _ensure_dir
+    os.makedirs(MEMORY_DIR, exist_ok=True)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 226, in makedirs
+  File "<frozen os>", line 236, in makedirs
+OSError: [Errno 30] Read-only file system: '/pentest'
+
+======================================================================
+FAIL: test_post_proof_hold_does_not_block_exploit_intent_fuzzers (tests.unit.test_dynamic_agent_dual_use_fuzzers.TestDynamicAgentDualUseFuzzers.test_post_proof_hold_does_not_block_exploit_intent_fuzzers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_dynamic_agent_dual_use_fuzzers.py", line 166, in test_post_proof_hold_does_not_block_exploit_intent_fuzzers
+    self.assertIsNone(agent._post_proof_hold_violation(ffuf_exploit))
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '⛔ POST-PROOF HOLD: Pivot blocked. Stay on **juiceshop** and deepen impact for vuln id: v1.\nExecute an exploitation/deepening command against the SAME target now.' is not None
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.216s
+
+FAILED (failures=1, errors=2)
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T07:15:13.898870+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:15:13.899090+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:15:13.899137+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:15:13.899334+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:15:13.899445+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:15:14.056650+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:15:14.056911+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:15:14.057194+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:15:14.057548+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:15:14.057835+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:15:14.213696+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:15:14.213964+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:15:14.214205+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:15:14.214393+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:15:14.214498+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:15:14.369307+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:15:14.369565+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:15:14.369835+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:15:14.370045+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:15:14.370154+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:15:14.523597+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:15:14.523826+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:15:14.524120+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:15:14.524364+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:15:14.524475+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:15:14.524541+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T07:15:14.677300+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:15:14.677551+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:15:14.677831+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:15:14.678072+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:15:14.678174+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:15:14.678239+00:00] [INFO] Scope allowlist initialized: ['juiceshop']

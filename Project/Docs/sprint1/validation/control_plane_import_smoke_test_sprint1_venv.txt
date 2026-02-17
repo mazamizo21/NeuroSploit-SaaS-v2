@@ -1,0 +1,4 @@
+python_executable= /Users/tazjack/Documents/PenTest/TazoSploit/venv/bin/python
+python_version= 3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.4.4.1)]
+control_plane_import_ok=True
+fastapi_app_title= TazoSploit SaaS v2 - Control Plane

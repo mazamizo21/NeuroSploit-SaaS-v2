@@ -1,0 +1,6 @@
+pattern= (?:(?<=^)|(?<=[\\s;|&()]))(sqlmap|curl|nmap|masscan|nikto|gobuster|ffuf|wfuzz|feroxbuster|dirb|dirsearch|whatweb|nuclei|searchsploit|msfconsole|msfvenom|python3|python|bash|sh|nc|netcat|sshpass|ssh|hydra|crackmapexec|smbclient|psql|mysql|redis-cli)(?=$|[\\s\"'`])
+sample_repr= 'ffuf -u http://x/FUZZ -w wl' match= None
+sample_repr= '\nffuf -u http://x/FUZZ -w wl' match= None
+sample_repr= 'echo hi\nffuf -u http://x/FUZZ -w wl' match= None
+sample_repr= 'curl -s http://x' match= None
+sample_repr= 'a curl -s http://x' match= None

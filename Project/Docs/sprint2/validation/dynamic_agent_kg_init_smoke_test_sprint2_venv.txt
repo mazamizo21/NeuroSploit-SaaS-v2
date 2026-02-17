@@ -1,0 +1,14 @@
+2026-02-16 01:31:46,513 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-16 01:31:46,665 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+python_executable= /Users/tazjack/Documents/PenTest/TazoSploit/venv/bin/python
+python_version= 3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.4.4.1)]
+KNOWLEDGE_GRAPH_ENABLED= None
+[PROFILE] balanced (default)
+[2026-02-16T06:31:46.665124+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-16T06:31:46.665386+00:00] [INFO] Tool usage tracker enabled
+[2026-02-16T06:31:46.665444+00:00] [INFO] Exploitation injector enabled
+[2026-02-16T06:31:46.665675+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-16T06:31:46.665787+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+kg_obj_present= True
+kg_available= False
+kg_inject_every= 5

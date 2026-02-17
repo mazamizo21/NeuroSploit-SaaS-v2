@@ -1,0 +1,9 @@
+[1] docker cp patched agent into kali
+[1b] verify detect_tool patterns inside container
+overescaped_present False
+correct_present True
+overescaped_lookahead_present False
+correct_lookahead_present True
+[2] request graceful stop via redis stop_signal
+OK
+1

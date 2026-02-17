@@ -1,0 +1,132 @@
+== SNAPSHOT 20260217T054120Z ==
+[docker compose ps]
+NAME                      IMAGE                               COMMAND                  SERVICE             CREATED          STATUS                 PORTS
+lab-admin-panel           php:8.2-apache                      "docker-php-entrypoi…"   admin-panel         2 weeks ago      Up 5 hours             0.0.0.0:8888->80/tcp, [::]:8888->80/tcp
+lab-dvna                  appsecco/dvna:sqlite                "npm start"              dvna                11 days ago      Up 5 hours             0.0.0.0:9091->9090/tcp, [::]:9091->9090/tcp
+lab-dvwa                  vulnerables/web-dvwa:latest         "/main.sh"               dvwa                2 weeks ago      Up 5 hours             0.0.0.0:8081->80/tcp, [::]:8081->80/tcp
+lab-elasticsearch         elasticsearch:7.17.10               "/bin/tini -- /usr/l…"   lab-elasticsearch   2 weeks ago      Up 5 hours             0.0.0.0:9200->9200/tcp, [::]:9200->9200/tcp
+lab-juiceshop             bkimminich/juice-shop:latest        "/nodejs/bin/node /j…"   juiceshop           2 weeks ago      Up 4 minutes           0.0.0.0:3080->3000/tcp, [::]:3080->3000/tcp
+lab-jumphost              linuxserver/openssh-server:latest   "/init"                  jumphost            2 weeks ago      Up 5 hours             0.0.0.0:2222->2222/tcp, [::]:2222->2222/tcp
+lab-mongodb               mongo:6                             "docker-entrypoint.s…"   lab-mongodb         2 weeks ago      Up 5 hours             0.0.0.0:27017->27017/tcp, [::]:27017->27017/tcp
+lab-mysql                 mysql:8.0                           "docker-entrypoint.s…"   lab-mysql           2 weeks ago      Up 5 hours             0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp
+lab-postgres              postgres:15                         "docker-entrypoint.s…"   lab-postgres        2 weeks ago      Up 5 hours             0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+lab-redis                 redis:7                             "docker-entrypoint.s…"   lab-redis           2 weeks ago      Up 5 hours             0.0.0.0:6380->6379/tcp, [::]:6380->6379/tcp
+lab-samba                 dperson/samba:latest                "/sbin/tini -- /usr/…"   samba               2 weeks ago      Up 5 hours (healthy)   0.0.0.0:139->139/tcp, [::]:139->139/tcp, 0.0.0.0:445->445/tcp, [::]:445->445/tcp
+lab-vuln-api              python:3.11-slim                    "sh -c 'pip install …"   vuln-api            13 days ago      Up 5 hours             0.0.0.0:5001->5000/tcp, [::]:5001->5000/tcp
+lab-webgoat               webgoat/webgoat:latest              "java -Duser.home=/h…"   webgoat             13 days ago      Up 5 hours (healthy)   0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+tazosploit-api            tazosploit-api                      "uvicorn main:app --…"   api                 2 hours ago      Up 2 hours (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+tazosploit-dom-renderer   tazosploit-dom-renderer             "uvicorn server:app …"   dom-renderer        3 hours ago      Up 3 hours             8080/tcp
+tazosploit-frontend       tazosploit-frontend                 "docker-entrypoint.s…"   frontend            2 hours ago      Up 2 hours             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+tazosploit-kali-1         tazosploit-kali                     "/entrypoint.sh tail…"   kali                41 minutes ago   Up 41 minutes          
+tazosploit-kali-2         tazosploit-kali                     "/entrypoint.sh tail…"   kali                41 minutes ago   Up 41 minutes          
+tazosploit-minio          minio/minio                         "/usr/bin/docker-ent…"   minio               3 hours ago      Up 3 hours (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+tazosploit-neo4j          neo4j:5.26-community                "tini -g -- /startup…"   neo4j               3 hours ago      Up 3 hours (healthy)   0.0.0.0:7474->7474/tcp, [::]:7474->7474/tcp, 0.0.0.0:7687->7687/tcp, [::]:7687->7687/tcp
+tazosploit-postgres       postgres:15-alpine                  "docker-entrypoint.s…"   postgres            3 hours ago      Up 3 hours (healthy)   5432/tcp
+tazosploit-redis          redis:7-alpine                      "docker-entrypoint.s…"   redis               3 hours ago      Up 3 hours (healthy)   6379/tcp
+tazosploit-scheduler      tazosploit-scheduler                "python scheduler/ma…"   scheduler           3 hours ago      Up 3 hours (healthy)   9001/tcp
+tazosploit-supervisor     tazosploit-supervisor               "python supervisor/m…"   supervisor          3 hours ago      Up 3 hours (healthy)   9012/tcp
+tazosploit-tunnel         tazosploit-tunnel-gateway           "tunnel-gateway"         tunnel-gateway      3 hours ago      Up 3 hours (healthy)   0.0.0.0:51820->51820/udp, [::]:51820->51820/udp, 0.0.0.0:8085->8080/tcp, [::]:8085->8080/tcp
+tazosploit-worker-1       tazosploit-worker                   "python worker/main.…"   worker              41 minutes ago   Up 41 minutes          9000/tcp
+tazosploit-worker-2       tazosploit-worker                   "python worker/main.…"   worker              41 minutes ago   Up 41 minutes          9000/tcp
+
+[container health summary]
+-- tazosploit-api --
+/tazosploit-api\trunning\thealthy\t2026-02-17T04:08:49.083413302Z
+-- tazosploit-frontend --
+/tazosploit-frontend\trunning\tno-healthcheck\t2026-02-17T04:08:54.72478543Z
+-- tazosploit-scheduler --
+/tazosploit-scheduler\trunning\thealthy\t2026-02-17T03:02:27.021329459Z
+-- tazosploit-worker-1 --
+/tazosploit-worker-1\trunning\tno-healthcheck\t2026-02-17T04:59:29.362194584Z
+-- tazosploit-worker-2 --
+/tazosploit-worker-2\trunning\tno-healthcheck\t2026-02-17T04:59:29.451456334Z
+-- tazosploit-supervisor --
+/tazosploit-supervisor\trunning\thealthy\t2026-02-17T03:02:21.395329679Z
+-- tazosploit-redis --
+/tazosploit-redis\trunning\thealthy\t2026-02-17T03:02:15.491132884Z
+-- tazosploit-postgres --
+/tazosploit-postgres\trunning\thealthy\t2026-02-17T03:02:15.497259259Z
+-- tazosploit-neo4j --
+/tazosploit-neo4j\trunning\thealthy\t2026-02-17T03:02:15.500888884Z
+-- tazosploit-kali-1 --
+/tazosploit-kali-1\trunning\tno-healthcheck\t2026-02-17T04:59:28.015233959Z
+-- tazosploit-kali-2 --
+/tazosploit-kali-2\trunning\tno-healthcheck\t2026-02-17T04:59:27.88578675Z
+
+[kali output dirs]
+total 24
+drwxr-xr-x 3 root root 12288 Feb 17 05:10 .
+drwxr-xr-x 1 root root  4096 Feb 17 04:59 ..
+drwxr-xr-x 6 root root  4096 Feb 17 05:39 c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+
+[job dir probe]
+total 5868
+drwxr-xr-x 6 root root    4096 Feb 17 05:39 .
+drwxr-xr-x 3 root root   12288 Feb 17 05:10 ..
+-rw-r--r-- 1 root root    1032 Feb 17 05:20 README.md
+-rw-r--r-- 1 root root    2054 Feb 17 05:19 access.json
+-rw-r--r-- 1 root root     909 Feb 17 05:21 acquisitions.md
+-rw-r--r-- 1 root root     732 Feb 17 05:39 admin_token.txt
+-rw-r--r-- 1 root root 1948728 Feb 17 05:41 agent_executions.jsonl
+-rw-r--r-- 1 root root  369237 Feb 17 05:21 announcement_encrypted.md
+-rw-r--r-- 1 root root    5499 Feb 17 05:37 arsenal.json
+-rw-r--r-- 1 root root    1044 Feb 17 05:21 coupons_2013.md
+-rw-r--r-- 1 root root    1194 Feb 17 05:27 creds.json
+-rw-r--r-- 1 root root    1056 Feb 17 05:20 default.md
+-rw-r--r-- 1 root root   38925 Feb 17 05:41 dynamic_agent.log
+drwxr-xr-x 2 root root    4096 Feb 17 05:19 evidence
+-rw-r--r-- 1 root root     952 Feb 17 05:38 evidence.json
+-rw-r--r-- 1 root root      86 Feb 17 05:37 exploitation.log
+-rw-r--r-- 1 root root    1734 Feb 17 05:12 feedback.json
+-rw-r--r-- 1 root root     499 Feb 17 05:37 ffuf_admin.txt
+-rw-r--r-- 1 root root     195 Feb 17 05:37 ffuf_api.txt
+-rw-r--r-- 1 root root      17 Feb 17 05:37 ffuf_rest.txt
+-rw-r--r-- 1 root root     498 Feb 17 05:37 ffuf_user.txt
+-rw-r--r-- 1 root root     152 Feb 17 05:24 findings.json
+drwxr-xr-x 2 root root    4096 Feb 17 05:31 ftp_files
+-rw-r--r-- 1 root root       0 Feb 17 05:36 gobuster_common.txt
+drwxr-xr-x 2 root root    4096 Feb 17 05:19 guides
+-rw-r--r-- 1 root root    1006 Feb 17 05:27 handoff.json
+-rw-r--r-- 1 root root    3246 Feb 17 05:20 incident.kdbx
+-rw-r--r-- 1 root root     743 Feb 17 05:38 jwt_token.txt
+-rw-r--r-- 1 root root     326 Feb 17 05:32 kp_hash.txt
+-rw-r--r-- 1 root root    3047 Feb 17 05:21 legal.md
+-rw-r--r-- 1 root root 1448421 Feb 17 05:40 llm_interactions.jsonl
+-rw-r--r-- 1 root root     103 Feb 17 05:39 mitre_coverage.json
+-rw-r--r-- 1 root root   20898 Feb 17 05:36 nikto.txt
+-rw-r--r-- 1 root root    3031 Feb 17 05:11 orders.json
+-rw-r--r-- 1 root root    4355 Feb 17 05:18 ports.json
+-rw-r--r-- 1 root root   13212 Feb 17 05:11 products.json
+-rw-r--r-- 1 root root 1961464 Feb 17 05:39 session_session_20260217_051001.json
+-rw-r--r-- 1 root root    1493 Feb 17 05:34 sqli_dump.txt
+-rw-r--r-- 1 root root     799 Feb 17 05:10 sqli_proof.json
+drwxr-xr-x 3 root root    4096 Feb 17 05:38 sqlmap
+-rw-r--r-- 1 root root     802 Feb 17 05:41 structured_findings.json
+-rw-r--r-- 1 root root    6903 Feb 17 05:29 users_dump.json
+-rw-r--r-- 1 root root    6903 Feb 17 05:11 users_full.json
+-rw-r--r-- 1 root root    6015 Feb 17 05:19 vuln_tracker.json
+-rw-r--r-- 1 root root     857 Feb 17 05:15 vulns.json
+total 16
+drwxr-xr-x 1 root root 4096 Feb 17 05:10 .
+drwxr-xr-x 1 root root 4096 Feb 17 04:59 ..
+drwxr-xr-x 2 root root 4096 Feb 17 05:10 c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+
+[redis keys for job]
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_container_name
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:supervisor_log
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:pushed_finding_hashes
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:guidance_history
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_container
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:tool_usage
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:checkpoint
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:log
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:kali_log_dir
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:supervisor_enabled
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:conversation
+job:c638254e-e0b0-4c76-bc7b-6a6c91fc7281:live_stats
+
+[postgres job row]
+ERROR:  column "updated_at" does not exist
+LINE 1: select id,status,phase,created_at,updated_at,max_iterations,...
+                                          ^
+HINT:  Perhaps you meant to reference the column "jobs.created_at".

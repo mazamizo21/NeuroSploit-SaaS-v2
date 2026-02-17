@@ -1,0 +1,13 @@
+timestamp_utc=2026-02-16T17:10:35Z
+job_id=0cd0e23a-7e35-44fd-9b7f-52569d7f8421
+internal_token_len=60
+token_enc_len=60
+
+--- chat ws (jobs/{id}/chat) ---
+{"ts":"2026-02-16T17:10:35.079Z","event":"start","payload":{"url":"ws://localhost:8000/api/v1/ws/jobs/0cd0e23a-7e35-44fd-9b7f-52569d7f8421/chat?token=%3Credacted%3E","decision":"approve"}}
+{"ts":"2026-02-16T17:10:35.106Z","event":"ws_error","payload":{}}
+{"ts":"2026-02-16T17:10:35.106Z","event":"ws_close","payload":{"code":1006,"reason":""}}
+
+--- output ws (job/{id}) ---
+{"ts":"2026-02-16T17:10:35.131Z","event":"start","payload":{"url":"ws://localhost:8000/api/v1/ws/job/0cd0e23a-7e35-44fd-9b7f-52569d7f8421?token=%3Credacted%3E","decision":"approve"}}
+{"ts":"2026-02-16T17:10:35.158Z","event":"ws_open","payload":{}}

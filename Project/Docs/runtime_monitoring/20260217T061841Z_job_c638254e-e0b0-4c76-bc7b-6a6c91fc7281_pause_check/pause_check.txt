@@ -1,0 +1,50 @@
+[redis] stop_signal
+
+[redis] terminal
+
+
+[kali] dynamic_agent pid
+1443 python3 /opt/tazosploit/dynamic_agent.py --target juiceshop --objective Complete penetration test of juiceshop. Recon, exploit, persist, and exfiltrate. --max-iterations 2000 --output-dir /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+14027 sh -lc pgrep -af '/opt/tazosploit/dynamic_agent.py' | head -n 5
+
+[kali] dynamic_agent.log tail
+[2026-02-17T06:16:44.102850+00:00] [INFO] Context chars trimmed to 17782.
+[2026-02-17T06:17:01.289595+00:00] [INFO] AI response: 668 chars
+[2026-02-17T06:17:01.290655+00:00] [INFO] Executing [bash]: python3 -c "
+import requests, os
+base = 'http://172.21.0.5:3000/ftp/'
+files = ['eastere.gg', 'encryp...
+[2026-02-17T06:17:01.508519+00:00] [INFO]   python3: exit=1
+[2026-02-17T06:17:01.508685+00:00] [INFO] === Iteration 115/2000 ===
+[2026-02-17T06:17:01.509401+00:00] [INFO] Context chars trimmed to 17838.
+[2026-02-17T06:17:14.083843+00:00] [INFO] AI response: 736 chars
+[2026-02-17T06:17:14.090540+00:00] [INFO] Session saved: /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/session_session_20260217_051001.json
+[2026-02-17T06:17:14.091097+00:00] [INFO] Executing [bash]: cd /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281 && python3 -c "
+import requests, os
+os.chdir...
+[2026-02-17T06:17:14.405722+00:00] [INFO]   cd: exit=0
+[2026-02-17T06:17:14.405819+00:00] [INFO] === Iteration 116/2000 ===
+[2026-02-17T06:17:14.406448+00:00] [INFO] Context chars trimmed to 17650.
+[2026-02-17T06:17:27.689546+00:00] [INFO] AI response: 404 chars
+[2026-02-17T06:17:27.690491+00:00] [INFO] Executing [bash]: john --show kp_hash.txt 2>/dev/null; cat creds.txt extracted_creds.txt 2>/dev/null | head -30; strin...
+[2026-02-17T06:17:27.807543+00:00] [INFO]   john: exit=1
+[2026-02-17T06:17:27.807617+00:00] [INFO] === Iteration 117/2000 ===
+[2026-02-17T06:17:27.808655+00:00] [INFO] Context chars trimmed to 17346.
+[2026-02-17T06:17:34.820865+00:00] [INFO] AI response: 307 chars
+[2026-02-17T06:17:34.821383+00:00] [INFO] Executing [bash]: hashcat -a 0 -m 13400 kp_hash.txt /usr/share/wordlists/rockyou.txt --force 2>&1 | head -30 & cat cre...
+[2026-02-17T06:17:35.502857+00:00] [INFO]   hashcat: exit=0
+[2026-02-17T06:17:35.502931+00:00] [INFO] === Iteration 118/2000 ===
+[2026-02-17T06:17:35.503178+00:00] [INFO] Context chars trimmed to 17868.
+[2026-02-17T06:17:44.689929+00:00] [INFO] AI response: 325 chars
+[2026-02-17T06:17:44.691053+00:00] [INFO] Executing [bash]: keepass2john incident-support.kdbx > kp_proper.txt 2>&1 && cat kp_proper.txt && john --wordlist=/usr...
+[2026-02-17T06:17:45.716769+00:00] [INFO]   keepass2john: exit=0
+[2026-02-17T06:17:45.716860+00:00] [INFO] === Iteration 119/2000 ===
+[2026-02-17T06:17:45.717194+00:00] [INFO] Context chars trimmed to 17949.
+[2026-02-17T06:18:04.391242+00:00] [INFO] AI response: 514 chars
+[2026-02-17T06:18:04.392262+00:00] [INFO] Executing [bash]: rm -f /root/.john/john.rec && john --show kp_proper.txt 2>&1; cat users_dump.json 2>/dev/null | pyth...
+[2026-02-17T06:18:04.607887+00:00] [INFO]   rm: exit=0
+[2026-02-17T06:18:04.607965+00:00] [INFO] === Iteration 120/2000 ===
+[2026-02-17T06:18:04.609145+00:00] [INFO] Context chars trimmed to 17394.
+[2026-02-17T06:18:19.425882+00:00] [INFO] AI response: 1049 chars
+[2026-02-17T06:18:19.434360+00:00] [INFO] Session saved: /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281/session_session_20260217_051001.json
+[2026-02-17T06:18:19.435172+00:00] [INFO] Executing [bash]: hashcat -m 13400 -a 0 '$keepass$*2*1*0*2360b9f8557b8c25a0dbb36a1610958a083caf96fddf7ee3a164e3659b80e...

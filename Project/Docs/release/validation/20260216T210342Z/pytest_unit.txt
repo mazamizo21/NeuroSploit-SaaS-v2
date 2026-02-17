@@ -1,0 +1,55 @@
+............................................................F........... [100%]
+=================================== FAILURES ===================================
+________________ TestToonHelper.test_to_toon_fallback_on_error _________________
+
+self = <test_toon_integration.TestToonHelper testMethod=test_to_toon_fallback_on_error>
+
+    def test_to_toon_fallback_on_error(self):
+        """If toon_encode raises, fallback to str()."""
+>       with patch.object(self.da, "toon_encode", side_effect=Exception("boom")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_toon_integration.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.2/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/mock.py:1503: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x10a838910>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'dynamic_agent' from '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/dynamic_agent.py'> does not have the attribute 'toon_encode'
+
+/opt/homebrew/Cellar/python@3.14/3.14.2/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/mock.py:1473: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[2026-02-16T21:04:04.057464+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-16T21:04:04.057657+00:00] [INFO] Tool usage tracker enabled
+[2026-02-16T21:04:04.057715+00:00] [INFO] Exploitation injector enabled
+[2026-02-16T21:04:04.060066+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-16T21:04:04.060158+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+------------------------------ Captured log call -------------------------------
+WARNING  knowledge_graph:knowledge_graph.py:72 neo4j_unavailable err=Failed to DNS resolve address neo4j:7687: [Errno 8] nodename nor servname provided, or not known
+=========================== short test summary info ============================
+FAILED tests/unit/test_toon_integration.py::TestToonHelper::test_to_toon_fallback_on_error
+1 failed, 71 passed in 9.79s

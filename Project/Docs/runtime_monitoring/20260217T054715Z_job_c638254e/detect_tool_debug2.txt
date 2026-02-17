@@ -1,0 +1,53 @@
+
+iter 63 existing_tool_used= #
+contains= {'ffuf': False, 'gobuster': False, 'nikto': False, 'sqlmap': False, 'curl': False, 'nmap': False}
+regex_first= None
+
+iter 64 existing_tool_used= #
+contains= {'ffuf': True, 'gobuster': False, 'nikto': False, 'sqlmap': True, 'curl': True, 'nmap': False}
+regex_first= None
+ffuf_lines_sample= ['# FFUF with authentication to find protected API endpoints', 'echo "=== FFUF AUTHENTICATED ENDPOINT DISCOVERY ==="', '# FFUF to find protected REST endpoints', 'ffuf -u "http://172.21.0.5:3000/rest/FUZZ" \\']
+
+iter 65 existing_tool_used= #
+contains= {'ffuf': False, 'gobuster': True, 'nikto': False, 'sqlmap': True, 'curl': True, 'nmap': False}
+regex_first= None
+
+iter 66 existing_tool_used= #
+contains= {'ffuf': True, 'gobuster': False, 'nikto': False, 'sqlmap': False, 'curl': True, 'nmap': False}
+regex_first= None
+ffuf_lines_sample= ['# Read admin token and use FFUF to find admin-only endpoints', '# FFUF to discover admin-protected endpoints with admin token', 'echo -e "\\n=== FFUF ADMIN ENDPOINT DISCOVERY ==="', 'ffuf -u "http://172.21.0.5:3000/FUZZ" \\', '  -t 30 -s 2>/dev/null | head -40 | tee /tmp/ffuf_admin.txt']
+
+iter 67 existing_tool_used= #
+contains= {'ffuf': False, 'gobuster': True, 'nikto': False, 'sqlmap': False, 'curl': True, 'nmap': False}
+regex_first= None
+
+iter 68 existing_tool_used= #
+contains= {'ffuf': True, 'gobuster': False, 'nikto': False, 'sqlmap': False, 'curl': False, 'nmap': False}
+regex_first= None
+ffuf_lines_sample= ['# Use FFUF to discover API endpoints first', 'echo "=== FFUF API ENDPOINT DISCOVERY ==="', 'ffuf -u "http://172.21.0.5:3000/rest/FUZZ" \\', '  -t 30 -s 2>/dev/null | head -30 | tee /tmp/ffuf_results.txt']
+
+iter 69 existing_tool_used= #
+contains= {'ffuf': True, 'gobuster': False, 'nikto': False, 'sqlmap': False, 'curl': False, 'nmap': False}
+regex_first= None
+ffuf_lines_sample= ['# Use FFUF with admin token to find all protected API endpoints', 'echo "=== FFUF DEEP API DISCOVERY WITH ADMIN TOKEN ==="', 'ffuf -u "http://172.21.0.5:3000/rest/FUZZ" \\', '  -t 50 -s 2>/dev/null | head -50 | tee /tmp/ffuf_rest_deep.txt', 'ffuf -u "http://172.21.0.5:3000/FUZZ" \\']
+
+iter 70 existing_tool_used= #
+contains= {'ffuf': False, 'gobuster': True, 'nikto': False, 'sqlmap': False, 'curl': False, 'nmap': False}
+regex_first= None
+
+iter 71 existing_tool_used= #
+contains= {'ffuf': False, 'gobuster': True, 'nikto': False, 'sqlmap': False, 'curl': False, 'nmap': False}
+regex_first= None
+
+iter 72 existing_tool_used= #
+contains= {'ffuf': False, 'gobuster': True, 'nikto': False, 'sqlmap': False, 'curl': False, 'nmap': False}
+regex_first= None
+
+iter 73 existing_tool_used= #
+contains= {'ffuf': True, 'gobuster': True, 'nikto': False, 'sqlmap': False, 'curl': False, 'nmap': False}
+regex_first= None
+ffuf_lines_sample= ['cat /tmp/ffuf_admin.txt', 'cat /tmp/ffuf_api.txt']
+
+iter 74 existing_tool_used= #
+contains= {'ffuf': False, 'gobuster': True, 'nikto': False, 'sqlmap': False, 'curl': True, 'nmap': False}
+regex_first= None

@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "<stdin>", line 8, in <module>
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/control-plane/main.py", line 13, in <module>
+    from fastapi import FastAPI, HTTPException, Depends, Request
+ModuleNotFoundError: No module named 'fastapi'
+python_executable= /opt/homebrew/opt/python@3.14/bin/python3.14
+python_version= 3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.4.4.1)]
+control_plane_import_ok=False

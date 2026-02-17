@@ -1,0 +1,22 @@
+python_executable= /opt/homebrew/opt/python@3.14/bin/python3.14
+python_version= 3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.4.4.1)]
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/dynamic_agent.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/dynamic_agent.py'...
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/phase_machine.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/phase_machine.py'...
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/tool_phase_map.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/tool_phase_map.py'...
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/structured_output.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/structured_output.py'...
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/tool_usage_tracker.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/tool_usage_tracker.py'...
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/exploitation_injector.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/exploitation_injector.py'...
+
+compileall_ok= True

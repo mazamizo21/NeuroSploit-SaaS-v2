@@ -1,0 +1,16 @@
+# Validation Log — docker compose build/recreate api+frontend (Copilot log tail + chat persistence)
+
+Date: 2026-02-17T06:37:00Z
+
+Command:
+```bash
+docker compose up -d --build api frontend
+```
+
+Result:
+- Exit code: 0
+- api: healthy
+- frontend: recreated
+
+Notes:
+- Build output in IDE capture was truncated; Docker reported success.

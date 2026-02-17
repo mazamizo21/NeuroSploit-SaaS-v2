@@ -1,0 +1,160 @@
+[compileall]
+compileall_exit=0
+[unittest]
+2026-02-17 11:37:44,076 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:44,228 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:44,228 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:44,228 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:44,229 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:44,375 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 11:37:44,377 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:44,377 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:44,377 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:44,378 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:44,530 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 11:37:44,533 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:44,533 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:44,533 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:44,534 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:44,684 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 11:37:44,686 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:44,686 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:44,686 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:44,687 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:44,836 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 11:37:44,839 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:44,839 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:44,839 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:44,839 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:44,987 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 11:37:45,181 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:45,182 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:45,182 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:45,182 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:45,332 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 11:37:45,525 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:45,525 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:45,525 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:45,526 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:45,674 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 11:37:45,865 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 11:37:45,865 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (26 overridden by env)
+2026-02-17 11:37:45,865 - tazosploit.profiles - INFO -   Env overrides: ENFORCE_EXPLOITATION_GATE=true, ENFORCE_EXPLOITATION_PROOF=true, EXPLOIT_ONLY_HARD=true, EXPLOITATION_GATE_COOLDOWN_ITERS=5, EXPLOITATION_GATE_MAX_REPROMPTS=3, EXPLOITATION_GATE_HARD_RESET_AFTER=6, EXPLOITATION_PROOF_MAX_ATTEMPTS_PER_VULN=5, EXPLOITATION_PROOF_FAIL_MODE=skip, CLASSIFY_CURL_STRICT=true, CLASSIFY_AUTH_CURL_AS_EXPLOIT=true, LLM_MAX_COMPLETION_TOKENS=1024, LLM_MIN_COMPLETION_TOKENS=256, EXPLOIT_MODE_TOKEN_CAP=768, MAX_CONTEXT_MESSAGES=40, MAX_CONTEXT_CHARS=14000, MAX_DIGEST_CHARS=2500, AUTO_COMPLETE_IDLE_ITERATIONS=20, COUNT_BLOCKED_AS_ITERATION=true, MAX_GATE_MESSAGES_IN_CONTEXT=5, BLOCK_REDUNDANT_EXPLOITS=true, REDUNDANT_EXPLOIT_STRICTNESS=medium, MAX_STDOUT_CHARS=800, MAX_STDERR_CHARS=400, MAX_FEEDBACK_CHARS=1500, GATE_MESSAGE_VERBOSITY=normal, LLM_TEMPERATURE=0.3
+2026-02-17 11:37:45,866 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 11:37:46,012 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+----------------------------------------------------------------------
+Ran 12 tests in 2.186s
+
+OK
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:44.076029+00:00] [INFO] Job settings overrides applied from Redis: ['KNOWLEDGE_GRAPH_ENABLED']
+[2026-02-17T16:37:44.225614+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:44.225746+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:44.225787+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:44.225939+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:44.374943+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:44.375133+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:44.375178+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:44.375391+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:44.375516+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:44.529617+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:44.529989+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:44.530035+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:44.530207+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:44.530325+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:44.684027+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:44.684256+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:44.684301+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:44.684504+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:44.684617+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:44.836157+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:44.836338+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:44.836378+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:44.836550+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:44.836663+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:44.987403+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:44.987623+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:44.987673+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:44.987891+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:44.988034+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T16:37:44.988107+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T16:37:44.988292+00:00] [INFO] Memory store initialized: 0 memories loaded
+[2026-02-17T16:37:45.177334+00:00] [INFO] Skill router: phase=RECON target_type=lab tier=standard profile=balanced max_skills=3 service_hints=[] selected=['reconnaissance', 'tool_amass', 'tool_arp_scan']
+[2026-02-17T16:37:45.177545+00:00] [INFO] Starting engagement: juiceshop
+[2026-02-17T16:37:45.177583+00:00] [INFO] Objective: test
+[2026-02-17T16:37:45.177687+00:00] [INFO] === Iteration 1/1 ===
+[2026-02-17T16:37:45.177884+00:00] [INFO] AI response: 234 chars
+[2026-02-17T16:37:45.178684+00:00] [INFO]   ffuf: exit=0
+[2026-02-17T16:37:45.179096+00:00] [INFO] Evidence files written to /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpf3zfet2f/evidence/
+[2026-02-17T16:37:45.179134+00:00] [INFO] Generated 0 API findings
+[2026-02-17T16:37:45.179248+00:00] [INFO] Comprehensive report saved: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpf3zfet2f/COMPREHENSIVE_REPORT_20260217_163745.md
+[2026-02-17T16:37:45.179575+00:00] [INFO] Report: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpf3zfet2f/agent_report_20260217_163745.json
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:45.331604+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:45.331833+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:45.331881+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:45.332065+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:45.332197+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T16:37:45.332257+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T16:37:45.332397+00:00] [INFO] Memory store initialized: 0 memories loaded
+[2026-02-17T16:37:45.521535+00:00] [INFO] Skill router: phase=RECON target_type=lab tier=standard profile=balanced max_skills=3 service_hints=[] selected=['reconnaissance', 'tool_amass', 'tool_arp_scan']
+[2026-02-17T16:37:45.521744+00:00] [INFO] Starting engagement: juiceshop
+[2026-02-17T16:37:45.521814+00:00] [INFO] Objective: test
+[2026-02-17T16:37:45.521899+00:00] [INFO] === Iteration 1/1 ===
+[2026-02-17T16:37:45.522113+00:00] [INFO] AI response: 133 chars
+[2026-02-17T16:37:45.522251+00:00] [WARN] BLOCKED post-recon scan: ffuf -u http://juiceshop:3000/FUZZ -w /var/folders/7_/51fs5tc97nz8f21gc57lzz_000
+[2026-02-17T16:37:45.522407+00:00] [INFO] Evidence files written to /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpruwq9a22/evidence/
+[2026-02-17T16:37:45.522437+00:00] [INFO] Generated 0 API findings
+[2026-02-17T16:37:45.522531+00:00] [INFO] Comprehensive report saved: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpruwq9a22/COMPREHENSIVE_REPORT_20260217_163745.md
+[2026-02-17T16:37:45.522750+00:00] [INFO] Report: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpruwq9a22/agent_report_20260217_163745.json
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:45.674083+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:45.674289+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:45.674340+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:45.674540+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:45.674658+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T16:37:45.674720+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T16:37:45.674854+00:00] [INFO] Memory store initialized: 0 memories loaded
+[2026-02-17T16:37:45.861518+00:00] [INFO] Skill router: phase=RECON target_type=lab tier=standard profile=balanced max_skills=3 service_hints=[] selected=['reconnaissance', 'tool_amass', 'tool_arp_scan']
+[2026-02-17T16:37:45.861757+00:00] [INFO] Starting engagement: juiceshop
+[2026-02-17T16:37:45.861794+00:00] [INFO] Objective: test
+[2026-02-17T16:37:45.861883+00:00] [INFO] === Iteration 1/1 ===
+[2026-02-17T16:37:45.862171+00:00] [INFO] AI response: 239 chars
+[2026-02-17T16:37:45.862501+00:00] [INFO]   ffuf: exit=0
+[2026-02-17T16:37:45.862670+00:00] [INFO] Evidence files written to /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpzhee4h9i/evidence/
+[2026-02-17T16:37:45.862703+00:00] [INFO] Generated 0 API findings
+[2026-02-17T16:37:45.862810+00:00] [INFO] Comprehensive report saved: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpzhee4h9i/COMPREHENSIVE_REPORT_20260217_163745.md
+[2026-02-17T16:37:45.863423+00:00] [INFO] Report: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpzhee4h9i/agent_report_20260217_163745.json
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T16:37:46.012150+00:00] [INFO] Tool phase map loaded: 251 tools
+[2026-02-17T16:37:46.012333+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T16:37:46.012378+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T16:37:46.012573+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T16:37:46.012693+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T16:37:46.012742+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T16:37:46.012872+00:00] [INFO] Memory store initialized: 0 memories loaded
+[2026-02-17T16:37:46.199630+00:00] [INFO] Skill router: phase=RECON target_type=lab tier=standard profile=balanced max_skills=3 service_hints=[] selected=['reconnaissance', 'tool_amass', 'tool_arp_scan']
+[2026-02-17T16:37:46.199863+00:00] [INFO] Starting engagement: juiceshop
+[2026-02-17T16:37:46.199900+00:00] [INFO] Objective: test
+[2026-02-17T16:37:46.199992+00:00] [INFO] === Iteration 1/1 ===
+[2026-02-17T16:37:46.200229+00:00] [INFO] AI response: 133 chars
+[2026-02-17T16:37:46.200287+00:00] [WARN] EXPLOIT GATE: blocked non-exploit command (intent=enum) reprompt=1
+[2026-02-17T16:37:46.200456+00:00] [INFO] Evidence files written to /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpuczsmq3m/evidence/
+[2026-02-17T16:37:46.200487+00:00] [INFO] Generated 0 API findings
+[2026-02-17T16:37:46.200596+00:00] [INFO] Comprehensive report saved: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpuczsmq3m/COMPREHENSIVE_REPORT_20260217_163746.md
+[2026-02-17T16:37:46.200891+00:00] [INFO] Report: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpuczsmq3m/agent_report_20260217_163746.json
+unittest_exit=0

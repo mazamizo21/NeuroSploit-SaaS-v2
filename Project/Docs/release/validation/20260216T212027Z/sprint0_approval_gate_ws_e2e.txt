@@ -1,0 +1,278 @@
+
+============================================================
+RUN START timestamp_utc=2026-02-16T21:26:42Z
+============================================================
+Sprint 0 E2E: Approval Gate WS flow
+repo_root=/Users/tazjack/Documents/PenTest/TazoSploit
+log_file=/Users/tazjack/Documents/PenTest/TazoSploit/Project/Docs/sprint0/validation/approval_gate_ws_e2e.txt
+============================================================
+
+[1/9] Ensure external lab network exists (required by kali service)
+OK: docker_network_exists=tazosploit-lab
+
+[2/9] Build kali executor image (ensures latest agent code is in-container)
+SKIP: kali_build=true (SKIP_KALI_BUILD=1)
+
+[3/9] Start core services (postgres, redis, api) + kali
+time="2026-02-16T16:26:42-05:00" level=warning msg="Found orphan containers ([lab-dvna lab-webgoat lab-vuln-api lab-admin-panel lab-postgres lab-redis lab-juiceshop lab-mysql lab-jumphost lab-mongodb lab-elasticsearch lab-samba lab-dvwa]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container tazosploit-postgres Running 
+ Container tazosploit-redis Running 
+ Container tazosploit-api Running 
+ Container tazosploit-kali-2 Recreate 
+ Container tazosploit-kali-1 Recreate 
+ Container tazosploit-kali-2 Recreated 
+ Container tazosploit-kali-1 Recreated 
+ Container tazosploit-kali-2 Starting 
+ Container tazosploit-postgres Waiting 
+ Container tazosploit-redis Waiting 
+ Container tazosploit-kali-2 Started 
+ Container tazosploit-kali-1 Starting 
+ Container tazosploit-kali-1 Started 
+ Container tazosploit-postgres Healthy 
+ Container tazosploit-redis Healthy 
+ Container tazosploit-api Restarting 
+ Container tazosploit-api Started 
+
+[4/9] Wait for API health
+OK: api_healthy=true
+
+[5/9] Create scope + job (internal service auth)
+OK: internal_token_source=api_container_env secret_key_len=51 internal_token_len=60 internal_token_urlencoded_len=60
+OK: job_id=59f7a4ac-ee34-43ae-97dc-65b59b3cf7a9
+
+[6/9] Start WS approval client
+{"ts":"2026-02-16T21:26:49.110Z","event":"start","payload":{"url":"ws://localhost:8000/api/v1/ws/jobs/59f7a4ac-ee34-43ae-97dc-65b59b3cf7a9/chat?token=%3Credacted%3E","decision":"approve"}}
+{"ts":"2026-02-16T21:26:49.138Z","event":"ws_open","payload":{}}
+{"ts":"2026-02-16T21:26:49.139Z","event":"ws_recv","payload":{"type":"connected"}}
+{"ts":"2026-02-16T21:26:49.903Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.040Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.044Z","event":"ws_recv","payload":{"type":"todo_update"}}
+{"ts":"2026-02-16T21:26:50.045Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.046Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.047Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.234Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.234Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.235Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.464Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.464Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.465Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.466Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.467Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.468Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.469Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.470Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.471Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.471Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.472Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.473Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.473Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.474Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.475Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.476Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.477Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.478Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.478Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.479Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.480Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.481Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.481Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.482Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.483Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.484Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.484Z","event":"ws_recv","payload":{"type":"phase_update"}}
+{"ts":"2026-02-16T21:26:50.484Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.485Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.486Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.486Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.486Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.487Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.488Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.489Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.489Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.490Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.491Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.491Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.492Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.492Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.493Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.493Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.494Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.494Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.495Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.495Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.496Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.496Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.498Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.499Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.500Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.501Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.501Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.502Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.502Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.503Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.503Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.504Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.505Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.505Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.506Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.506Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.507Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.507Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.508Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.509Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.509Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.510Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.510Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.511Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.511Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.512Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.512Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.513Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.513Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.514Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.514Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.515Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.515Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.516Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.517Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.517Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.518Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.519Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.519Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.520Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.521Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.521Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.522Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.523Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.524Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.524Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.525Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.742Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.742Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.744Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.746Z","event":"ws_recv","payload":{"type":"thinking"}}
+{"ts":"2026-02-16T21:26:50.746Z","event":"ws_recv","payload":{"type":"output"}}
+{"ts":"2026-02-16T21:26:50.748Z","event":"ws_recv","payload":{"type":"output"}}
+
+[7/9] Trigger approval gate from DynamicAgent (inside kali)
+final: line 39: warning: here-document at line 1 delimited by end-of-file (wanted `PY')
+[PROFILE] relaxed (auto-detected for claude-opus-4-6)
+Warning: toon_format not available — using default serialization
+[2026-02-16T21:26:51.382085+00:00] [INFO] Job settings overrides applied from Redis: []
+2026-02-16 21:26:51,382 - tazosploit.llm - INFO - Claude auth: using subscription token (Bearer auth) — no per-token billing
+2026-02-16 21:26:51,382 - tazosploit.llm - INFO - LLM Client initialized: https://api.anthropic.com / claude-opus-4-6 (Claude: True, OpenAI: False, GPT-5: False, Zhipu: False)
+{"ts":"2026-02-16T21:26:51.383Z","event":"ws_recv","payload":{"type":"todo_update"}}
+[2026-02-16T21:26:51.544903+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-16T21:26:51.544988+00:00] [INFO] Tool usage tracker enabled
+[2026-02-16T21:26:51.545005+00:00] [INFO] Exploitation injector enabled
+2026-02-16 21:26:51,730 - neo4j.pool - DEBUG - [#0000]  _: <POOL> created, direct address IPv4Address(('neo4j', 7687))
+2026-02-16 21:26:51,731 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> routing towards fixed database: None
+2026-02-16 21:26:51,731 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> pinning database: None
+2026-02-16 21:26:51,731 - neo4j.pool - DEBUG - [#0000]  _: <POOL> acquire direct connection, access_mode='READ', database=AcquisitionDatabase(name=None, guessed=False)
+2026-02-16 21:26:51,731 - neo4j.pool - DEBUG - [#0000]  _: <POOL> trying to hand out new connection
+2026-02-16 21:26:51,731 - neo4j.io - DEBUG - [#0000]  _: <RESOLVE> in: neo4j:7687
+2026-02-16 21:26:51,731 - neo4j.io - DEBUG - [#0000]  _: <RESOLVE> dns resolver out: 172.18.0.7:7687
+2026-02-16 21:26:51,731 - neo4j.io - DEBUG - [#0000]  C: <OPEN> 172.18.0.7:7687
+2026-02-16 21:26:51,731 - neo4j.io - DEBUG - [#8DCC]  C: <MAGIC> 0x6060B017
+2026-02-16 21:26:51,731 - neo4j.io - DEBUG - [#8DCC]  C: <HANDSHAKE> 0x000001FF 0x00080805 0x00020404 0x00000003
+2026-02-16 21:26:51,732 - neo4j.io - DEBUG - [#8DCC]  S: <HANDSHAKE> 0x000001FF [3] 0x00040404 0x00040405 0x00020805 0x00
+2026-02-16 21:26:51,732 - neo4j.io - DEBUG - [#8DCC]  C: <HANDSHAKE> 0x00000805 0x00
+2026-02-16 21:26:51,733 - neo4j.io - DEBUG - [#8DCC]  C: HELLO {'user_agent': 'neo4j-python/6.1.0 Python/3.13.11-final-0 (linux)', 'bolt_agent': {'product': 'neo4j-python/6.1.0', 'platform': 'Linux 6.12.67-linuxkit; aarch64', 'language': 'Python/3.13.11-final-0', 'language_details': 'CPython; 3.13.11-final-0 (main, Dec  8 2025 11:41:44) [GCC 15.2.0]'}}
+2026-02-16 21:26:51,733 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> client state: CONNECTED > AUTHENTICATION
+2026-02-16 21:26:51,733 - neo4j.io - DEBUG - [#8DCC]  C: LOGON {'scheme': 'basic', 'principal': 'neo4j', 'credentials': '*******'}
+2026-02-16 21:26:51,733 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> client state: AUTHENTICATION > READY
+2026-02-16 21:26:51,733 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'server': 'Neo4j/5.26.21', 'protocol_version': '5.8', 'connection_id': 'bolt-4905', 'hints': {'connection.recv_timeout_seconds': 120, 'ssr.enabled': True}}
+2026-02-16 21:26:51,733 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: CONNECTED > AUTHENTICATION
+2026-02-16 21:26:51,734 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'advertised_address': 'localhost:7687'}
+2026-02-16 21:26:51,734 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: AUTHENTICATION > READY
+2026-02-16 21:26:51,734 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> released bolt-4905
+2026-02-16 21:26:51,734 - knowledge_graph - INFO - neo4j_connected uri=bolt://neo4j:7687
+2026-02-16 21:26:51,734 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> routing towards fixed database: None
+2026-02-16 21:26:51,734 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> pinning database: None
+2026-02-16 21:26:51,734 - neo4j.pool - DEBUG - [#0000]  _: <POOL> acquire direct connection, access_mode='WRITE', database=AcquisitionDatabase(name=None, guessed=False)
+2026-02-16 21:26:51,734 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> picked existing connection bolt-4905
+2026-02-16 21:26:51,735 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> checked re_auth auth=None updated=False force=False
+2026-02-16 21:26:51,735 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> handing out existing connection
+2026-02-16 21:26:51,735 - neo4j.io - DEBUG - [#8DCC]  C: RUN 'CREATE CONSTRAINT host_unique IF NOT EXISTS FOR (h:Host) REQUIRE (h.ip, h.job_id) IS UNIQUE' {} {}
+2026-02-16 21:26:51,735 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> client state: READY > STREAMING
+2026-02-16 21:26:51,735 - neo4j.io - DEBUG - [#8DCC]  C: PULL {'n': 1000}
+2026-02-16 21:26:51,737 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'t_first': 1, 'fields': [], 'db': 'neo4j'}
+2026-02-16 21:26:51,737 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: READY > STREAMING
+2026-02-16 21:26:51,737 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'bookmark': 'FB:kcwQWejj6nh6T52/w+lZowYYIEiQ', 'statuses': [{'gql_status': '00NA0', 'neo4j_code': 'Neo.ClientNotification.Schema.IndexOrConstraintAlreadyExists', 'status_description': "note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT host_unique IF NOT EXISTS FOR (e:Host) REQUIRE (e.ip, e.job_id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT host_unique FOR (e:Host) REQUIRE (e.ip, e.job_id) IS UNIQUE' already exists.", 'diagnostic_record': {'_classification': 'SCHEMA', '_severity': 'INFORMATION'}, 'description': '`CONSTRAINT host_unique FOR (e:Host) REQUIRE (e.ip, e.job_id) IS UNIQUE` already exists.', 'title': '`CREATE CONSTRAINT host_unique IF NOT EXISTS FOR (e:Host) REQUIRE (e.ip, e.job_id) IS UNIQUE` has no effect.'}, {'gql_status': '00001', 'status_description': 'note: successful completion - omitted result'}], 'type': 's', 't_last': 0, 'db': 'neo4j'}
+2026-02-16 21:26:51,737 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: STREAMING > READY
+2026-02-16 21:26:51,737 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> released bolt-4905
+2026-02-16 21:26:51,737 - neo4j.notifications - INFO - Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT host_unique IF NOT EXISTS FOR (e:Host) REQUIRE (e.ip, e.job_id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT host_unique FOR (e:Host) REQUIRE (e.ip, e.job_id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT host_unique IF NOT EXISTS FOR (h:Host) REQUIRE (h.ip, h.job_id) IS UNIQUE'
+2026-02-16 21:26:51,737 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> routing towards fixed database: None
+2026-02-16 21:26:51,737 - neo4j.pool - DEBUG - [#0000]  _: <POOL> acquire direct connection, access_mode='WRITE', database=AcquisitionDatabase(name=None, guessed=False)
+2026-02-16 21:26:51,738 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> picked existing connection bolt-4905
+2026-02-16 21:26:51,738 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> checked re_auth auth=None updated=False force=False
+2026-02-16 21:26:51,738 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> handing out existing connection
+2026-02-16 21:26:51,738 - neo4j.io - DEBUG - [#8DCC]  C: RUN 'CREATE CONSTRAINT service_unique IF NOT EXISTS FOR (s:Service) REQUIRE (s.port, s.host_ip, s.job_id) IS UNIQUE' {} {'bookmarks': ['FB:kcwQWejj6nh6T52/w+lZowYYIEiQ']}
+2026-02-16 21:26:51,738 - neo4j.io - DEBUG - [#8DCC]  C: PULL {'n': 1000}
+2026-02-16 21:26:51,739 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'t_first': 1, 'fields': [], 'db': 'neo4j'}
+2026-02-16 21:26:51,739 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: READY > STREAMING
+2026-02-16 21:26:51,740 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'bookmark': 'FB:kcwQWejj6nh6T52/w+lZowYYIEiQ', 'statuses': [{'gql_status': '00NA0', 'neo4j_code': 'Neo.ClientNotification.Schema.IndexOrConstraintAlreadyExists', 'status_description': "note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT service_unique IF NOT EXISTS FOR (e:Service) REQUIRE (e.port, e.host_ip, e.job_id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT service_unique FOR (e:Service) REQUIRE (e.port, e.host_ip, e.job_id) IS UNIQUE' already exists.", 'diagnostic_record': {'_classification': 'SCHEMA', '_severity': 'INFORMATION'}, 'description': '`CONSTRAINT service_unique FOR (e:Service) REQUIRE (e.port, e.host_ip, e.job_id) IS UNIQUE` already exists.', 'title': '`CREATE CONSTRAINT service_unique IF NOT EXISTS FOR (e:Service) REQUIRE (e.port, e.host_ip, e.job_id) IS UNIQUE` has no effect.'}, {'gql_status': '00001', 'status_description': 'note: successful completion - omitted result'}], 'type': 's', 't_last': 0, 'db': 'neo4j'}
+2026-02-16 21:26:51,740 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: STREAMING > READY
+2026-02-16 21:26:51,740 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> released bolt-4905
+2026-02-16 21:26:51,740 - neo4j.notifications - INFO - Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT service_unique IF NOT EXISTS FOR (e:Service) REQUIRE (e.port, e.host_ip, e.job_id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT service_unique FOR (e:Service) REQUIRE (e.port, e.host_ip, e.job_id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT service_unique IF NOT EXISTS FOR (s:Service) REQUIRE (s.port, s.host_ip, s.job_id) IS UNIQUE'
+2026-02-16 21:26:51,740 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> routing towards fixed database: None
+2026-02-16 21:26:51,740 - neo4j.pool - DEBUG - [#0000]  _: <POOL> acquire direct connection, access_mode='WRITE', database=AcquisitionDatabase(name=None, guessed=False)
+2026-02-16 21:26:51,740 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> picked existing connection bolt-4905
+2026-02-16 21:26:51,740 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> checked re_auth auth=None updated=False force=False
+2026-02-16 21:26:51,740 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> handing out existing connection
+2026-02-16 21:26:51,740 - neo4j.io - DEBUG - [#8DCC]  C: RUN 'CREATE CONSTRAINT vuln_unique IF NOT EXISTS FOR (v:Vulnerability) REQUIRE v.id IS UNIQUE' {} {'bookmarks': ['FB:kcwQWejj6nh6T52/w+lZowYYIEiQ']}
+2026-02-16 21:26:51,740 - neo4j.io - DEBUG - [#8DCC]  C: PULL {'n': 1000}
+2026-02-16 21:26:51,742 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'t_first': 1, 'fields': [], 'db': 'neo4j'}
+2026-02-16 21:26:51,742 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: READY > STREAMING
+2026-02-16 21:26:51,742 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'bookmark': 'FB:kcwQWejj6nh6T52/w+lZowYYIEiQ', 'statuses': [{'gql_status': '00NA0', 'neo4j_code': 'Neo.ClientNotification.Schema.IndexOrConstraintAlreadyExists', 'status_description': "note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT vuln_unique IF NOT EXISTS FOR (e:Vulnerability) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT vuln_unique FOR (e:Vulnerability) REQUIRE (e.id) IS UNIQUE' already exists.", 'diagnostic_record': {'_classification': 'SCHEMA', '_severity': 'INFORMATION'}, 'description': '`CONSTRAINT vuln_unique FOR (e:Vulnerability) REQUIRE (e.id) IS UNIQUE` already exists.', 'title': '`CREATE CONSTRAINT vuln_unique IF NOT EXISTS FOR (e:Vulnerability) REQUIRE (e.id) IS UNIQUE` has no effect.'}, {'gql_status': '00001', 'status_description': 'note: successful completion - omitted result'}], 'type': 's', 't_last': 0, 'db': 'neo4j'}
+2026-02-16 21:26:51,742 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: STREAMING > READY
+2026-02-16 21:26:51,742 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> released bolt-4905
+2026-02-16 21:26:51,742 - neo4j.notifications - INFO - Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT vuln_unique IF NOT EXISTS FOR (e:Vulnerability) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT vuln_unique FOR (e:Vulnerability) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT vuln_unique IF NOT EXISTS FOR (v:Vulnerability) REQUIRE v.id IS UNIQUE'
+2026-02-16 21:26:51,742 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> routing towards fixed database: None
+2026-02-16 21:26:51,742 - neo4j.pool - DEBUG - [#0000]  _: <POOL> acquire direct connection, access_mode='WRITE', database=AcquisitionDatabase(name=None, guessed=False)
+2026-02-16 21:26:51,742 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> picked existing connection bolt-4905
+2026-02-16 21:26:51,742 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> checked re_auth auth=None updated=False force=False
+2026-02-16 21:26:51,743 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> handing out existing connection
+2026-02-16 21:26:51,743 - neo4j.io - DEBUG - [#8DCC]  C: RUN 'CREATE CONSTRAINT cred_unique IF NOT EXISTS FOR (c:Credential) REQUIRE c.id IS UNIQUE' {} {'bookmarks': ['FB:kcwQWejj6nh6T52/w+lZowYYIEiQ']}
+2026-02-16 21:26:51,743 - neo4j.io - DEBUG - [#8DCC]  C: PULL {'n': 1000}
+2026-02-16 21:26:51,744 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'t_first': 1, 'fields': [], 'db': 'neo4j'}
+2026-02-16 21:26:51,744 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: READY > STREAMING
+2026-02-16 21:26:51,745 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'bookmark': 'FB:kcwQWejj6nh6T52/w+lZowYYIEiQ', 'statuses': [{'gql_status': '00NA0', 'neo4j_code': 'Neo.ClientNotification.Schema.IndexOrConstraintAlreadyExists', 'status_description': "note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT cred_unique IF NOT EXISTS FOR (e:Credential) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT cred_unique FOR (e:Credential) REQUIRE (e.id) IS UNIQUE' already exists.", 'diagnostic_record': {'_classification': 'SCHEMA', '_severity': 'INFORMATION'}, 'description': '`CONSTRAINT cred_unique FOR (e:Credential) REQUIRE (e.id) IS UNIQUE` already exists.', 'title': '`CREATE CONSTRAINT cred_unique IF NOT EXISTS FOR (e:Credential) REQUIRE (e.id) IS UNIQUE` has no effect.'}, {'gql_status': '00001', 'status_description': 'note: successful completion - omitted result'}], 'type': 's', 't_last': 0, 'db': 'neo4j'}
+2026-02-16 21:26:51,745 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: STREAMING > READY
+2026-02-16 21:26:51,745 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> released bolt-4905
+2026-02-16 21:26:51,745 - neo4j.notifications - INFO - Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT cred_unique IF NOT EXISTS FOR (e:Credential) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT cred_unique FOR (e:Credential) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT cred_unique IF NOT EXISTS FOR (c:Credential) REQUIRE c.id IS UNIQUE'
+2026-02-16 21:26:51,745 - neo4j - DEBUG - [#0000]  _: <WORKSPACE> routing towards fixed database: None
+2026-02-16 21:26:51,745 - neo4j.pool - DEBUG - [#0000]  _: <POOL> acquire direct connection, access_mode='WRITE', database=AcquisitionDatabase(name=None, guessed=False)
+2026-02-16 21:26:51,745 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> picked existing connection bolt-4905
+2026-02-16 21:26:51,745 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> checked re_auth auth=None updated=False force=False
+2026-02-16 21:26:51,745 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> handing out existing connection
+2026-02-16 21:26:51,745 - neo4j.io - DEBUG - [#8DCC]  C: RUN 'CREATE CONSTRAINT exploit_unique IF NOT EXISTS FOR (e:ExploitAttempt) REQUIRE e.id IS UNIQUE' {} {'bookmarks': ['FB:kcwQWejj6nh6T52/w+lZowYYIEiQ']}
+2026-02-16 21:26:51,745 - neo4j.io - DEBUG - [#8DCC]  C: PULL {'n': 1000}
+2026-02-16 21:26:51,746 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'t_first': 1, 'fields': [], 'db': 'neo4j'}
+2026-02-16 21:26:51,746 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: READY > STREAMING
+2026-02-16 21:26:51,747 - neo4j.io - DEBUG - [#8DCC]  S: SUCCESS {'bookmark': 'FB:kcwQWejj6nh6T52/w+lZowYYIEiQ', 'statuses': [{'gql_status': '00NA0', 'neo4j_code': 'Neo.ClientNotification.Schema.IndexOrConstraintAlreadyExists', 'status_description': "note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT exploit_unique IF NOT EXISTS FOR (e:ExploitAttempt) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT exploit_unique FOR (e:ExploitAttempt) REQUIRE (e.id) IS UNIQUE' already exists.", 'diagnostic_record': {'_classification': 'SCHEMA', '_severity': 'INFORMATION'}, 'description': '`CONSTRAINT exploit_unique FOR (e:ExploitAttempt) REQUIRE (e.id) IS UNIQUE` already exists.', 'title': '`CREATE CONSTRAINT exploit_unique IF NOT EXISTS FOR (e:ExploitAttempt) REQUIRE (e.id) IS UNIQUE` has no effect.'}, {'gql_status': '00001', 'status_description': 'note: successful completion - omitted result'}], 'type': 's', 't_last': 0, 'db': 'neo4j'}
+2026-02-16 21:26:51,747 - neo4j.io - DEBUG - [#8DCC]  _: <CONNECTION> server state: STREAMING > READY
+2026-02-16 21:26:51,747 - neo4j.pool - DEBUG - [#8DCC]  _: <POOL> released bolt-4905
+2026-02-16 21:26:51,747 - neo4j.notifications - INFO - Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT exploit_unique IF NOT EXISTS FOR (e:ExploitAttempt) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT exploit_unique FOR (e:ExploitAttempt) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT exploit_unique IF NOT EXISTS FOR (e:ExploitAttempt) REQUIRE e.id IS UNIQUE'
+[2026-02-16T21:26:51.747204+00:00] [INFO] Knowledge graph enabled
+[2026-02-16T21:26:51.747420+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+agent_job_id= 59f7a4ac-ee34-43ae-97dc-65b59b3cf7a9
+phase_start= RECON
+{"ts":"2026-02-16T21:26:51.748Z","event":"ws_recv","payload":{"type":"phase_update"}}
+[2026-02-16T21:26:53.249972+00:00] [INFO] Approval gate engaged for transition RECON -> EXPLOITATION
+awaiting_approval= True
+pending_phase= EXPLOITATION
+{"ts":"2026-02-16T21:26:53.252Z","event":"ws_recv","payload":{"type":"approval_request"}}
+{"ts":"2026-02-16T21:26:53.253Z","event":"ws_send","payload":{"type":"approval"}}
+{"ts":"2026-02-16T21:26:53.256Z","event":"ws_recv","payload":{"type":"approval_ack"}}
+{"ts":"2026-02-16T21:26:53.256Z","event":"success","payload":{"ack":{"request_id":null,"decision":"approve"}}}
+[2026-02-16T21:26:53.752652+00:00] [INFO] Approval: user approved transition to EXPLOITATION
+approval_decision= approve
+phase_final= EXPLOITATION
+2026-02-16 21:26:53,782 - neo4j.io - DEBUG - [#8DCC]  C: GOODBYE
+2026-02-16 21:26:53,782 - neo4j.io - DEBUG - [#8DCC]  C: <CLOSE>
+
+[8/9] Wait for WS client to exit
+
+[9/9] Cleanup: mark job completed (avoid quota accumulation)
+PASS: approval gate WS E2E validated job_id=59f7a4ac-ee34-43ae-97dc-65b59b3cf7a9

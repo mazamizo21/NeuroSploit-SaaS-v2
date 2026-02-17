@@ -1,0 +1,20 @@
+timestamp_utc=2026-02-16T17:06:39Z
+job_id=0cd0e23a-7e35-44fd-9b7f-52569d7f8421
+token_len=60
+--- /api/v1/ws/jobs/{id}/chat ---
+url=http://localhost:8000/api/v1/ws/jobs/0cd0e23a-7e35-44fd-9b7f-52569d7f8421/chat?token=internal-change-this-to-a-secure-random-string-in-production
+HTTP/1.1 403 Forbidden
+Date: Mon, 16 Feb 2026 17:06:39 GMT
+Content-Length: 0
+Content-Type: text/plain
+Connection: close
+
+--- /api/v1/ws/job/{id} (output) ---
+url=http://localhost:8000/api/v1/ws/job/0cd0e23a-7e35-44fd-9b7f-52569d7f8421?token=internal-change-this-to-a-secure-random-string-in-production
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: Im/SdJM+sDDJeyDNF1Dc68rpmbI=
+date: Mon, 16 Feb 2026 17:06:39 GMT
+server: uvicorn
+

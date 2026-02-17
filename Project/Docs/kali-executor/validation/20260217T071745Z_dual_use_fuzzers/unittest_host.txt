@@ -1,0 +1,111 @@
+[host] python -m unittest new test
+2026-02-17 02:17:45,423 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:17:45,575 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:17:45,578 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 02:17:45,578 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (0 overridden by env)
+2026-02-17 02:17:45,578 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:17:45,732 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:17:45,735 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 02:17:45,735 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (0 overridden by env)
+2026-02-17 02:17:45,735 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:17:45,892 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:17:45,895 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 02:17:45,895 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (0 overridden by env)
+2026-02-17 02:17:45,896 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:17:46,049 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:17:46,052 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 02:17:46,052 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (0 overridden by env)
+2026-02-17 02:17:46,052 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:17:46,202 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+2026-02-17 02:17:46,398 - tazosploit.profiles - INFO - LLM Profile: balanced (default)
+2026-02-17 02:17:46,399 - tazosploit.profiles - INFO - Profile 'balanced' applied: 26 settings (0 overridden by env)
+2026-02-17 02:17:46,399 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+2026-02-17 02:17:46,547 - knowledge_graph - WARNING - neo4j_unavailable err=No module named 'neo4j'
+======================================================================
+FAIL: test_recon_complete_gate_allows_exploit_intent_ffuf_wfuzz (tests.unit.test_dynamic_agent_dual_use_fuzzers.TestDynamicAgentDualUseFuzzers.test_recon_complete_gate_allows_exploit_intent_ffuf_wfuzz)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_dynamic_agent_dual_use_fuzzers.py", line 139, in test_recon_complete_gate_allows_exploit_intent_ffuf_wfuzz
+    self.assertTrue(any("ffuf" in c for c in executed))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_recon_complete_gate_blocks_enum_intent_ffuf_wfuzz (tests.unit.test_dynamic_agent_dual_use_fuzzers.TestDynamicAgentDualUseFuzzers.test_recon_complete_gate_blocks_enum_intent_ffuf_wfuzz)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tazjack/Documents/PenTest/TazoSploit/tests/unit/test_dynamic_agent_dual_use_fuzzers.py", line 174, in test_recon_complete_gate_blocks_enum_intent_ffuf_wfuzz
+    self.assertIn("RECON ALREADY COMPLETE", last_user)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'RECON ALREADY COMPLETE' not found in '⚠️ WORDLIST MISSING: w. Use an existing wordlist (e.g., `/usr/share/wordlists/dirb/common.txt` or `/opt/SecLists/Discovery/Web-Content/common.txt`) or download one to `/tmp/` before running this command.'
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.392s
+
+FAILED (failures=2)
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T07:17:45.575050+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:17:45.575296+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:17:45.575356+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:17:45.575630+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:17:45.575766+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T07:17:45.731638+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:17:45.731904+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:17:45.732184+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:17:45.732426+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:17:45.732551+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T07:17:45.892122+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:17:45.892344+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:17:45.892640+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:17:45.892933+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:17:45.893070+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T07:17:46.049075+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:17:46.049325+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:17:46.049384+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:17:46.049668+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:17:46.049822+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T07:17:46.202413+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:17:46.202618+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:17:46.202687+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:17:46.202882+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:17:46.202993+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:17:46.203045+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T07:17:46.203198+00:00] [INFO] Memory store initialized: 0 memories loaded
+[2026-02-17T07:17:46.394666+00:00] [INFO] Skill router: phase=RECON target_type=lab tier=standard profile=balanced max_skills=3 service_hints=[] selected=['reconnaissance', 'tool_amass', 'tool_arp_scan']
+[2026-02-17T07:17:46.394899+00:00] [INFO] Starting engagement: juiceshop
+[2026-02-17T07:17:46.395025+00:00] [INFO] Objective: test
+[2026-02-17T07:17:46.395123+00:00] [INFO] === Iteration 1/1 ===
+[2026-02-17T07:17:46.395304+00:00] [INFO] AI response: 162 chars
+[2026-02-17T07:17:46.395646+00:00] [WARN] BLOCKED missing wordlist: ffuf -u http://juiceshop:3000/rest/user/login -H "Authorization: Bearer <<BEARER_REDACTED>>
+[2026-02-17T07:17:46.396058+00:00] [INFO] Evidence files written to /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpeoi37lpf/evidence/
+[2026-02-17T07:17:46.396096+00:00] [INFO] Generated 0 API findings
+[2026-02-17T07:17:46.396214+00:00] [INFO] Comprehensive report saved: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpeoi37lpf/COMPREHENSIVE_REPORT_20260217_071746.md
+[2026-02-17T07:17:46.396453+00:00] [INFO] Report: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpeoi37lpf/agent_report_20260217_071746.json
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-17T07:17:46.546321+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-17T07:17:46.546528+00:00] [INFO] Tool usage tracker enabled
+[2026-02-17T07:17:46.546820+00:00] [INFO] Exploitation injector enabled
+[2026-02-17T07:17:46.547089+00:00] [WARN] Knowledge graph unavailable (Neo4j down/driver missing)
+[2026-02-17T07:17:46.547199+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+[2026-02-17T07:17:46.547254+00:00] [INFO] Scope allowlist initialized: ['juiceshop']
+[2026-02-17T07:17:46.547396+00:00] [INFO] Memory store initialized: 0 memories loaded
+[2026-02-17T07:17:46.744592+00:00] [INFO] Skill router: phase=RECON target_type=lab tier=standard profile=balanced max_skills=3 service_hints=[] selected=['reconnaissance', 'tool_amass', 'tool_arp_scan']
+[2026-02-17T07:17:46.744814+00:00] [INFO] Starting engagement: juiceshop
+[2026-02-17T07:17:46.744853+00:00] [INFO] Objective: test
+[2026-02-17T07:17:46.744962+00:00] [INFO] === Iteration 1/1 ===
+[2026-02-17T07:17:46.745130+00:00] [INFO] AI response: 61 chars
+[2026-02-17T07:17:46.745209+00:00] [WARN] BLOCKED missing wordlist: ffuf -u http://juiceshop:3000/FUZZ -w w
+[2026-02-17T07:17:46.745370+00:00] [INFO] Evidence files written to /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpgyurrddy/evidence/
+[2026-02-17T07:17:46.745405+00:00] [INFO] Generated 0 API findings
+[2026-02-17T07:17:46.745511+00:00] [INFO] Comprehensive report saved: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpgyurrddy/COMPREHENSIVE_REPORT_20260217_071746.md
+[2026-02-17T07:17:46.745744+00:00] [INFO] Report: /var/folders/7_/51fs5tc97nz8f21gc57lzz_00000gn/T/tmpgyurrddy/agent_report_20260217_071746.json

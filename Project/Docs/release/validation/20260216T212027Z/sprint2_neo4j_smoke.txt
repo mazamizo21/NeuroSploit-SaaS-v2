@@ -1,0 +1,85 @@
+
+============================================================
+RUN START timestamp_utc=2026-02-16T21:26:53Z
+============================================================
+============================================================
+Sprint 2 Docker Smoke Test: Neo4j + KnowledgeGraph
+timestamp_utc=2026-02-16T21:26:53Z
+repo_root=/Users/tazjack/Documents/PenTest/TazoSploit
+log_file=/Users/tazjack/Documents/PenTest/TazoSploit/Project/Docs/sprint2/validation/docker_neo4j_connectivity_smoke_test_sprint2.txt
+============================================================
+
+[1/6] Docker versions
+Client:
+ Version:           29.2.0
+ API version:       1.53
+ Go version:        go1.25.6
+ Git commit:        0b9d198
+ Built:             Mon Jan 26 19:25:13 2026
+ OS/Arch:           darwin/arm64
+ Context:           desktop-linux
+
+Server: Docker Desktop 4.60.1 (218372)
+ Engine:
+  Version:          29.2.0
+  API version:      1.53 (minimum version 1.44)
+  Go version:       go1.25.6
+  Git commit:       9c62384
+  Built:            Mon Jan 26 19:25:48 2026
+  OS/Arch:          linux/arm64
+  Experimental:     false
+ containerd:
+  Version:          v2.2.1
+  GitCommit:        dea7da592f5d1d2b7755e3a161be07f43fad8f75
+ runc:
+  Version:          1.3.4
+  GitCommit:        v1.3.4-0-gd6d73eb8
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+Docker Compose version v5.0.2
+
+[2/6] Ensure external lab network exists (required by kali service)
+OK: docker_network_exists=tazosploit-lab
+
+[3/6] Build kali executor image (ensures neo4j python driver installed)
+SKIP: kali_build=true (SKIP_KALI_BUILD=1)
+
+[4/6] Start neo4j + kali
+time="2026-02-16T16:26:54-05:00" level=warning msg="Found orphan containers ([lab-dvna lab-webgoat lab-vuln-api lab-admin-panel lab-postgres lab-redis lab-juiceshop lab-mysql lab-jumphost lab-mongodb lab-elasticsearch lab-samba lab-dvwa]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container tazosploit-neo4j Running 
+ Container tazosploit-kali-1 Running 
+ Container tazosploit-kali-2 Running 
+
+[5/6] Wait for neo4j health
+neo4j_health=healthy attempt=1/60
+
+[6/6] KnowledgeGraph connectivity test inside kali container
+python_executable= /usr/bin/python3
+python_version= 3.13.11 (main, Dec  8 2025, 11:41:44) [GCC 15.2.0]
+NEO4J_URI= bolt://neo4j:7687
+NEO4J_USER= neo4j
+KNOWLEDGE_GRAPH_ENABLED= true
+neo4j_driver_import_ok=True
+neo4j_driver_version= 6.1.0
+kg_available= True
+Received notification from DBMS server: <GqlStatusObject gql_status='01N52', status_description='warn: property key does not exist. The property `os` does not exist. Verify that the spelling is correct.', position=<SummaryInputPosition line=5, column=22, offset=162>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'offset': 162, 'line': 5, 'column': 22}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n            MATCH (h:Host {job_id: $job_id})-[:RUNS]->(s:Service)\n            RETURN h.ip AS ip,\n                   h.hostname AS hostname,\n                   h.os AS os,\n                   collect({port: s.port, name: s.name, version: s.version}) AS services\n            '
+Received notification from DBMS server: <GqlStatusObject gql_status='01N52', status_description='warn: property key does not exist. The property `source` does not exist. Verify that the spelling is correct.', position=<SummaryInputPosition line=7, column=22, offset=250>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'offset': 250, 'line': 7, 'column': 22}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n            MATCH (c:Credential {job_id: $job_id})\n            OPTIONAL MATCH (c)-[:WORKS_ON]->(s:Service)\n            RETURN c.username AS username,\n                   c.password AS password,\n                   c.hash AS hash,\n                   c.source AS source,\n                   s.port AS port,\n                   s.host_ip AS host_ip\n            '
+Received notification from DBMS server: <GqlStatusObject gql_status='01N52', status_description='warn: property key does not exist. The property `hash` does not exist. Verify that the spelling is correct.', position=<SummaryInputPosition line=6, column=22, offset=215>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'offset': 215, 'line': 6, 'column': 22}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n            MATCH (c:Credential {job_id: $job_id})\n            OPTIONAL MATCH (c)-[:WORKS_ON]->(s:Service)\n            RETURN c.username AS username,\n                   c.password AS password,\n                   c.hash AS hash,\n                   c.source AS source,\n                   s.port AS port,\n                   s.host_ip AS host_ip\n            '
+Received notification from DBMS server: <GqlStatusObject gql_status='01N52', status_description='warn: property key does not exist. The property `password` does not exist. Verify that the spelling is correct.', position=<SummaryInputPosition line=5, column=22, offset=172>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'offset': 172, 'line': 5, 'column': 22}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n            MATCH (c:Credential {job_id: $job_id})\n            OPTIONAL MATCH (c)-[:WORKS_ON]->(s:Service)\n            RETURN c.username AS username,\n                   c.password AS password,\n                   c.hash AS hash,\n                   c.source AS source,\n                   s.port AS port,\n                   s.host_ip AS host_ip\n            '
+Received notification from DBMS server: <GqlStatusObject gql_status='01N52', status_description='warn: property key does not exist. The property `username` does not exist. Verify that the spelling is correct.', position=<SummaryInputPosition line=4, column=22, offset=129>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'offset': 129, 'line': 4, 'column': 22}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n            MATCH (c:Credential {job_id: $job_id})\n            OPTIONAL MATCH (c)-[:WORKS_ON]->(s:Service)\n            RETURN c.username AS username,\n                   c.password AS password,\n                   c.hash AS hash,\n                   c.source AS source,\n                   s.port AS port,\n                   s.host_ip AS host_ip\n            '
+Received notification from DBMS server: <GqlStatusObject gql_status='01N51', status_description='warn: relationship type does not exist. The relationship type `WORKS_ON` does not exist. Verify that the spelling is correct.', position=<SummaryInputPosition line=3, column=34, offset=85>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'offset': 85, 'line': 3, 'column': 34}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n            MATCH (c:Credential {job_id: $job_id})\n            OPTIONAL MATCH (c)-[:WORKS_ON]->(s:Service)\n            RETURN c.username AS username,\n                   c.password AS password,\n                   c.hash AS hash,\n                   c.source AS source,\n                   s.port AS port,\n                   s.host_ip AS host_ip\n            '
+
+--- kg_summary ---
+=== ATTACK SURFACE SUMMARY ===
+
+[HOST] 10.10.10.10 (kg-smoke)
+  Port 80: http Apache-smoke
+
+=== VULNERABILITIES ===
+  [LOW] nuclei-smoke-template (CVE-2020-0000) on 10.10.10.10:80 - ATTEMPTED
+
+=== UNEXPLOITED SERVICES (1) ===
+  10.10.10.10:80 (http) - vulns: nuclei-smoke-template
+
+PASS: neo4j + knowledge graph connectivity verified

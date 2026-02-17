@@ -1,0 +1,2 @@
+pid=root      1443  0.0  1.4 852920 116068 ?       Ssl  05:10   0:03 python3 /opt/tazosploit/dynamic_agent.py --target juiceshop --objective Complete penetration test of juiceshop. Recon, exploit, persist, and exfiltrate. --max-iterations 2000 --output-dir /pentest/output/c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+sh: 1: cannot open /proc/root: No such file

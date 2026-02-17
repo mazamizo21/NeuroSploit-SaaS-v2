@@ -1,0 +1,13 @@
+2026-02-15 23:42:33,042 - tazosploit.llm - INFO - LLM Client initialized: http://host.docker.internal:1234/v1 / openai/gpt-oss-120b (Claude: False, OpenAI: True, GPT-5: False, Zhipu: False)
+[PROFILE] balanced (default)
+Warning: toon_format not available — using default serialization
+[2026-02-16T04:42:33.210478+00:00] [INFO] Tool phase map loaded: 246 tools
+[2026-02-16T04:42:33.210704+00:00] [INFO] Tool usage tracker enabled
+[2026-02-16T04:42:33.210757+00:00] [INFO] Exploitation injector enabled
+[2026-02-16T04:42:33.210864+00:00] [INFO] Dynamic Agent initialized - fully AI-driven with MITRE ATT&CK awareness
+phase_current= RECON
+tool_gate(nmap)= ok
+tool_gate(msfconsole)= ⛔ BLOCKED TOOL: 'msfconsole' is not allowed in phase=RECON. Allowed phases: EXPLOITATION, C2_DEPLOY, POST_EXPLOIT. Pick a different tool/technique appropriate for this phase.
+runtime_msg_prefix= **RUNTIME ENFORCEMENT CONTEXT**
+runtime_msg_has_diversity= False
+runtime_msg_has_proactive_plan= False

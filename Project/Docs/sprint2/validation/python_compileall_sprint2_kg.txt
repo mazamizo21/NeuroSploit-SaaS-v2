@@ -1,0 +1,13 @@
+python_executable= /Users/tazjack/Documents/PenTest/TazoSploit/venv/bin/python
+python_version= 3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.4.4.1)]
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/dynamic_agent.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/dynamic_agent.py'...
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/knowledge_graph.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/knowledge_graph.py'...
+
+== compile_file: /Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/graph_parsers.py
+Compiling '/Users/tazjack/Documents/PenTest/TazoSploit/kali-executor/open-interpreter/graph_parsers.py'...
+
+compileall_ok= True

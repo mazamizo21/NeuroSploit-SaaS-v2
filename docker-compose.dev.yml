@@ -1,0 +1,24 @@
+# Development overrides (DO NOT use in production)
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d api
+#
+# Purpose:
+# - Run uvicorn with --reload so bind-mounted control-plane changes take effect without
+#   requiring `docker compose restart api`.
+
+services:
+  api:
+    command:
+      [
+        "uvicorn",
+        "main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--no-access-log",
+        "--reload",
+        "--reload-dir",
+        "/app"
+      ]

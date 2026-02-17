@@ -1,0 +1,28 @@
+NAME                      IMAGE                               COMMAND                  SERVICE             CREATED          STATUS                 PORTS
+lab-admin-panel           php:8.2-apache                      "docker-php-entrypoi…"   admin-panel         2 weeks ago      Up 5 hours             0.0.0.0:8888->80/tcp, [::]:8888->80/tcp
+lab-dvna                  appsecco/dvna:sqlite                "npm start"              dvna                11 days ago      Up 5 hours             0.0.0.0:9091->9090/tcp, [::]:9091->9090/tcp
+lab-dvwa                  vulnerables/web-dvwa:latest         "/main.sh"               dvwa                2 weeks ago      Up 5 hours             0.0.0.0:8081->80/tcp, [::]:8081->80/tcp
+lab-elasticsearch         elasticsearch:7.17.10               "/bin/tini -- /usr/l…"   lab-elasticsearch   2 weeks ago      Up 5 hours             0.0.0.0:9200->9200/tcp, [::]:9200->9200/tcp
+lab-juiceshop             bkimminich/juice-shop:latest        "/nodejs/bin/node /j…"   juiceshop           2 weeks ago      Up 3 minutes           0.0.0.0:3080->3000/tcp, [::]:3080->3000/tcp
+lab-jumphost              linuxserver/openssh-server:latest   "/init"                  jumphost            2 weeks ago      Up 5 hours             0.0.0.0:2222->2222/tcp, [::]:2222->2222/tcp
+lab-mongodb               mongo:6                             "docker-entrypoint.s…"   lab-mongodb         2 weeks ago      Up 5 hours             0.0.0.0:27017->27017/tcp, [::]:27017->27017/tcp
+lab-mysql                 mysql:8.0                           "docker-entrypoint.s…"   lab-mysql           2 weeks ago      Up 5 hours             0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp
+lab-postgres              postgres:15                         "docker-entrypoint.s…"   lab-postgres        2 weeks ago      Up 5 hours             0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+lab-redis                 redis:7                             "docker-entrypoint.s…"   lab-redis           2 weeks ago      Up 5 hours             0.0.0.0:6380->6379/tcp, [::]:6380->6379/tcp
+lab-samba                 dperson/samba:latest                "/sbin/tini -- /usr/…"   samba               2 weeks ago      Up 5 hours (healthy)   0.0.0.0:139->139/tcp, [::]:139->139/tcp, 0.0.0.0:445->445/tcp, [::]:445->445/tcp
+lab-vuln-api              python:3.11-slim                    "sh -c 'pip install …"   vuln-api            13 days ago      Up 5 hours             0.0.0.0:5001->5000/tcp, [::]:5001->5000/tcp
+lab-webgoat               webgoat/webgoat:latest              "java -Duser.home=/h…"   webgoat             13 days ago      Up 5 hours (healthy)   0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+tazosploit-api            tazosploit-api                      "uvicorn main:app --…"   api                 2 hours ago      Up 2 hours (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+tazosploit-dom-renderer   tazosploit-dom-renderer             "uvicorn server:app …"   dom-renderer        3 hours ago      Up 3 hours             8080/tcp
+tazosploit-frontend       tazosploit-frontend                 "docker-entrypoint.s…"   frontend            2 hours ago      Up 2 hours             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+tazosploit-kali-1         tazosploit-kali                     "/entrypoint.sh tail…"   kali                41 minutes ago   Up 41 minutes          
+tazosploit-kali-2         tazosploit-kali                     "/entrypoint.sh tail…"   kali                41 minutes ago   Up 41 minutes          
+tazosploit-minio          minio/minio                         "/usr/bin/docker-ent…"   minio               3 hours ago      Up 3 hours (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+tazosploit-neo4j          neo4j:5.26-community                "tini -g -- /startup…"   neo4j               3 hours ago      Up 3 hours (healthy)   0.0.0.0:7474->7474/tcp, [::]:7474->7474/tcp, 0.0.0.0:7687->7687/tcp, [::]:7687->7687/tcp
+tazosploit-postgres       postgres:15-alpine                  "docker-entrypoint.s…"   postgres            3 hours ago      Up 3 hours (healthy)   5432/tcp
+tazosploit-redis          redis:7-alpine                      "docker-entrypoint.s…"   redis               3 hours ago      Up 3 hours (healthy)   6379/tcp
+tazosploit-scheduler      tazosploit-scheduler                "python scheduler/ma…"   scheduler           3 hours ago      Up 3 hours (healthy)   9001/tcp
+tazosploit-supervisor     tazosploit-supervisor               "python supervisor/m…"   supervisor          3 hours ago      Up 3 hours (healthy)   9012/tcp
+tazosploit-tunnel         tazosploit-tunnel-gateway           "tunnel-gateway"         tunnel-gateway      3 hours ago      Up 3 hours (healthy)   0.0.0.0:51820->51820/udp, [::]:51820->51820/udp, 0.0.0.0:8085->8080/tcp, [::]:8085->8080/tcp
+tazosploit-worker-1       tazosploit-worker                   "python worker/main.…"   worker              41 minutes ago   Up 41 minutes          9000/tcp
+tazosploit-worker-2       tazosploit-worker                   "python worker/main.…"   worker              41 minutes ago   Up 41 minutes          9000/tcp

@@ -1,0 +1,11 @@
+-[ RECORD 1 ]--+-------------------------------------
+id             | c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+status         | completed
+progress       | 0
+findings_count | 3
+tokens_used    | 896827
+cost_usd       | 112
+started_at     | 2026-02-17 05:10:01.453192
+completed_at   | 2026-02-17 06:29:03.246589
+error_message  | 
+

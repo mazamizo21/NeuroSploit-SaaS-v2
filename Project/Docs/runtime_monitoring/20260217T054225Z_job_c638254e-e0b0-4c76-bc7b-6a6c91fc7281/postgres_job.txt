@@ -1,0 +1,118 @@
+[postgres] \d jobs
+                                                Table "public.jobs"
+         Column          |            Type             | Collation | Nullable |              Default               
+-------------------------+-----------------------------+-----------+----------+------------------------------------
+ id                      | uuid                        |           | not null | uuid_generate_v4()
+ tenant_id               | uuid                        |           | not null | 
+ scope_id                | uuid                        |           |          | 
+ created_by              | uuid                        |           |          | 
+ name                    | character varying(255)      |           | not null | 
+ description             | text                        |           |          | 
+ phase                   | character varying(50)       |           | not null | 
+ targets                 | jsonb                       |           | not null | 
+ intensity               | character varying(20)       |           |          | 'medium'::character varying
+ timeout_seconds         | integer                     |           |          | 3600
+ auto_run                | boolean                     |           |          | false
+ status                  | job_status                  |           |          | 'pending'::job_status
+ progress                | integer                     |           |          | 0
+ worker_id               | character varying(100)      |           |          | 
+ container_id            | character varying(100)      |           |          | 
+ findings_count          | integer                     |           |          | 0
+ critical_count          | integer                     |           |          | 0
+ high_count              | integer                     |           |          | 0
+ tokens_used             | integer                     |           |          | 0
+ cost_usd                | integer                     |           |          | 0
+ created_at              | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ started_at              | timestamp without time zone |           |          | 
+ completed_at            | timestamp without time zone |           |          | 
+ error_message           | text                        |           |          | 
+ retry_count             | integer                     |           |          | 0
+ result                  | jsonb                       |           |          | '{}'::jsonb
+ target_type             | character varying(20)       |           |          | 'lab'::character varying
+ max_iterations          | integer                     |           |          | 30
+ authorization_confirmed | boolean                     |           |          | false
+ exploit_mode            | character varying(20)       |           |          | 'explicit_only'::character varying
+ llm_provider            | character varying(100)      |           |          | 
+ allow_persistence       | boolean                     |           |          | false
+ allow_defense_evasion   | boolean                     |           |          | false
+ allow_scope_expansion   | boolean                     |           |          | false
+ enable_session_handoff  | boolean                     |           |          | false
+ enable_target_rotation  | boolean                     |           |          | true
+ target_focus_window     | integer                     |           |          | 6
+ target_focus_limit      | integer                     |           |          | 30
+ target_min_commands     | integer                     |           |          | 8
+ supervisor_enabled      | boolean                     |           |          | 
+ supervisor_provider     | character varying(100)      |           |          | 
+ llm_profile             | character varying(20)       |           |          | 
+ agent_freedom           | integer                     |           |          | 
+ llm_model               | character varying(255)      |           |          | 
+Indexes:
+    "jobs_pkey" PRIMARY KEY, btree (id)
+    "idx_jobs_created" btree (created_at DESC)
+    "idx_jobs_status" btree (status)
+    "idx_jobs_tenant" btree (tenant_id)
+Foreign-key constraints:
+    "jobs_created_by_fkey" FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    "jobs_scope_id_fkey" FOREIGN KEY (scope_id) REFERENCES scopes(id) ON DELETE SET NULL
+    "jobs_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "active_sessions" CONSTRAINT "active_sessions_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL
+    TABLE "attack_edges" CONSTRAINT "attack_edges_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "attack_nodes" CONSTRAINT "attack_nodes_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "attack_paths" CONSTRAINT "attack_paths_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "command_logs" CONSTRAINT "command_logs_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "evidence_files" CONSTRAINT "evidence_files_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "findings" CONSTRAINT "findings_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "llm_logs" CONSTRAINT "llm_logs_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "loot" CONSTRAINT "loot_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "mitre_technique_hits" CONSTRAINT "mitre_technique_hits_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+    TABLE "risk_scores" CONSTRAINT "risk_scores_job_id_fkey" FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+
+
+[postgres] select * from jobs where id=c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+-[ RECORD 1 ]-----------+-----------------------------------------------------------------
+id                      | c638254e-e0b0-4c76-bc7b-6a6c91fc7281
+tenant_id               | a0000000-0000-0000-0000-000000000001
+scope_id                | 4fb034f7-0d91-42e4-97b8-b94a84b22eda
+created_by              | b0000000-0000-0000-0000-000000000001
+name                    | Juice Shop Clean Slate v12 (GLM-5)
+description             | 
+phase                   | FULL
+targets                 | ["juiceshop"]
+intensity               | medium
+timeout_seconds         | 99999
+auto_run                | f
+status                  | running
+progress                | 0
+worker_id               | 2d5ccf909ef7
+container_id            | de3ba881adadd56afe9cd2a276128b22fe54335577c0a80aa42ea0d6a2b247a5
+findings_count          | 2
+critical_count          | 1
+high_count              | 1
+tokens_used             | 408589
+cost_usd                | 52
+created_at              | 2026-02-17 05:10:00.950794
+started_at              | 2026-02-17 05:10:01.453192
+completed_at            | 
+error_message           | 
+retry_count             | 0
+result                  | {}
+target_type             | lab
+max_iterations          | 2000
+authorization_confirmed | f
+exploit_mode            | autonomous
+llm_provider            | zai
+allow_persistence       | f
+allow_defense_evasion   | f
+allow_scope_expansion   | t
+enable_session_handoff  | t
+enable_target_rotation  | t
+target_focus_window     | 6
+target_focus_limit      | 30
+target_min_commands     | 8
+supervisor_enabled      | f
+supervisor_provider     | 
+llm_profile             | 
+agent_freedom           | 
+llm_model               | 
+

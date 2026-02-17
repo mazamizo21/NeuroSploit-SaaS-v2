@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from dynamic_agent import DynamicAgent; a=DynamicAgent(log_dir='/tmp/tazosploit_smoke_logs', max_iterations=1); print('phase_current=', a.phase_current); print('tool_gate(nmap)=', a._check_tool_phase_gate('bash','nmap -F -n 1.2.3.4') or 'ok'); print('tool_gate(msfconsole)=', a._check_tool_phase_gate('msfconsole','msfconsole -q -x "help; exit"') or 'ok'); msg=a._build_runtime_enforcement_message(); print('runtime_msg_prefix=', msg.splitlines()[0] if msg else '');
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'dynamic_agent'
