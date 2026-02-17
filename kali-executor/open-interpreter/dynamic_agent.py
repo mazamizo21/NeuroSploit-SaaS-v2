@@ -4287,6 +4287,23 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                 tool_used=self._detect_tool(content)
             )
 
+        # Hard tool phase gate — block tools outside their allowed phases
+        phase_block = self._check_tool_phase_gate(exec_type, content)
+        if phase_block:
+            self._log(f"TOOL_PHASE_BLOCKED: {phase_block}", level="WARN")
+            return Execution(
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                iteration=self.iteration,
+                execution_type=exec_type,
+                content=content,
+                stdout="",
+                stderr=phase_block,
+                exit_code=126,
+                duration_ms=0,
+                success=False,
+                tool_used=self._detect_tool(content),
+            )
+
         # Sanitize sqlmap commands to ensure --batch mode
         tool_used = self._detect_tool(content)
         if tool_used == "sqlmap" or (content and content.strip().startswith("sqlmap")):

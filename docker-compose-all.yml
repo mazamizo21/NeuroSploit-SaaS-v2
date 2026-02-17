@@ -390,6 +390,75 @@ services:
     restart: unless-stopped
 
   # ===========================================================================
+  # TOOL INTEGRATIONS  (only with: --profile tools)
+  # ===========================================================================
+
+  # Empire C2 — PowerShell post-exploitation framework (REST API)
+  empire:
+    image: bcsecurity/empire:latest
+    container_name: tazosploit-empire
+    ports:
+      - "1337:1337"
+      - "5000:5000"
+    networks:
+      - exec-net
+      - kali-net
+    restart: unless-stopped
+    command: ["server", "--restip", "0.0.0.0", "--restport", "1337"]
+    profiles:
+      - tools
+
+  # OWASP ZAP — Web application security scanner (REST API)
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: tazosploit-zap
+    ports:
+      - "8090:8090"
+    networks:
+      - exec-net
+      - kali-net
+    command: >
+      zap.sh -daemon -host 0.0.0.0 -port 8090
+      -config api.disablekey=true
+      -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # BeEF — Browser Exploitation Framework (REST API + hook.js)
+  beef:
+    image: beefproject/beef:latest
+    container_name: tazosploit-beef
+    ports:
+      - "3000:3000"
+      - "6789:6789"
+    networks:
+      - exec-net
+      - kali-net
+    environment:
+      - BEEF_USER=beef
+      - BEEF_PASSWD=beef123
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # Sliver C2 — Cross-platform C2 framework (gRPC API)
+  sliver:
+    image: bcsecurity/sliver:latest
+    container_name: tazosploit-sliver
+    ports:
+      - "31337:31337"
+      - "8888:8888"
+    networks:
+      - exec-net
+      - kali-net
+    volumes:
+      - sliver-data:/root/.sliver
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # ===========================================================================
   # VULNERABLE LAB  (only with: --profile lab)
   # ===========================================================================
 
@@ -598,4 +667,5 @@ volumes:
   kali-memory:
   lab-mysql-data:
   lab-postgres-data:
+  sliver-data:
   lab-mongodb-data:
