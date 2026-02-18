@@ -956,7 +956,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         self.phase_gate_last_notice_iter = 0
         self._last_emitted_phase = None
         self.phase_force_exploit = False
-        self.exploit_fail_fast_threshold = int(os.getenv("EXPLOIT_FAIL_FAST_THRESHOLD", "3"))
+        self.exploit_fail_fast_threshold = int(os.getenv("EXPLOIT_FAIL_FAST_THRESHOLD", "5"))
         self.runtime_context_prefix = "**RUNTIME ENFORCEMENT CONTEXT**"
         self.banned_loop_phrases = [
             "let me scan more",
@@ -1019,6 +1019,7 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         self.redundant_exploit_strictness = os.getenv("REDUNDANT_EXPLOIT_STRICTNESS", "medium").lower().strip()
         self.gate_message_verbosity = os.getenv("GATE_MESSAGE_VERBOSITY", "normal").lower().strip()
         self._gate_message_count_in_context = 0  # Track gate messages for capping
+        self._no_proof_guard_consecutive = 0  # Death-loop escape counter
 
         # Start in exploit-only posture when exploit phase is active.
         try:
@@ -4746,8 +4747,23 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                             except Exception:
                                 attempt_count = 0
 
-                            # P0 Anti-loop: after 3 failed attempts, pivot to next vuln (do not scan).
+                            # P0 Anti-loop: after N failed attempts, pivot to next vuln (do not scan).
                             if attempt_count >= self.exploit_fail_fast_threshold:
+                                # Check if this attempt had substantial output (exploit may have
+                                # worked but proof wasn't captured). Defer fail-fast if so.
+                                _ff_stdout = (execution.stdout or "")
+                                _ff_exit = getattr(execution, "exit_code", None)
+                                if _ff_exit == 0 and len(_ff_stdout) > 200:
+                                    _ff_vrec_check = self.vulns_found.get(vid)
+                                    if isinstance(_ff_vrec_check, dict):
+                                        _ff_vrec_check["attempt_count"] = 0
+                                    self._log(
+                                        f"FAIL-FAST DEFERRED: attempt had substantial output "
+                                        f"({len(_ff_stdout)} chars, exit=0), retrying — {vid}",
+                                        "WARN",
+                                    )
+                                    return
+
                                 # BUG FIX: Mark vuln as not_exploitable IMMEDIATELY so the
                                 # exploit gate (_get_unproven_vulns) won't re-trigger on it.
                                 # Without this, the gate keeps pushing the agent back to the
@@ -6110,6 +6126,88 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
                                 self._record_vuln_attempt(vid, execution)
                                 self._mark_vuln_proven(vid, f"cmd: {self._redact_sensitive(cmd[:400])}\noutput:\n{proof}"[:800])
                                 return
+
+            # ── GENERAL proof patterns (target-agnostic) ──
+            # These catch exploitation output that the target-specific patterns above miss.
+
+            # General SQLi proof: sqlmap dump markers or table data in output
+            try:
+                is_sqli_tool = ("sqlmap" in cmd_lower)
+                if is_sqli_tool and len(out) >= 50:
+                    sqli_markers = (
+                        "dumped to" in out_lower
+                        or "fetched data logged" in out_lower
+                        or "table found" in out_lower
+                        or bool(re.search(r"\|\s*\S+.*\|\s*\S+.*\|", out))  # table rows like | col1 | col2 |
+                        or bool(re.search(r"\d+ entries", out_lower))
+                        or ("database:" in out_lower and "table:" in out_lower)
+                    )
+                    if sqli_markers:
+                        vid = self._pick_matching_vuln_id(["sql injection", "sqli", "sql"])
+                        if not vid:
+                            self._track_vuln_found("sql injection", (self.target or "unknown"), "Auto-proof: sqlmap dump markers")
+                            vid = self._pick_matching_vuln_id(["sql injection", "sqli", "sql"])
+                        if vid and not (self.vulns_found.get(vid) or {}).get("exploited"):
+                            proof = self._redact_sensitive(out[:500])
+                            self._record_vuln_attempt(vid, execution)
+                            self._mark_vuln_proven(vid, f"cmd: {self._redact_sensitive(cmd[:400])}\noutput:\n{proof}"[:800])
+                            return
+            except Exception:
+                pass
+
+            # General auth bypass / token extraction: curl/wget returning JWT + injection indicators
+            try:
+                is_http_tool = any(t in cmd_lower for t in ("curl ", "wget ", "http"))
+                has_injection = any(ind in cmd_lower for ind in ("' or", "\" or", "union", "1=1", "--", "sqlmap", "sleep(", "benchmark("))
+                has_jwt = bool(re.search(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}", out))
+                if is_http_tool and has_injection and has_jwt and len(out) >= 50:
+                    vid = self._pick_matching_vuln_id(["sql injection", "sqli", "auth bypass", "authentication bypass"])
+                    if not vid:
+                        self._track_vuln_found("authentication bypass", (self.target or "unknown"), "Auto-proof: JWT token via injection")
+                        vid = self._pick_matching_vuln_id(["sql injection", "sqli", "auth bypass", "authentication bypass"])
+                    if vid and not (self.vulns_found.get(vid) or {}).get("exploited"):
+                        proof = self._redact_sensitive(out[:500])
+                        self._record_vuln_attempt(vid, execution)
+                        self._mark_vuln_proven(vid, f"cmd: {self._redact_sensitive(cmd[:400])}\noutput:\n{proof}"[:800])
+                        return
+            except Exception:
+                pass
+
+            # General data dump: multiple emails or password hashes after injection attempt
+            try:
+                has_injection_cmd = any(ind in cmd_lower for ind in ("sqlmap", "' or", "\" or", "union select", "1=1"))
+                email_count = len(re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", out))
+                hash_count = len(re.findall(r"\b[a-f0-9]{32}\b", out_lower))  # MD5 hashes
+                if has_injection_cmd and (email_count >= 3 or hash_count >= 2) and len(out) >= 100:
+                    vid = self._pick_matching_vuln_id(["sql injection", "sqli", "sql", "data exposure"])
+                    if not vid:
+                        self._track_vuln_found("sql injection", (self.target or "unknown"), "Auto-proof: data dump with emails/hashes")
+                        vid = self._pick_matching_vuln_id(["sql injection", "sqli", "sql", "data exposure"])
+                    if vid and not (self.vulns_found.get(vid) or {}).get("exploited"):
+                        proof = self._redact_sensitive(out[:500])
+                        self._record_vuln_attempt(vid, execution)
+                        self._mark_vuln_proven(vid, f"cmd: {self._redact_sensitive(cmd[:400])}\noutput:\n{proof}"[:800])
+                        return
+            except Exception:
+                pass
+
+            # General RCE proof: uid= output from any command with injection indicators
+            try:
+                has_rce_indicator = any(ind in cmd_lower for ind in (";", "|", "`", "$(", "exec", "system(", "passthru"))
+                uid_match = bool(re.search(r"\buid=\d+\b", out_lower))
+                if has_rce_indicator and uid_match:
+                    vid = self._pick_matching_vuln_id(["command injection", "cmdi", "rce", "remote code"])
+                    if not vid:
+                        self._track_vuln_found("command injection", (self.target or "unknown"), "Auto-proof: uid= from command injection")
+                        vid = self._pick_matching_vuln_id(["command injection", "cmdi", "rce", "remote code"])
+                    if vid and not (self.vulns_found.get(vid) or {}).get("exploited"):
+                        proof = self._redact_sensitive(out[:500])
+                        self._record_vuln_attempt(vid, execution)
+                        self._mark_vuln_proven(vid, f"cmd: {self._redact_sensitive(cmd[:400])}\noutput:\n{proof}"[:800])
+                        return
+            except Exception:
+                pass
+
         except Exception:
             return
     
@@ -6364,16 +6462,41 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                             self.force_exploit_next = False
                             self.exploit_only_hard = False
                             self.current_vuln_focus_id = None
+                            self._no_proof_guard_consecutive = 0
                             self._log(
                                 "ALL VULNS RESOLVED (periodic check): allowing targeted recon/vuln discovery",
                                 "INFO",
                             )
                         else:
                             # Do not treat "all skipped" as done when nothing is proven.
-                            self.all_vulns_resolved = False
-                            self.force_exploit_next = True
-                            self.exploit_only_hard = True
-                            self._log("NO-PROOF GUARD: unresolved=0 but proven=0, keeping exploit mode active", "WARN")
+                            self._no_proof_guard_consecutive += 1
+                            if self._no_proof_guard_consecutive >= 5:
+                                # Death-loop escape: agent is trapped — all vulns marked not_exploitable,
+                                # can't discover new ones (gate blocks), can't exploit (nothing left).
+                                # Release the gate and clear not_exploitable flags to let agent cycle back.
+                                self.force_exploit_next = False
+                                self.exploit_only_hard = False
+                                self.all_vulns_resolved = False
+                                for _vid, _vrec in self.vulns_found.items():
+                                    if isinstance(_vrec, dict) and (_vrec.get("not_exploitable_reason") or "").strip():
+                                        _vrec["not_exploitable_reason"] = ""
+                                        _vrec["attempt_count"] = 0
+                                self._save_vuln_tracker()
+                                self._log(
+                                    f"DEATH-LOOP ESCAPE: releasing gate after {self._no_proof_guard_consecutive} "
+                                    f"consecutive no-proof iterations — cleared not_exploitable flags",
+                                    "WARN",
+                                )
+                                self._no_proof_guard_consecutive = 0
+                            else:
+                                self.all_vulns_resolved = False
+                                self.force_exploit_next = True
+                                self.exploit_only_hard = True
+                                self._log(
+                                    f"NO-PROOF GUARD: unresolved=0 but proven=0, keeping exploit mode active "
+                                    f"(consecutive={self._no_proof_guard_consecutive}/5)",
+                                    "WARN",
+                                )
             except Exception:
                 pass
 

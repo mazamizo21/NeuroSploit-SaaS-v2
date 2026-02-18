@@ -764,7 +764,18 @@ class Worker:
                      objective=objective[:100])
 
         llm_provider_override = (job_details.get("llm_provider") or "").strip()
-        
+
+        # Pass --llm-provider CLI arg so DynamicAgent initializes the right provider class
+        if llm_provider_override:
+            # Map job-level provider names to CLI-accepted choices
+            _cli_provider_map = {
+                "zai": "openai", "openai": "openai", "anthropic": "anthropic",
+                "ollama": "ollama", "lmstudio": "lmstudio", "lm-studio": "lmstudio",
+            }
+            _cli_provider = _cli_provider_map.get(llm_provider_override.lower())
+            if _cli_provider:
+                cmd.extend(["--llm-provider", _cli_provider])
+
         # Run in a thread to not block the event loop, with streaming
         loop = asyncio.get_event_loop()
         
@@ -823,6 +834,7 @@ class Worker:
                     "ALLOW_SELF_REGISTRATION": "true" if relax_exploit_restrictions else "false",
                     "AUTO_COMPLETE_IDLE_ITERATIONS": str(auto_complete_idle_iterations),
                     "AUTO_COMPLETE_MIN_ITERATIONS": str(auto_complete_min_iterations),
+                    **({"LLM_PROVIDER": llm_provider_override} if llm_provider_override else {}),
                     **({"LLM_PROVIDER_OVERRIDE": llm_provider_override} if llm_provider_override else {}),
                     **({"LLM_THINKING_ENABLED": "true"} if thinking_enabled else {}),
                     **({"LLM_API_BASE": llm_api_base_override} if llm_api_base_override else {}),
