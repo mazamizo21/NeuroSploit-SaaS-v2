@@ -42,8 +42,14 @@ except Exception:
     AIOHTTP_AVAILABLE = False
 
 # Import enhanced modules
-from .loop_detector import LoopDetector, LoopAlert
-from .resource_monitor import ResourceMonitor, ResourceAlert
+try:
+    from .loop_detector import LoopDetector, LoopAlert
+except ImportError:
+    from loop_detector import LoopDetector, LoopAlert
+try:
+    from .resource_monitor import ResourceMonitor, ResourceAlert
+except ImportError:
+    from resource_monitor import ResourceMonitor, ResourceAlert
 
 # ----------------------------------------------------------------------------
 # Configuration
